@@ -1,0 +1,1 @@
+.cake-animation{position:absolute;right:10px;animation:pop .5s ease-in-out,bounce 1s infinite}@keyframes pop{0%{transform:scale(0)}to{transform:scale(1)}}@keyframes bounce{0%,20%,50%,80%,to{transform:translateY(0)}40%{transform:translateY(-10px)}60%{transform:translateY(-5px)}}
