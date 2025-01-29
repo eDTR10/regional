@@ -67,7 +67,8 @@ export default function PrintDTR({name,data,date,show,selectedYear, selectedMont
         <Button type='button' variant={show?"default":"outline"} className={show?'  z-20 w-full flex gap-2 ':' flex gap-2 text-foreground z-20 w-full pointer-events-none '} >Show PDF <PrinterIcon className={show?' w-4 h-4 animate-bounce':' w-4 h-4 '}/> </Button>
       </DrawerTrigger>
 
-      <DrawerContent>
+      <DrawerContent  title="DTR" 
+  description="Optional Description">
     <div className='h-[70vh] sm:h-[30vh]   w-full overflow-y-scroll sm:overflow-hidden  bg-white '>
 
     

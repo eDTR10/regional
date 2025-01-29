@@ -6,9 +6,9 @@ import { convertStatus } from '@/helper/convert-status';
 Font.register({
   family: 'Roboto',
   fonts: [
-    { src: '/calibri-font-family/calibri-regular.ttf' }, // normal
-    { src: '/calibri-font-family/calibri-italic.ttf', fontStyle: 'italic' }, // italic
-    { src: '/calibri-font-family/calibri-bold.ttf', fontStyle: 'bold' } // bold
+    { src: `${import.meta.env.VITE_LINK}/calibri-font-family/calibri-regular.ttf` }, // normal
+    { src: `${import.meta.env.VITE_LINK}/calibri-font-family/calibri-italic.ttf`, fontStyle: 'italic' }, // italic
+    { src: `${import.meta.env.VITE_LINK}/calibri-font-family/calibri-bold.ttf`, fontStyle: 'bold' } // bold
   ]
 });
 

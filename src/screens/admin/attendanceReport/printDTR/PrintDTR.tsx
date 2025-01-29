@@ -45,19 +45,7 @@ export default function PrintDTR({name,data,date,show,selectedYear, selectedMont
 
     // Load the generated PDF into pdf-lib and secure it
     const pdfDoc = await PDFDocument.load(await blob.arrayBuffer());
-    // pdfDoc.encrypt({
-    //   ownerPassword: 'jelinegwapa143',
-    //   userPassword: '',
-    //   permissions: {
-    //     printing: 'highResolution',
-    //     modifying: false,
-    //     copying: false,
-    //     annotating: false,
-    //     fillingForms: false,
-    //     contentAccessibility: false,
-    //     documentAssembly: false,
-    //   },
-    // });
+  
 
     const pdfBytes = await pdfDoc.save();
     const protectedBlob = new Blob([pdfBytes], { type: 'application/pdf' });
@@ -65,7 +53,7 @@ export default function PrintDTR({name,data,date,show,selectedYear, selectedMont
     // Create a temporary download link and programmatically click it
     const downloadLink = document.createElement('a');
     downloadLink.href = URL.createObjectURL(protectedBlob);
-    downloadLink.download = `${name ? name.toUpperCase() : "UNKNOWN"}_DTR_${date}.pdf`;
+    downloadLink.download = `${name.toUpperCase()}_DTR_${date}.pdf`;
     downloadLink.click();
 
     // Clean up the URL object after download
@@ -79,7 +67,8 @@ export default function PrintDTR({name,data,date,show,selectedYear, selectedMont
         <Button type='button' variant={show?"default":"outline"} className={show?'  z-20 w-full flex gap-2 ':' flex gap-2 text-foreground z-20 w-full pointer-events-none '} >Show PDF <PrinterIcon className={show?' w-4 h-4 animate-bounce':' w-4 h-4 '}/> </Button>
       </DrawerTrigger>
 
-      <DrawerContent>
+      <DrawerContent  title="DTR" 
+  description="Optional Description">
     <div className='h-[70vh] sm:h-[30vh]   w-full overflow-y-scroll sm:overflow-hidden  bg-white '>
 
     
@@ -118,7 +107,7 @@ export default function PrintDTR({name,data,date,show,selectedYear, selectedMont
           </div>
           
           <PDFViewer className="w-full h-full" >
-          <MyDocument name={name ? name.toUpperCase() : "UNKNOWN"} previewUrl={previewUrl} date={date} data={data} selectedYear={selectedYear} selectedMonth={ selectedMonth} />
+          <MyDocument name={name.toUpperCase()} previewUrl={previewUrl} date={date} data={data} selectedYear={selectedYear} selectedMonth={ selectedMonth} />
         </PDFViewer>
         </Suspense>
         
