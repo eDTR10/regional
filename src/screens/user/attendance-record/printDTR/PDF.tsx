@@ -62,6 +62,7 @@ const MyDocument = ({ name, date, data,selectedYear, selectedMonth,previewUrl }:
     }
 });
 
+
 const renderCheckinText = (data:any) => {
   switch (data.length) {
     case 4:
@@ -180,7 +181,7 @@ const renderPMArivalText = (inTime:any,outTime:any) => {
 
 
   return (
-    <Document title={`${name.toUpperCase()}_DTR_${date}.pdf`}   >
+    <Document title={`${name?name.toUpperCase():""}_DTR_${date}.pdf`}   >
       <Page size="A4" style={{ fontFamily: 'Roboto', flexDirection: 'row', backgroundColor: '#ffffff', fontSize: 8, padding: 30 }}>
       {[1, 2].map((_, index) => (
           <View key={index} style={{ width: '50%', paddingHorizontal: 8 }}>
@@ -188,7 +189,7 @@ const renderPMArivalText = (inTime:any,outTime:any) => {
             <Image src={DICT} style={{ height: 60, objectFit: 'contain', alignSelf: 'center', marginBottom: 10 }} />
             <Text style={{ fontSize: 10, fontStyle: 'bold', textAlign: 'center', marginBottom: 3 }}>DAILY TIME RECORD</Text>
             <Text style={{ fontSize: 10, textAlign: 'center', marginBottom: 10 }}></Text>
-            <Text style={{ fontSize: 9, textAlign: 'center', textTransform: 'uppercase', borderBottom: 0.5, marginBottom: 1,fontStyle:'bold' }}>{name.toUpperCase()?name.toUpperCase():"JOHN C. DOE"}</Text>
+            <Text style={{ fontSize: 9, textAlign: 'center', textTransform: 'uppercase', borderBottom: 0.5, marginBottom: 1,fontStyle:'bold' }}>{name?name.toUpperCase():"JOHN C. DOE"}</Text>
             <Text style={{ fontSize: 8, textAlign: 'center' }}>( Name )</Text>
 
             <View style={{ flexDirection: 'row', marginTop: 10, marginBottom: 5 }}>
@@ -393,7 +394,7 @@ const activities = activitiesByDate[day] || [];
               />
            
           )}
-              <Text style={{ borderBottom: 0.5, paddingTop: 2 ,fontStyle:'bold' }}>{name.toUpperCase()}</Text>
+              <Text style={{ borderBottom: 0.5, paddingTop: 2 ,fontStyle:'bold' }}>{name?name.toUpperCase():""}</Text>
             </View>
 
             <Text style={{ fontSize: 7, marginTop: 10, textAlign: 'justify' }}>

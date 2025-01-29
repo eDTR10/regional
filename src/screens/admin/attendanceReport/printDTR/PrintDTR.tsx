@@ -45,7 +45,19 @@ export default function PrintDTR({name,data,date,show,selectedYear, selectedMont
 
     // Load the generated PDF into pdf-lib and secure it
     const pdfDoc = await PDFDocument.load(await blob.arrayBuffer());
-  
+    // pdfDoc.encrypt({
+    //   ownerPassword: 'jelinegwapa143',
+    //   userPassword: '',
+    //   permissions: {
+    //     printing: 'highResolution',
+    //     modifying: false,
+    //     copying: false,
+    //     annotating: false,
+    //     fillingForms: false,
+    //     contentAccessibility: false,
+    //     documentAssembly: false,
+    //   },
+    // });
 
     const pdfBytes = await pdfDoc.save();
     const protectedBlob = new Blob([pdfBytes], { type: 'application/pdf' });
@@ -53,7 +65,7 @@ export default function PrintDTR({name,data,date,show,selectedYear, selectedMont
     // Create a temporary download link and programmatically click it
     const downloadLink = document.createElement('a');
     downloadLink.href = URL.createObjectURL(protectedBlob);
-    downloadLink.download = `${name.toUpperCase()}_DTR_${date}.pdf`;
+    downloadLink.download = `${name ? name.toUpperCase() : "UNKNOWN"}_DTR_${date}.pdf`;
     downloadLink.click();
 
     // Clean up the URL object after download
@@ -107,7 +119,7 @@ export default function PrintDTR({name,data,date,show,selectedYear, selectedMont
           </div>
           
           <PDFViewer className="w-full h-full" >
-          <MyDocument name={name.toUpperCase()} previewUrl={previewUrl} date={date} data={data} selectedYear={selectedYear} selectedMonth={ selectedMonth} />
+          <MyDocument name={name ? name.toUpperCase() : "UNKNOWN"} previewUrl={previewUrl} date={date} data={data} selectedYear={selectedYear} selectedMonth={ selectedMonth} />
         </PDFViewer>
         </Suspense>
         
