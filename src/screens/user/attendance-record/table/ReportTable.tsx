@@ -19,6 +19,7 @@ import { convertDate } from "@/helper/date-time";
 import Swal from "sweetalert2";
 import PrintButton from "./../printDTR/PrintDTR";
 import { Skeleton } from "@/components/ui/skeleton";
+import { LoaderIcon } from "lucide-react";
 
 function ReportTable() {
   const [inputData,setInputData] = useState({
@@ -56,6 +57,7 @@ function ReportTable() {
   }
 
   function getAttendaceCon() {
+    setLoading(true)
       axios.post(`${import.meta.env.VITE_POINT}/user_filter_by_user_date/`,{
           "fromDate": inputData.fromDate,
           "toDate": inputData.toDate
@@ -68,6 +70,7 @@ function ReportTable() {
         }).then((e)=>{
           setData(e.data)
           setPrintableData(e.data)
+          setLoading(false)
           setShow(true)
           Swal.fire({
               icon: "success",
@@ -201,8 +204,16 @@ useEffect(() => {
           
           </div>
 
-          <Button className=" sm:w-full">
+          <Button className={loading?" sm:w-full pointer-events-none":" sm:w-full"}>
               Filter
+
+              {loading?
+              <LoaderIcon className=" ml-2 w-4 h-4 animate-spin"/>  :""
+            }
+
+
+
+              
           </Button>
           <div className={show?" sm:w-full w-[400px] z-20 ":" sm:w-full w-[400px] z-20  cursor-not-allowed "}>
               <PrintButton name={JSON.parse(localStorage.getItem('user')||"").full_name} 

@@ -37,7 +37,7 @@ const UserPersonalInformation = (profileData: any) => {
         <div>
             <div className='flex flex-col w-full items-center p-8 bg-primary-foreground border  border-border'>
                 <Avatar>
-                    <AvatarImage src={profileData.profileData.photos ? `${import.meta.env.VITE_URL}${profileData.profileData.photos}` : 'https://github.com/shadcn.png'} alt={fullName} className='rounded-full h-28 w-28 object-cover' />
+                <AvatarImage src={false ? `${import.meta.env.VITE_URL}${profileData.profileData.photos}` : 'https://github.com/shadcn.png'} alt={fullName} className='rounded-full h-28 w-28 object-cover' />
                 </Avatar>
 
                 <div className="flex flex-col items-center mt-4">

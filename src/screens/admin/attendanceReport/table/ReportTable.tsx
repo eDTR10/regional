@@ -20,7 +20,7 @@ import { convertDate } from "@/helper/date-time";
 import Swal from "sweetalert2";
 import PrintButton from "../printDTR/PrintDTR";
 import { Skeleton } from "@/components/ui/skeleton";
-import { StickyNote } from "lucide-react";
+import { LoaderIcon, StickyNote } from "lucide-react";
 
 function ReportTable() {
   const [inputData, setInputData] = useState({
@@ -58,6 +58,7 @@ function ReportTable() {
   }
 
   function getAttendaceCon() {
+    setLoading(true)
     axios.post(`${import.meta.env.VITE_POINT}/filter_by_user_date/`, {
       "userId": localStorage.getItem('selectedID'),
       "fromDate": inputData.fromDate,
@@ -71,6 +72,7 @@ function ReportTable() {
       }).then((e) => {
         setData(e.data)
         setPrintableData(e.data)
+        setLoading(false)
         setShow(true)
         Swal.fire({
           icon: "success",
@@ -224,8 +226,12 @@ function ReportTable() {
 
         </div>
 
-        <Button className=" sm:w-full">
-          Filter
+        <Button className={loading?" sm:w-full pointer-events-none":" sm:w-full"}>
+              Filter
+
+              {loading?
+              <LoaderIcon className=" ml-2 w-4 h-4 animate-spin"/>  :""
+            }
         </Button>
         <div className={show ? " sm:w-full w-[400px]" : " sm:w-full w-[400px]  cursor-not-allowed "}>
           <PrintButton name={localStorage.getItem('selectedName')}
