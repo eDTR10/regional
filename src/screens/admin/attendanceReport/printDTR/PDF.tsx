@@ -333,10 +333,10 @@ const activities = activitiesByDate[day] || [];
 
 
         <View style={{ width: '10%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
-          <Text style={{ textAlign: 'center', marginTop: 2 }}>0</Text>
+          <Text style={{ textAlign: 'center', marginTop: 2 }}></Text>
         </View>
         <View style={{ width: '10%', paddingLeft: 2, height: '100%', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-          <Text style={{ textAlign: 'center', marginTop: 2 }}>0</Text>
+          <Text style={{ textAlign: 'center', marginTop: 2 }}></Text>
         </View>
       </View>
     );
@@ -359,10 +359,10 @@ const activities = activitiesByDate[day] || [];
                       <Text style={{ textAlign: 'center', marginTop: 2 }}>{renderCheckOutText(checkoutTimes)}</Text>
                     </View>
                     <View style={{ width: '10%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
-                      <Text style={{ textAlign: 'center', marginTop: 2 }}>0</Text>
+                      <Text style={{ textAlign: 'center', marginTop: 2 }}></Text>
                     </View>
                     <View style={{ width: '10%', paddingLeft: 2, height: '100%', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-                      <Text style={{ textAlign: 'center', marginTop: 2 }}>0</Text>
+                      <Text style={{ textAlign: 'center', marginTop: 2 }}></Text>
                     </View>
                   </View>
                 )
