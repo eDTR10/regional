@@ -63,11 +63,11 @@ const ResetPassword= lazy(() =>
 const router = createBrowserRouter([
   {
 
-    path: `${import.meta.env.VITE_BASE}`,
-    element: <Navigate to={`${import.meta.env.VITE_BASE}/login`} />,
+    path: `/regional`,
+    element: <Navigate to={`/regional/login`} />,
   },
   {
-    path: `${import.meta.env.VITE_BASE}/login`,
+    path: `/regional/login`,
     element: <>
       <Suspense fallback={<Loader />}>
         <Login />
@@ -75,7 +75,7 @@ const router = createBrowserRouter([
     </>,
   },
   {
-    path: `${import.meta.env.VITE_BASE}/forgot-password`,
+    path: `/regional/forgot-password`,
     element: <>
       <Suspense fallback={<Loader />}>
         <ForgotPassword />
@@ -83,7 +83,7 @@ const router = createBrowserRouter([
     </>,
   },
   {
-    path: `${import.meta.env.VITE_BASE}/reset-password/:uid/:token`,
+    path: `/regional/reset-password/:uid/:token`,
     element:  <>
     <Suspense fallback={<Loader />}>
       <ResetPassword  />
@@ -91,7 +91,7 @@ const router = createBrowserRouter([
   </>,
   },
   {
-    path: `${import.meta.env.VITE_BASE}/admin`,
+    path: `/regional/admin`,
     element:
 
       <Admin />
@@ -101,11 +101,11 @@ const router = createBrowserRouter([
 
     children: [
       {
-        path: `${import.meta.env.VITE_BASE}/admin`,
-        element: <Navigate to={`${import.meta.env.VITE_BASE}/admin/home`} />,
+        path: `/regional/admin`,
+        element: <Navigate to={`/regional/admin/home`} />,
       },
       {
-        path: `${import.meta.env.VITE_BASE}/admin/profile`,
+        path: `/regional/admin/profile`,
         element: <>
           <Suspense fallback={<Loader />}>
             <AdminProfileMainContainer />
@@ -113,7 +113,7 @@ const router = createBrowserRouter([
         </>,
       },
       {
-        path: `${import.meta.env.VITE_BASE}/admin/home`,
+        path: `/regional/admin/home`,
         element: <>
           <Suspense fallback={<Loader />}>
             <Dashboard />
@@ -121,7 +121,7 @@ const router = createBrowserRouter([
         </>,
       },
       {
-        path: `${import.meta.env.VITE_BASE}/admin/employee`,
+        path: `/regional/admin/employee`,
         element: <>
           <Suspense fallback={<Loader />}>
             <Employees />
@@ -129,7 +129,7 @@ const router = createBrowserRouter([
         </>,
       },
       {
-        path: `${import.meta.env.VITE_BASE}/admin/departments`,
+        path: `/regional/admin/departments`,
         element: <>
           <Suspense fallback={<Loader />}>
             <Department />
@@ -137,7 +137,7 @@ const router = createBrowserRouter([
         </>,
       },
       {
-        path: `${import.meta.env.VITE_BASE}/admin/holidays`,
+        path: `/regional/admin/holidays`,
         element: <>
           <Suspense fallback={<Loader />}>
             <Holidays />
@@ -145,7 +145,7 @@ const router = createBrowserRouter([
         </>,
       },
       {
-        path: `${import.meta.env.VITE_BASE}/admin/report`,
+        path: `/regional/admin/report`,
         element: <>
           <Suspense fallback={<Loader />}>
             <AttendanceReport />
@@ -153,7 +153,7 @@ const router = createBrowserRouter([
         </>,
       },
       {
-        path: `${import.meta.env.VITE_BASE}/admin/records`,
+        path: `/regional/admin/records`,
         element: <>
           <Suspense fallback={<Loader />}>
             <Records />
@@ -167,17 +167,17 @@ const router = createBrowserRouter([
     ],
   },
   {
-    path: `${import.meta.env.VITE_BASE}/user`,
+    path: `/regional/user`,
     element:
       <User />
     ,
     children: [
       {
-        path: `${import.meta.env.VITE_BASE}/user`,
-        element: <Navigate to={`${import.meta.env.VITE_BASE}/user/home`} />,
+        path: `/regional/user`,
+        element: <Navigate to={`/regional/user/home`} />,
       },
       {
-        path: `${import.meta.env.VITE_BASE}/user/home`,
+        path: `/regional/user/home`,
         element: <>
           <Suspense fallback={<Loader />}>
             <UserDashboard />
@@ -185,7 +185,7 @@ const router = createBrowserRouter([
         </>,
       },
       {
-        path: `${import.meta.env.VITE_BASE}/user/profile`,
+        path: `/regional/user/profile`,
         element: <>
           <Suspense fallback={<Loader />}>
             <UserProfile />
@@ -193,7 +193,7 @@ const router = createBrowserRouter([
         </>,
       },
       {
-        path: `${import.meta.env.VITE_BASE}/user/employee-status`,
+        path: `/regional/user/employee-status`,
         element: <>
           <Suspense fallback={<Loader />}>
             <UserEmployeeStatus />
@@ -201,7 +201,7 @@ const router = createBrowserRouter([
         </>,
       },
       {
-        path: `${import.meta.env.VITE_BASE}/user/attendance-record`,
+        path: `/regional/user/attendance-record`,
         element: <>
           <Suspense fallback={<Loader />}>
             <UserAttendanceRecord />
@@ -214,7 +214,8 @@ const router = createBrowserRouter([
       },
     ],
   },
-]);
+],
+);
 
 function wait(time: number) {
   return new Promise((resolve) => {
