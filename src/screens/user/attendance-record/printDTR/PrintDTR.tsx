@@ -19,10 +19,18 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { PDFDocument } from 'pdf-lib-with-encrypt';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 export default function PrintDTR({name,data,date,show,selectedYear, selectedMonth}:any) {
   const [_image, setImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [selectedSchedule, setSelectedSchedule] = useState("6:00-3:00")
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -79,7 +87,17 @@ export default function PrintDTR({name,data,date,show,selectedYear, selectedMont
           <div className=' flex w-full items-center justify-center h-20 gap-10'>
             
               <Button onClick={handleDownload} value=''>Save DTR  <FileCodeIcon  className=' h-4 w-4 ml-2 animate-bounce'/> </Button>
-        
+
+              <Select value={selectedSchedule} onValueChange={setSelectedSchedule}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Select schedule" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="6:00-3:00">6:00-3:00</SelectItem>
+                  <SelectItem value="7:00-4:00">7:00-4:00</SelectItem>
+                  <SelectItem value="8:00-5:00">8:00-5:00</SelectItem>
+                </SelectContent>
+              </Select>
 
             <input
         type="file"

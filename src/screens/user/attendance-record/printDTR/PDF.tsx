@@ -70,7 +70,7 @@ const renderCheckinText = (data:any) => {
     case 3:
       return data[0];
     case 2:
-      return data[0];
+      return data[1];
     case 1:
       return data[0];
     default:

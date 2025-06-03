@@ -37,6 +37,11 @@ const Department = lazy(() =>
   wait(1300).then(() => import("./screens/admin/department/DepartmentMainContainer.tsx"))
 );
 
+
+const Records = lazy(() =>
+  wait(1300).then(() => import("./screens/admin/records/Records.tsx"))
+);
+
 const AttendanceReport = lazy(() =>
   wait(1300).then(() => import("./screens/admin/attendanceReport/AttendanceReport.tsx"))
 );
@@ -144,6 +149,14 @@ const router = createBrowserRouter([
         element: <>
           <Suspense fallback={<Loader />}>
             <AttendanceReport />
+          </Suspense>
+        </>,
+      },
+      {
+        path: `${import.meta.env.VITE_BASE}/admin/records`,
+        element: <>
+          <Suspense fallback={<Loader />}>
+            <Records />
           </Suspense>
         </>,
       },

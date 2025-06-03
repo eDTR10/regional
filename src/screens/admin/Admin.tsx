@@ -9,7 +9,7 @@ import { Link, Outlet } from "react-router-dom";
 
 import NavLink from "@/components/link/link";
 import { ModeToggle } from "@/components/mode-toggle";
-import { ArrowLeftIcon, Building2Icon, CakeIcon, ClipboardListIcon, ListChecksIcon, LogOutIcon, MenuIcon, UsersIcon } from "lucide-react";
+import { ArrowLeftIcon, Building2Icon, CakeIcon, ClipboardListIcon, ListChecksIcon, LogOutIcon, MenuIcon, Paperclip, UsersIcon } from "lucide-react";
 import { useState } from "react";
 import Profile from "@/components/profile/Profile";
 
@@ -85,6 +85,12 @@ function Admin() {
                   to={`${import.meta.env.VITE_BASE}/admin/report`}
                   text="Attendance report"
                   icon={<ClipboardListIcon className=" w-5 h-5 " />}
+                />
+
+                <NavLink
+                  to={`${import.meta.env.VITE_BASE}/admin/records`}
+                  text="Records"
+                  icon={<Paperclip className=" w-5 h-5 " />}
                 />
 
               </div>
