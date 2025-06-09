@@ -8,8 +8,6 @@ import { Suspense, lazy } from "react";
 import NotFound from "./screens/notFound";
 import Loader from './components/loader/loader.tsx';
 import Admin from './screens/admin/Admin.tsx';
-
-
 import User from './screens/user/User.tsx';
 import UserProfile from './screens/user/profile/UserProfile.tsx';
 import UserEmployeeStatus from './screens/user/employee-status/UserEmployeeStatusContainer.tsx';

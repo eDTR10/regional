@@ -263,6 +263,14 @@ const renderPMArivalText = (inTime:any,outTime:any) => {
  const checkoutTimes2 = groupedData[day]?.o || '';
 const activities = activitiesByDate[day] || [];
 
+const convertTo24Hour = (time: string): string => {
+  if (!time) return '';
+  
+  const [hours, minutes] = time.split(':').map(Number);
+  const hours24 = hours >= 1 && hours <= 11 ? hours + 12 : hours;
+  
+  return `${hours24.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+};
   
 
   
@@ -359,10 +367,14 @@ const activities = activitiesByDate[day] || [];
                       <Text style={{ textAlign: 'center', marginTop: 2 }}>{renderCheckOutText(checkoutTimes)}</Text>
                     </View>
                     <View style={{ width: '10%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
-                      <Text style={{ textAlign: 'center', marginTop: 2 }}></Text>
+                      <Text style={{ textAlign: 'center', marginTop: 2 }}>
+
+                      {checkinTimes}
+                      
+                      </Text>
                     </View>
                     <View style={{ width: '10%', paddingLeft: 2, height: '100%', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-                      <Text style={{ textAlign: 'center', marginTop: 2 }}></Text>
+                      <Text style={{ textAlign: 'center', marginTop: 2 }}>{checkoutTimes?checkoutTimes:""}</Text>
                     </View>
                   </View>
                 )
