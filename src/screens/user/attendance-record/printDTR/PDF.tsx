@@ -344,9 +344,26 @@ const convertTo24Hour = (time: any): string => {
                           activities?.map((activity: any, idx: number) => {
                             if (activity.period === 1) {
                               return (
+                                <>
                                 <View key={idx} style={{ width: '69%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
                                   <Text style={{ textAlign: 'center', marginTop: 2 }}>{ `${activity.description}`}</Text>
                                 </View>
+                                <View style={{ width: '10%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
+                      <Text style={{ textAlign: 'center', marginTop: 2 }}>
+                    
+                      </Text>
+                      
+                    </View>
+                    <View style={{ width: '10%', paddingLeft: 2, height: '100%', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+                      <Text style={{ textAlign: 'center', marginTop: 2 }}>
+
+                       
+                      </Text>
+                    </View>
+                                
+                                </>
+                                
+                                
                               );
                             } else if (activity.period === 2) {
                               return (
@@ -359,6 +376,23 @@ const convertTo24Hour = (time: any): string => {
                     </View>
                     <View style={{ width: '17.25%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
                       <Text style={{ textAlign: 'center', marginTop: 2 }}>{renderCheckOutText(checkoutTimes)}</Text>
+                    </View>
+
+                      <View style={{ width: '10%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
+                      <Text style={{ textAlign: 'center', marginTop: 2 }}>
+
+                      {
+                      undertimeCalc("12:00", convertTo24Hour(renderCheckOutText(checkoutTimes))).hours }
+                    
+                      </Text>
+                      
+                    </View>
+                    <View style={{ width: '10%', paddingLeft: 2, height: '100%', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+                      <Text style={{ textAlign: 'center', marginTop: 2 }}>{
+                      undertimeCalc("12:00", convertTo24Hour(renderCheckOutText(checkoutTimes))).minutes }
+
+                       
+                      </Text>
                     </View>
                                 </>
                               );
@@ -376,6 +410,22 @@ const convertTo24Hour = (time: any): string => {
                                   <View key={idx} style={{ width: '34.5%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
                                     <Text style={{ textAlign: 'center', marginTop: 2 }}>{ `${activity.description}`}</Text>
                                   </View>
+                                  <View style={{ width: '10%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
+                      <Text style={{ textAlign: 'center', marginTop: 2 }}>
+
+                      {
+                      undertimeCalc(renderCheckinText(checkinTimes), convertTo24Hour(renderCheckOutText(checkoutTimes))).hours }
+                    
+                      </Text>
+                      
+                    </View>
+                    <View style={{ width: '10%', paddingLeft: 2, height: '100%', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+                      <Text style={{ textAlign: 'center', marginTop: 2 }}>{
+                      undertimeCalc(renderCheckinText(checkinTimes), convertTo24Hour(renderCheckOutText(checkoutTimes))).minutes }
+
+                       
+                      </Text>
+                    </View>
                                   
                                 </>
                               );
@@ -383,27 +433,37 @@ const convertTo24Hour = (time: any): string => {
                           })
                         ):
                         dayName?
-                      
-                          <View style={{ width: '69%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' ,backgroundColor:"#c7e8f0" }}>
+                        <>
+                        
+                        <View style={{ width: '69%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' ,backgroundColor:"#c7e8f0" }}>
                             <Text style={{ textAlign: 'center', marginTop: 2 }}>{dayName?dayName : activities || `${dayName}`  } {checkinTimes?`-${renderCheckinText(checkinTimes)}`:""   }   {checkoutTimes?`| ${renderCheckOutText(checkoutTimes)}`:""   } </Text>
                           </View>
+
+                          <View style={{ width: '10%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
+                      <Text style={{ textAlign: 'center', marginTop: 2 }}>
+                    
+                      </Text>
+                      
+                    </View>
+                    <View style={{ width: '10%', paddingLeft: 2, height: '100%', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+                      <Text style={{ textAlign: 'center', marginTop: 2 }}>
+
+                       
+                      </Text>
+                    </View>
+                        
+                        </>
+                          
+                          
+                          
                           
                           :  ""
-                          
+                       
                         
                         
                       
                       }
-
-       
-
-
-        <View style={{ width: '10%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
-          <Text style={{ textAlign: 'center', marginTop: 2 }}></Text>
-        </View>
-        <View style={{ width: '10%', paddingLeft: 2, height: '100%', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-          <Text style={{ textAlign: 'center', marginTop: 2 }}></Text>
-        </View>
+                        
       </View>
     );
   } else {
