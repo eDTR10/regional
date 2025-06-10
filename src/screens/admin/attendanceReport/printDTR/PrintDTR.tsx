@@ -26,7 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-export default function PrintDTR({name,data,date,show,selectedYear, selectedMonth}:any) {
+export default function PrintDTR({name = '', data, date, show, selectedYear, selectedMonth}:any) {
   const [_image, setImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -53,7 +53,15 @@ export default function PrintDTR({name,data,date,show,selectedYear, selectedMont
 
   const  handleDownload = async () => {
     // Generate the PDF using @react-pdf/renderer
-    const doc = <MyDocument name={name} previewUrl={previewUrl} date={date} data={data} selectedYear={selectedYear} selectedMonth={selectedMonth} />;
+    const doc = <MyDocument 
+      name={name?.toUpperCase() || ''} 
+      previewUrl={previewUrl} 
+      date={date} 
+      data={data} 
+      selectedSchedule={selectedSchedule}
+      selectedYear={selectedYear} 
+      selectedMonth={selectedMonth} 
+    />;
     const asPdf = pdf();
     asPdf.updateContainer(doc);
     const blob = await asPdf.toBlob();
@@ -97,10 +105,6 @@ export default function PrintDTR({name,data,date,show,selectedYear, selectedMont
                   <SelectValue  />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="1">5:00-2:00</SelectItem>
-                  <SelectItem value="2">5:30-2:30</SelectItem>
-                  <SelectItem value="3">6:00-3:00</SelectItem>
-                  <SelectItem value="4">6:30-3:30</SelectItem>
                   <SelectItem value="5">7:00-4:00</SelectItem>
                   <SelectItem value="6">7:30-4:30</SelectItem>
                   <SelectItem value="7">8:00-5:00</SelectItem>
@@ -168,7 +172,15 @@ export default function PrintDTR({name,data,date,show,selectedYear, selectedMont
           </div>
           
           <PDFViewer className="w-full h-full" >
-          <MyDocument name={name.toUpperCase()} previewUrl={previewUrl} date={date} data={data} selectedYear={selectedYear} selectedMonth={ selectedMonth} />
+          <MyDocument 
+      name={name?.toUpperCase() || ''} 
+      previewUrl={previewUrl} 
+      selectedSchedule={selectedSchedule}
+      date={date} 
+      data={data} 
+      selectedYear={selectedYear} 
+      selectedMonth={selectedMonth} 
+    />
         </PDFViewer>
         </Suspense>
         

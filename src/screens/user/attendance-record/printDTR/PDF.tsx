@@ -12,7 +12,7 @@ Font.register({
   ]
 });
 
-const MyDocument = ({ name, date, data,selectedYear, selectedMonth,previewUrl }: any) => {
+const MyDocument = ({ name, date, data,selectedYear, selectedMonth,previewUrl,selectedSchedule }: any) => {
   const getDateFromChecktime = (checktime: any) => new Date(checktime).getUTCDate();
 
 
@@ -177,6 +177,58 @@ const renderPMArivalText = (inTime:any,outTime:any) => {
   
 };
 
+const getScheduleTime = (scheduleValue: string): { timeIn: number, timeOut: number } => {
+  const schedules: { [key: string]: { timeIn: number, timeOut: number } } = {
+
+    "5": { timeIn: 7 * 60, timeOut: 16 * 60 },  // 7:00-4:00
+    "6": { timeIn: 7.5 * 60, timeOut: 16.5 * 60 }, // 7:30-4:30
+    "7": { timeIn: 8 * 60, timeOut: 17 * 60 },  // 8:00-5:00
+    "8": { timeIn: 8.5 * 60, timeOut: 17.5 * 60 }, // 8:30-5:30
+    "9": { timeIn: 9 * 60, timeOut: 18 * 60 },  // 9:00-6:00
+    "10": { timeIn: 9.5 * 60, timeOut: 18.5 * 60 }, // 9:30-6:30
+    "11": { timeIn: 10 * 60, timeOut: 19 * 60 }  // 10:00-7:00
+  };
+  
+  return schedules[scheduleValue] || schedules["7"]; // Default to 8:00-5:00 if invalid
+};
+
+
+
+const undertimeCalc = (timeIn: string, timeOut: string): { hours: number, minutes: number } => {
+  // Get selected schedule from localStorage
+  const selectedSched = selectedSchedule || "7";
+  const schedule = getScheduleTime(selectedSched);
+
+  // Use schedule times instead of hardcoded values
+  const expectedTimeIn = schedule.timeIn;
+  const expectedTimeOut = schedule.timeOut;
+
+  // Convert input times to minutes
+  const [inHour, inMinute] = timeIn?timeIn.split(':').map(Number):'12:00'.split(':').map(Number);
+  const [outHour, outMinute] = timeOut.split(':').map(Number);
+  
+  const actualTimeIn = (inHour * 60) + inMinute;
+  const actualTimeOut = (outHour * 60) + outMinute;
+
+  // Calculate total undertime minutes
+  let undertimeMinutes = 0;
+
+  // Check if came in late
+  if (actualTimeIn > expectedTimeIn) {
+    undertimeMinutes += actualTimeIn - expectedTimeIn;
+  }
+
+  // Check if left early 
+  if (actualTimeOut < expectedTimeOut) {
+    undertimeMinutes += expectedTimeOut - actualTimeOut;
+  }
+
+  // Convert to hours and minutes
+  const hours = Math.floor(undertimeMinutes / 60);
+  const minutes = undertimeMinutes % 60;
+
+  return { hours, minutes };
+};
 
 
 
@@ -263,6 +315,20 @@ const renderPMArivalText = (inTime:any,outTime:any) => {
  const checkoutTimes2 = groupedData[day]?.o || '';
 const activities = activitiesByDate[day] || [];
 
+const convertTo24Hour = (time: any): string => {
+  // If time is empty, undefined, or not a string
+  if (!time || typeof time !== 'string') return '';
+  
+  const [hours, minutes] = time.split(':').map(Number);
+  
+  // Check if hours and minutes are valid numbers
+  if (isNaN(hours) || isNaN(minutes)) return '';
+  
+  // Convert 1:00 to 13:00 for afternoon times
+  const hours24 = hours >= 1 && hours <= 11 ? hours + 12 : hours;
+  
+  return `${hours24.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+};
   
 
   
@@ -359,10 +425,18 @@ const activities = activitiesByDate[day] || [];
                       <Text style={{ textAlign: 'center', marginTop: 2 }}>{renderCheckOutText(checkoutTimes)}</Text>
                     </View>
                     <View style={{ width: '10%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
-                      <Text style={{ textAlign: 'center', marginTop: 2 }}></Text>
+                      <Text style={{ textAlign: 'center', marginTop: 2 }}>
+
+                      {undertimeCalc(renderCheckinText(checkinTimes), convertTo24Hour(renderCheckOutText(checkoutTimes))).hours}
+                    
+                      </Text>
+                      
                     </View>
                     <View style={{ width: '10%', paddingLeft: 2, height: '100%', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-                      <Text style={{ textAlign: 'center', marginTop: 2 }}></Text>
+                      <Text style={{ textAlign: 'center', marginTop: 2 }}>{undertimeCalc(renderCheckinText(checkinTimes), convertTo24Hour(renderCheckOutText(checkoutTimes))).minutes}
+
+                       
+                      </Text>
                     </View>
                   </View>
                 )
