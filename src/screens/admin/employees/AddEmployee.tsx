@@ -2,7 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { cn } from "@/lib/utils"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button";
-import { PenIcon } from "lucide-react";
+import { PenIcon, User2Icon } from "lucide-react";
 import { Input } from "@/components/ui/input"
 import {  useState } from "react";
 import axios from '../../../plugin/axios';
@@ -10,32 +10,36 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "
 import Swal from 'sweetalert2'
 
 
-function EditProfile({employee, getAllUsers, departments}:any) {
+function AddEmployee({getAllUsers, departments}:any) {
 
     const [dialogOpen, setDialogOpen] = useState(false); // State to control the dialog visibility
     const [employees, setEmployees] = useState<any>({
-      
-    })
+    "birthday": "",
+    "city": "",
+    "deptid":1 ,
+    "email": "",
+    "email2": "",
+    "full_name": "",
+    "hiredday": "",
+    "job_title": "",
+    "ophone": "",
+    "sex": "",
+    "state": null,
+    "status": 1,
+    "street": "",
+    "zip": "",
+    "password": "@user322w"
+})
 
-    const convertDate1 = (date:any) => {
-      if (!date) return '';
-      const d = new Date(date);
-      const month = (`0${d.getMonth() + 1}`).slice(-2);
-      const day = (`0${d.getDate()}`).slice(-2);
-      const year = d.getFullYear();
-      return `${year}-${month}-${day}`;
-    };
   
    
    function updateUser() {
-    axios.put(`users/update/${employees.uid}/`,{
-      birthday: employees.birthday,
+    axios.post(`users/bulk/`,[{
       city: employees.city,
       deptid: employees.deptid,
       email: employees.email,
       email2: employees.email2,
       full_name: employees.full_name,
-      hiredday:  employees.hiredday,
       job_title: employees.job_title,
       ophone: employees.ophone,
       sex: employees.sex,
@@ -43,8 +47,9 @@ function EditProfile({employee, getAllUsers, departments}:any) {
       status: employees.status,
       street:employees.street,
       employee_id: employees.employee_id,
-      zip: employees.zip
-    },{
+      zip: employees.zip,
+      password:"@user322w"
+    }],{
       headers: {
           Authorization: `Token ${localStorage.getItem("accessToken")}`,
       },
@@ -75,14 +80,15 @@ function EditProfile({employee, getAllUsers, departments}:any) {
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
                 
-                    <PenIcon onClick={()=>{
-                  setEmployees(employee)
-                }}  className="h-4 w-4 text-primary cursor-pointer"/>
-              
+                  
+
+                <Button className=" flex items-center ">
+                  <User2Icon className="h-4 w-4 mr-2" />
+                  Add Employee</Button>
             </DialogTrigger>
             <DialogContent className="sm:w-[90%] xxs:w-[90%] rounded-md ">
               <DialogHeader>
-                <DialogTitle className="text-start text-primary" >Edit profile</DialogTitle>
+                <DialogTitle className="text-start text-primary" >Add Employee</DialogTitle>
                     {/* <DialogDescription className="text-start">
                     Make changes to your profile here. Click save when you're done.
                     </DialogDescription> */}
@@ -92,19 +98,19 @@ function EditProfile({employee, getAllUsers, departments}:any) {
                updateUser()}}>
                 <div className="grid gap-2">
                     <Label htmlFor="ID ">Employee ID</Label>
-                    <Input type="text" id="text" value={employees.employee_id}onChange={(e:any)=>{
+                    <Input type="text" required id="text" className=" uppercase" value={employees.employee_id}onChange={(e:any)=>{
                     setEmployees({...employees,employee_id:e.target.value})
                 }} />
                 </div>
                 <div className="grid gap-2">
                     <Label htmlFor="email ">Email</Label>
-                    <Input type="email" id="email" value={employees.email}onChange={(e:any)=>{
+                    <Input type="email" required id="email" value={employees.email}onChange={(e:any)=>{
                     setEmployees({...employees,email:e.target.value})
                 }} />
                 </div>
                 <div className="grid gap-2">
-                    <Label htmlFor="fullname">Full name</Label>
-                    <Input id="fullname" value={employees.full_name}onChange={(e:any)=>{
+                    <Label  htmlFor="fullname">Full name</Label>
+                    <Input id="fullname" required value={employees.full_name}onChange={(e:any)=>{
                     setEmployees({...employees,full_name:e.target.value})
                 }} />
                 </div>
@@ -151,7 +157,7 @@ function EditProfile({employee, getAllUsers, departments}:any) {
                 
                 <div className="grid gap-2">
                     <Label htmlFor="office">Office</Label>
-                    <Select value={employees.deptid} onValueChange={(value) => { 
+                    <Select required value={employees.deptid} onValueChange={(value) => { 
                       setEmployees({...employees,deptid:parseInt(value)}) }}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select office" />
@@ -174,13 +180,14 @@ function EditProfile({employee, getAllUsers, departments}:any) {
                 </div>
 
                 <div className="grid gap-2">
-                    <Label htmlFor="birthday">Birthday</Label>
+                    <Label htmlFor="birthday">Password</Label>
                     <Input 
                       id="birthday" 
-                      type="date" 
-                      value={convertDate1(employees.birthday)} 
+                      type="password" 
+                      required
+                      value={employees.password } // Default password if not set
                       onChange={(e) => {
-                        setEmployees({ ...employees, birthday: e.target.value });
+                        setEmployees({ ...employees, password: e.target.value });
                       }} 
                     />
                 </div>
@@ -204,4 +211,4 @@ function EditProfile({employee, getAllUsers, departments}:any) {
   )
 }
 
-export default EditProfile
+export default AddEmployee

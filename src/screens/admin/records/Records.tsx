@@ -200,7 +200,7 @@ function Records() {
   }).then((result) => {
     if (result.isConfirmed) {
       // Proceed with the axios request
-      axios.post('checkinoutregion/bulk/', data, {
+      axios.post('checkinoutmisor/bulk/', data, {
         headers: {
           Authorization: `Token ${localStorage.getItem("accessToken")}`,
         },

@@ -1,12 +1,15 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import Swal from 'sweetalert2';
 
 import { useEffect, useState } from "react";
 import axios from '../../../plugin/axios';
 import ViewButton from "./ViewButton";
 import EditProfile from "./EditProfile";
-import { ListIcon, Search } from "lucide-react";
+import { ListIcon, Search, Trash2Icon } from "lucide-react";
 import { getDepartmentName } from "@/helper/department";
 import { convertStatus } from "@/helper/convert-status";
+import { Button } from "@/components/ui/button";
+import AddEmployee from "./AddEmployee";
 
 function EmployeeTable() {
     const [employees, setEmployees] = useState<any>([]);
@@ -60,7 +63,42 @@ function EmployeeTable() {
         return matchesSearchTerm;
     }) : [];
 
-
+    const handleDelete = (employee: any) => {
+      Swal.fire({
+        title: 'Are you sure?',
+        text: `Do you want to delete ${employee.full_name}'s account?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: 'Yes, delete it!'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // Add your delete API call here
+          axios.delete(`users/delete/${employee.uid}/`, {
+            headers: {
+              Authorization: `Token ${localStorage.getItem("accessToken")}`,
+            },
+          })
+          .then(() => {
+            Swal.fire(
+              'Deleted!',
+              'Account has been deleted.',
+              'success'
+            );
+            usersAll(); // Refresh the table
+          })
+          .catch((error) => {
+            Swal.fire(
+              'Error!',
+              'Failed to delete account.',
+              'error'
+            );
+            console.error("Delete error:", error);
+          });
+        }
+      });
+    };
 
     return (
         
@@ -87,14 +125,16 @@ function EmployeeTable() {
                 </div>
                 
 
-                <div></div>
+                <div>
+                    <AddEmployee  departments={departments} getAllUsers={usersAll} />
+                </div>
             </div>
           
             <div className="  ">
                 <Table >
                     <TableHeader>
                         <TableRow>
-                            <TableHead className="w-[30px] border border-border text-white sticky top-0 bg-primary text-md ">No.</TableHead>
+                            <TableHead className="w-[30px] border border-border text-white sticky top-0 bg-primary text-md ">ID</TableHead>
                             <TableHead className="text-white border border-border text-md sticky top-0 bg-primary cursor-pointer">Employee</TableHead>
                             <TableHead className="text-white border border-border text-md sticky top-0 bg-primary cursor-pointer">Office</TableHead>
                             <TableHead className="text-white border border-border text-md sticky top-0 bg-primary cursor-pointer">Status</TableHead>
@@ -105,7 +145,7 @@ function EmployeeTable() {
                     <TableBody>
                         {filteredEmployee.length  !== 0 ? filteredEmployee.map((employee: any, index: any) => (
                             <TableRow key={index} className="border border-border">
-                                <TableCell >{index +1}</TableCell>
+                                <TableCell >{employee?.employee_id}</TableCell>
                                 <TableCell >{employee?.full_name}</TableCell>
                                 <TableCell >{getDepartmentName(employee.deptid)}</TableCell>
                                 <TableCell >{convertStatus(employee?.status)}</TableCell>
@@ -114,6 +154,11 @@ function EmployeeTable() {
                                     <ViewButton employee={employee} activityId={employee.uid} />
                                     
                                     <EditProfile employee={employee} departments={departments} getAllUsers={usersAll}  />
+
+                                    <Trash2Icon 
+                                      className="h-4 w-4 text-red-500 cursor-pointer hover:text-red-300" 
+                                      onClick={() => handleDelete(employee)} 
+                                    />
                                 </div>
                                 
                                 </TableCell>
