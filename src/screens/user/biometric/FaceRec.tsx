@@ -34,7 +34,7 @@ function isWithinRadius(
   currentLon: number,
   targetLat: number,
   targetLon: number,
-  radiusKm: number = 1.5
+  radiusKm: number = 0.15
 ): { isNearby: boolean; distance: number } {
   const distance = calculateDistance(
     currentLat,
@@ -304,11 +304,11 @@ function FaceRec() {
           if (isRecognized && smiling) {
             setLivelinessStatus("passed");
             setLivelinessMessage(
-              "Liveliness confirmed: Recognized and smiling!"
+              "Nice Smile!😉"
             );
           } else if (isRecognized && !smiling) {
             setLivelinessStatus("pending");
-            setLivelinessMessage("Please smile to verify liveliness.");
+            setLivelinessMessage("Please smile.");
           } else {
             setLivelinessStatus("pending");
             setLivelinessMessage("Face not recognized.");
@@ -327,7 +327,7 @@ function FaceRec() {
     };
 
     // Use interval instead of requestAnimationFrame for better performance
-    detectionIntervalRef.current = setInterval(detectFaces, 500); // Run every 500ms instead of every frame
+    detectionIntervalRef.current = setInterval(detectFaces, 200); // Run every 500ms instead of every frame
   }, []);
 
   // Optimized data fetching
@@ -533,7 +533,7 @@ function FaceRec() {
           </p>
           <p className="ml-4 text-sm italic text-foreground ">
             You are currently <span className=" ">{proximityStatus}</span>
-            {locationStatus}
+            
           </p>
         </div>
         <div className="flex flex-col items-center justify-center mt-10 sm:mt-4">
@@ -546,48 +546,14 @@ function FaceRec() {
 
           {true ? (
             <div className="flex w-full justify-center mt-10">
-              <div className=" flex self-center   w-[80%] sm:w-[90%] sm:h-[50vh]  h-[60vh] bg-border border round">
-                <div className=" border border-border  flex flex-col gap-5 items-center justify-center h-full w-full relative ">
-                  <p className=" absolute bottom-0 left-0 p-4 justify-start justify-self-start text-secondary-foreground ">
-                    Biometric Status: &nbsp;
-                    <span
-                      className={
-                        status == "Running"
-                          ? "  justify-end justify-self-end text-green-600"
-                          : " text-red-500 justify-end justify-self-end"
-                      }
-                    >
-                      {status}
-                    </span>
-                  </p>
+              <div className={livelinessStatus === "passed" && locationStatus === "ok" ? " flex self-center   w-[80%] sm:w-[90%] sm:h-[40vh]  h-[50vh] bg-border border border-5 border-green-500 rounded-md " :" flex self-center   w-[80%] sm:w-[90%] sm:h-[40vh]  h-[50vh] bg-border border rounded-md "}>
+                <div className="   flex flex-col gap-5 items-center justify-center h-full w-full relative ">
+                
 
-                  <RotateCcwIcon
-                    className={
-                      camera == "user"
-                        ? " absolute bottom-0 z-40 cursor-pointer m-5 sm:right-0  justify-end justify-self-end text-foreground rotate-180 transition-all duration-700 col-span-1 "
-                        : " absolute bottom-0 sm:right-0 z-40 cursor-pointer m-5  justify-end justify-self-end text-foreground col-span-1  rotate-0 transition-all duration-700"
-                    }
-                    onClick={() => {
-                      setCamera((prevState) =>
-                        prevState === "user" ? "environment" : "user"
-                      );
-                    }}
-                  />
+                  
 
                   <div className=" overflow-hidden w-full max-w-[500px] h-[500px] relative flex">
-                    <div className="w-full absolute top-0 max-w-[500px]">
-                      <div className="text-center my-2">
-                        <span
-                          className={
-                            livelinessStatus === "passed"
-                              ? "text-green-600"
-                              : "text-yellow-600"
-                          }
-                        >
-                          {livelinessMessage}
-                        </span>
-                      </div>
-                    </div>
+                  
 
                    
 <div className=" ml-2 mt-5 absolute gap-2 text-primary col-span-1 flex flex-col ">
@@ -637,6 +603,50 @@ function FaceRec() {
             </div>
           )}
 
+
+         
+            <div className=" relative  grid grid-cols-3 justify-center  w-[80%] items-center   h-full">
+
+                        <p className=" relative bottom-0 left-0 p-4 z-[999] justify-start justify-self-start  sm:text-sm  text-secondary-foreground ">
+                     Status: &nbsp;
+                      <span
+                        className={
+                          status == "Running"
+                            ? "  justify-end justify-self-end z-[999] text-green-600"
+                            : " text-red-500 justify-end z-[999] justify-self-end"
+                        }
+                      >
+                        {status}
+                      </span>
+                    </p>
+                        <RotateCcwIcon
+                    className={
+                      camera == "user"
+                        ? "   cursor-pointer m-5 text-foreground justify-center self-center justify-self-center rotate-180 transition-all duration-700 col-span-1 "
+                        : " justify-center self-center justify-self-center cursor-pointer m-5 text-foreground col-span-1  rotate-0 transition-all duration-700"
+                    }
+                    onClick={() => {
+                      setCamera((prevState) =>
+                        prevState === "user" ? "environment" : "user"
+                      );
+                    }}
+                  />
+
+
+
+              
+                        <span
+                          className={
+                            livelinessStatus === "passed"
+                              ? "text-green-600 sm:text-sm justify-self-end"
+                              : "text-yellow-600 sm:text-sm  justify-self-end"
+                          }
+                        >
+                          {livelinessMessage}
+                        </span>
+                     
+                    </div>
+         
           <div className=" mt-10 flex gap-6  justify-center">
             <Button
               className={
