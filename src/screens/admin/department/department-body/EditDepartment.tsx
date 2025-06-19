@@ -126,7 +126,7 @@ function EditDepartment({ deptData, fetchData }: { deptData: DepartmentData; fet
           {/* office section */}
           <div className="flex flex-col gap-2">
             <div className="flex justify-between items-center">
-              <p className="text-foreground">office Names</p>
+              <p className="text-foreground">office Coordinates</p>
               <Button 
                 type="button" 
                 variant="outline" 
@@ -143,7 +143,7 @@ function EditDepartment({ deptData, fetchData }: { deptData: DepartmentData; fet
                   value={office}
                   onChange={(e) => updateoffice(index, e.target.value)}
                   className="text-foreground"
-                  placeholder="Enter office name"
+                  placeholder="Enter office coordinates"
                 />
                 <Button 
                   type="button"

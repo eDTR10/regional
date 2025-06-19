@@ -1,3 +1,5 @@
+type LocationStatus = "ok" | "error" | null;
+
 import { Button } from "@/components/ui/button";
 import Swal from "sweetalert2";
 import * as faceapi from "face-api.js";
@@ -29,33 +31,50 @@ function calculateDistance(
   return distance;
 }
 
-function isWithinRadius(
-  currentLat: number,
-  currentLon: number,
-  targetLat: number,
-  targetLon: number,
-  radiusKm: number = 0.15
-): { isNearby: boolean; distance: number } {
-  const distance = calculateDistance(
-    currentLat,
-    currentLon,
-    targetLat,
-    targetLon
-  );
-  return {
-    isNearby: distance <= radiusKm,
-    distance: distance,
-  };
-}
+
 
 function isSmiling(expressions: any) {
   return expressions.happy > 0.7;
 }
 
+// Modified isWithinRadius function to handle multiple coordinates
+function isWithinRadiusAny(
+  currentLat: number,
+  currentLon: number,
+  targetLocations: string[],
+  radiusKm: number = 0.15
+): { isNearby: boolean; distance: number; nearestLocation: string } {
+  let minDistance = Infinity;
+  let isNearAny = false;
+  let nearestLocation = "";
+
+  targetLocations.forEach((location) => {
+    const [targetLat, targetLon] = location
+      .split(",")
+      .map((coord) => parseFloat(coord.trim()));
+    const distance = calculateDistance(currentLat, currentLon, targetLat, targetLon);
+
+    if (distance <= radiusKm) {
+      isNearAny = true;
+    }
+
+    if (distance < minDistance) {
+      minDistance = distance;
+      nearestLocation = location;
+    }
+  });
+
+  return {
+    isNearby: isNearAny,
+    distance: minDistance,
+    nearestLocation,
+  };
+}
+
 function FaceRec() {
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [isModelsLoaded, setIsModelsLoaded] = useState(false);
- 
+
   const [faces, setFaces] = useState<any[]>([]);
 
   // Memoize user data to avoid repeated parsing
@@ -67,7 +86,7 @@ function FaceRec() {
   );
 
   const fullName = userObject.current?.full_name;
-  const [locationStatus, setLocationStatus] = useState<any>(null);
+  const [locationStatus, setLocationStatus] = useState<LocationStatus>(null);
   const [proximityStatus, setProximityStatus] = useState<string | null>(null);
   const [livelinessStatus, setLivelinessStatus] = useState<
     "pending" | "passed" | "failed"
@@ -80,7 +99,7 @@ function FaceRec() {
   const MODEL_URL = "/regional/models";
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [camera, setCamera] = useState("environment");
+  const [camera, setCamera] = useState("user");
   const [name, setName] = useState<any[]>([]);
   const [persons, setPersons] = useState([
     {
@@ -93,77 +112,85 @@ function FaceRec() {
   const requestAnimationFrameId = useRef<number>();
   const detectionIntervalRef = useRef<NodeJS.Timeout>();
   const faceMatcher = useRef<faceapi.FaceMatcher | null>(null);
+  const locationIntervalRef = useRef<NodeJS.Timeout>();
 
   // Optimized coordinate parsing with memoization
-  const getCoordinates = useCallback((locationArray: any[]) => {
-    if (!locationArray || locationArray.length === 0) return null;
 
-    const [coordinates] = locationArray;
-    const [latitude, longitude] = coordinates.split(",").map(Number);
 
-    return {
-      latitude: parseFloat(latitude.toFixed(6)),
-      longitude: parseFloat(longitude.toFixed(6)),
-    };
-  }, []);
+  // Optimize handleGetLocation to use the latest locations
+  const handleGetLocation = useCallback((locations: string[]) => {
+    const checkLocation = () => {
 
-  // Debounced location handler
-  const handleGetLocation = useCallback((data1: any, data2: any) => {
-    if (!navigator.geolocation) {
-      setProximityStatus(null);
-      Swal.fire({
-        icon: "error",
-        title: "Geolocation Not Supported",
-        text: "Your browser does not support geolocation.",
-        confirmButtonColor: "#3085d6",
-      });
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        const { isNearby, distance } = isWithinRadius(
-          latitude,
-          longitude,
-          data1,
-          data2
-        );
-
-        if (isNearby) {
-          setProximityStatus(
-            `✅ Within office range! (${distance.toFixed(2)} km)`
-          );
-          setLocationStatus("ok");
-        } else {
-          setProximityStatus(
-            `❌ Outside office range (${distance.toFixed(2)} km from office)`
-          );
-          setLocationStatus(false);
-        }
-      },
-      (error) => {
+    console.log("Checking location...");
+      if (!navigator.geolocation) {
         setProximityStatus(null);
-
-        const errorMessages = {
-          [error.PERMISSION_DENIED]:
-            "Please enable location access in your browser settings. Or browse to you destop settings and enable location access.",
-          [error.POSITION_UNAVAILABLE]: "Location information is unavailable.",
-          [error.TIMEOUT]: "Location request timed out.",
-        };
-
-        const errorMessage =
-          errorMessages[error.code as keyof typeof errorMessages] ||
-          "An unknown error occurred.";
-
+        setLocationStatus("error");
         Swal.fire({
           icon: "error",
-          title: "Location Error",
-          text: errorMessage,
+          title: "Geolocation Not Supported",
+          text: "Your browser does not support geolocation.",
           confirmButtonColor: "#3085d6",
         });
+        return;
       }
-    );
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          const { isNearby, distance } = isWithinRadiusAny(
+            latitude,
+            longitude,
+            locations
+          );
+
+          setProximityStatus(
+            isNearby
+              ? `✅ Within office range! (${distance.toFixed(2)} km)`
+              : `❌ Outside office range (${distance.toFixed(2)} km from nearest office)`
+          );
+          setLocationStatus(isNearby ? "ok" : "error");
+        },
+        (error) => {
+          setProximityStatus(null);
+          setLocationStatus("error");
+
+          const errorMessages = {
+            [error.PERMISSION_DENIED]:
+              "Please enable location access in your browser settings. Or browse to you destop settings and enable location access.",
+            [error.POSITION_UNAVAILABLE]: "Location information is unavailable.",
+            [error.TIMEOUT]: "Location request timed out.",
+          };
+
+          const errorMessage =
+            errorMessages[error.code as keyof typeof errorMessages] ||
+            "An unknown error occurred.";
+
+          Swal.fire({
+            icon: "error",
+            title: "Location Error",
+            text: errorMessage,
+            confirmButtonColor: "#3085d6",
+          });
+        },
+        // Add options for better accuracy
+        {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 0
+        }
+      );
+    };
+
+    // Clear any existing interval
+    if (locationIntervalRef.current) {
+      clearInterval(locationIntervalRef.current);
+    }
+
+    // Initial check
+    checkLocation();
+
+    // Set up interval for checking location every 10 seconds
+    locationIntervalRef.current = setInterval(checkLocation, 10000);
   }, []);
 
   // Optimized model loading with better error handling
@@ -273,7 +300,9 @@ function FaceRec() {
         );
 
         // Clear canvas
-        const ctx = canvas.getContext("2d");
+        const ctx = canvasRef.current.getContext("2d", {
+          willReadFrequently: true
+        });
         if (ctx) {
           ctx.clearRect(0, 0, displaySize.width, displaySize.height);
         }
@@ -303,9 +332,7 @@ function FaceRec() {
 
           if (isRecognized && smiling) {
             setLivelinessStatus("passed");
-            setLivelinessMessage(
-              "Nice Smile!😉"
-            );
+            setLivelinessMessage("Nice Smile!😉");
           } else if (isRecognized && !smiling) {
             setLivelinessStatus("pending");
             setLivelinessMessage("Please smile.");
@@ -330,7 +357,7 @@ function FaceRec() {
     detectionIntervalRef.current = setInterval(detectFaces, 200); // Run every 500ms instead of every frame
   }, []);
 
-  // Optimized data fetching
+  // Optimize fetchData to handle errors better
   const fetchData = useCallback(async () => {
     try {
       const response = await axios.get("users/userDetails", {
@@ -341,40 +368,38 @@ function FaceRec() {
 
       const data = response.data;
 
-      if (data?.description) {
-        const faceData = [
-          {
-            label: data.full_name,
-            descriptors: data.description,
-          },
-        ];
+      if (!data?.description) {
+        throw new Error("No face description data in API response");
+      }
 
-        const personData = [
-          {
-            id: data.full_name,
-            name: data.full_name,
-            position: data.job_title,
-          },
-        ];
+      const faceData = [{
+        label: data.full_name,
+        descriptors: data.description,
+      }];
 
-        setFaces(faceData);
-        setPersons(personData);
-        setIsDataLoaded(true);
+      const personData = [{
+        id: data.full_name,
+        name: data.full_name,
+        position: data.job_title,
+      }];
 
-        // Handle location
-        const coordinates = getCoordinates(data.location);
-        if (coordinates) {
-          handleGetLocation(coordinates.latitude, coordinates.longitude);
-        }
+      setFaces(faceData);
+      setPersons(personData);
+      setIsDataLoaded(true);
+
+      // Handle multiple locations
+      if (data.location?.length > 0) {
+        handleGetLocation(data.location);
       } else {
-        console.error("No face description data in API response");
-        setStatus("No face data available");
+        setProximityStatus("❌ No office locations configured");
+        setLocationStatus("error");
       }
     } catch (error: any) {
       console.error("Error fetching data:", error);
-      setStatus("Error loading face data");
+      setStatus(error.message || "Error loading face data");
+      setLocationStatus("error");
     }
-  }, [getCoordinates, handleGetLocation]);
+  }, [handleGetLocation]);
 
   // Initialize everything when data is loaded
   useEffect(() => {
@@ -401,10 +426,10 @@ function FaceRec() {
 
           if (permissionStatus.state === "granted") {
             fetchData();
-            setLocationStatus(true)
+            setLocationStatus("ok");
           } else if (permissionStatus.state === "denied") {
             setProximityStatus("❌ Location access denied.");
-            setLocationStatus(false);
+            setLocationStatus("error");
             fetchData(); // Still fetch face data even without location
           } else {
             setProximityStatus("❓ Location access not determined.");
@@ -435,18 +460,22 @@ function FaceRec() {
         videoRef.current.srcObject = null;
       }
 
-      // Clear intervals and animation frames
+      // Clear all intervals
       if (detectionIntervalRef.current) {
         clearInterval(detectionIntervalRef.current);
       }
-
+      if (locationIntervalRef.current) {
+        clearInterval(locationIntervalRef.current);
+      }
       if (requestAnimationFrameId.current) {
         cancelAnimationFrame(requestAnimationFrameId.current);
       }
 
       // Clear canvas
       if (canvasRef.current) {
-        const ctx = canvasRef.current.getContext("2d");
+        const ctx = canvasRef.current.getContext("2d", {
+          willReadFrequently: true
+        });
         if (ctx) {
           ctx.clearRect(
             0,
@@ -454,10 +483,15 @@ function FaceRec() {
             canvasRef.current.width,
             canvasRef.current.height
           );
-        }   
+        }
       }
 
       setStatus("Stopped");
+      Swal.fire({
+        title: "Session Ended",
+        text: "Your biometric session has ended. Try refreshing the page to start a new session.",
+        icon: "info",
+        confirmButtonColor: "#3085d6",})
     };
   }, []);
 
@@ -480,9 +514,7 @@ function FaceRec() {
     const message = action === "in" ? "clocked in" : "clocked out";
     const currentTime = getCurrentISOTime();
 
-  
-
-         axios
+    axios
       .post(
         "checkinoutregion/create/",
         {
@@ -515,13 +547,6 @@ function FaceRec() {
           confirmButtonColor: "#d33",
         });
       });
-    
-
-    
-
-   
-
-
   }, []);
 
   return (
@@ -532,8 +557,8 @@ function FaceRec() {
             Hello, {fullName}! 👋
           </p>
           <p className="ml-4 text-sm italic text-foreground ">
-            You are currently <span className=" ">{proximityStatus}</span>
-            
+            You are currently{" "}
+            <span className=" ">{proximityStatus}</span>
           </p>
         </div>
         <div className="flex flex-col items-center justify-center mt-10 sm:mt-4">
@@ -546,33 +571,36 @@ function FaceRec() {
 
           {true ? (
             <div className="flex w-full justify-center mt-10">
-              <div className={livelinessStatus === "passed" && locationStatus === "ok" ? " flex self-center   w-[80%] sm:w-[90%] sm:h-[40vh]  h-[50vh] bg-border border border-5 border-green-500 rounded-md " :" flex self-center   w-[80%] sm:w-[90%] sm:h-[40vh]  h-[50vh] bg-border border rounded-md "}>
+              <div
+                className={
+                  livelinessStatus === "passed" && locationStatus === "ok"
+                    ? " flex self-center   w-[80%] sm:w-[90%] sm:h-[40vh]  h-[50vh] bg-border border border-5 border-green-500 rounded-md "
+                    : " flex self-center   w-[80%] sm:w-[90%] sm:h-[40vh]  h-[50vh] bg-border border rounded-md "
+                }
+              >
                 <div className="   flex flex-col gap-5 items-center justify-center h-full w-full relative ">
-                
-
-                  
-
                   <div className=" overflow-hidden w-full max-w-[500px] h-[500px] relative flex">
-                  
-
-                   
-<div className=" ml-2 mt-5 absolute gap-2 text-primary col-span-1 flex flex-col ">
-  {name &&
-    name.map((response: any, key: any) => {
-      const matchedData = persons.find(
-        (item) => item.id === response._label
-      );
-      return (
-        <div
-          key={key}
-          className=" text-sm bg-card/50 backdrop-blur-md p-2 rounded-md"
-        >
-          <h3>{matchedData ? matchedData.name : 'Unknown'}</h3>
-          <p>{matchedData ? matchedData.position : 'Unrecognized Person'}</p>
-        </div>
-      );
-    })}
-</div>
+                    <div className=" ml-2 mt-5 absolute gap-2 text-primary col-span-1 flex flex-col ">
+                      {name &&
+                        name.map((response: any, key: any) => {
+                          const matchedData = persons.find(
+                            (item) => item.id === response._label
+                          );
+                          return (
+                            <div
+                              key={key}
+                              className=" text-sm bg-card/50 backdrop-blur-md p-2 rounded-md"
+                            >
+                              <h3>{matchedData ? matchedData.name : "Unknown"}</h3>
+                              <p>
+                                {matchedData
+                                  ? matchedData.position
+                                  : "Unrecognized Person"}
+                              </p>
+                            </div>
+                          );
+                        })}
+                    </div>
 
                     <video
                       crossOrigin="anonymous"
@@ -603,50 +631,43 @@ function FaceRec() {
             </div>
           )}
 
+          <div className=" relative  grid grid-cols-3 justify-center  w-[80%] items-center   h-full">
+            <p className=" relative bottom-0 left-0 p-4 z-[999] justify-start justify-self-start  sm:text-sm  text-secondary-foreground ">
+              Status: &nbsp;
+              <span
+                className={
+                  status == "Running"
+                    ? "  justify-end justify-self-end z-[999] text-green-600"
+                    : " text-red-500 justify-end z-[999] justify-self-end"
+                }
+              >
+                {status}
+              </span>
+            </p>
+            <RotateCcwIcon
+              className={
+                camera == "user"
+                  ? "   cursor-pointer m-5 text-foreground justify-center self-center justify-self-center rotate-180 transition-all duration-700 col-span-1 "
+                  : " justify-center self-center justify-self-center cursor-pointer m-5 text-foreground col-span-1  rotate-0 transition-all duration-700"
+              }
+              onClick={() => {
+                setCamera((prevState) =>
+                  prevState === "user" ? "environment" : "user"
+                );
+              }}
+            />
 
-         
-            <div className=" relative  grid grid-cols-3 justify-center  w-[80%] items-center   h-full">
+            <span
+              className={
+                livelinessStatus === "passed"
+                  ? "text-green-600 sm:text-sm justify-self-end"
+                  : "text-yellow-600 sm:text-sm  justify-self-end"
+              }
+            >
+              {livelinessMessage}
+            </span>
+          </div>
 
-                        <p className=" relative bottom-0 left-0 p-4 z-[999] justify-start justify-self-start  sm:text-sm  text-secondary-foreground ">
-                     Status: &nbsp;
-                      <span
-                        className={
-                          status == "Running"
-                            ? "  justify-end justify-self-end z-[999] text-green-600"
-                            : " text-red-500 justify-end z-[999] justify-self-end"
-                        }
-                      >
-                        {status}
-                      </span>
-                    </p>
-                        <RotateCcwIcon
-                    className={
-                      camera == "user"
-                        ? "   cursor-pointer m-5 text-foreground justify-center self-center justify-self-center rotate-180 transition-all duration-700 col-span-1 "
-                        : " justify-center self-center justify-self-center cursor-pointer m-5 text-foreground col-span-1  rotate-0 transition-all duration-700"
-                    }
-                    onClick={() => {
-                      setCamera((prevState) =>
-                        prevState === "user" ? "environment" : "user"
-                      );
-                    }}
-                  />
-
-
-
-              
-                        <span
-                          className={
-                            livelinessStatus === "passed"
-                              ? "text-green-600 sm:text-sm justify-self-end"
-                              : "text-yellow-600 sm:text-sm  justify-self-end"
-                          }
-                        >
-                          {livelinessMessage}
-                        </span>
-                     
-                    </div>
-         
           <div className=" mt-10 flex gap-6  justify-center">
             <Button
               className={
