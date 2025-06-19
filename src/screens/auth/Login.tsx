@@ -75,7 +75,7 @@ function Login() {
                         ]).then((e: any) => {
                             if (e.data.auth_token) {
                                 localStorage.setItem("accessToken", e.data.auth_token)
-                                return axios.get('users/me/', {
+                                return axios.get('users/userDetails/', {
                                     headers: {
                                         Authorization: `Token ${e.data.auth_token}`,
                                     },

@@ -55,20 +55,27 @@ function isSmiling(expressions: any) {
 function FaceRec() {
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [isModelsLoaded, setIsModelsLoaded] = useState(false);
+ 
   const [faces, setFaces] = useState<any[]>([]);
-  
+
   // Memoize user data to avoid repeated parsing
-  const userObject = useRef((() => {
-    const userJson = localStorage.getItem("user");
-    return userJson ? JSON.parse(userJson) : null;
-  })());
-  
+  const userObject = useRef(
+    (() => {
+      const userJson = localStorage.getItem("user");
+      return userJson ? JSON.parse(userJson) : null;
+    })()
+  );
+
   const fullName = userObject.current?.full_name;
   const [locationStatus, setLocationStatus] = useState<any>(null);
   const [proximityStatus, setProximityStatus] = useState<string | null>(null);
-  const [livelinessStatus, setLivelinessStatus] = useState<"pending" | "passed" | "failed">("pending");
-  const [livelinessMessage, setLivelinessMessage] = useState<string>("Please blink or smile to verify liveliness");
-  
+  const [livelinessStatus, setLivelinessStatus] = useState<
+    "pending" | "passed" | "failed"
+  >("pending");
+  const [livelinessMessage, setLivelinessMessage] = useState<string>(
+    "Please blink or smile to verify liveliness"
+  );
+
   const [status, setStatus] = useState("Loading...");
   const MODEL_URL = "/regional/models";
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -94,9 +101,9 @@ function FaceRec() {
     const [coordinates] = locationArray;
     const [latitude, longitude] = coordinates.split(",").map(Number);
 
-    return { 
-      latitude: parseFloat(latitude.toFixed(6)), 
-      longitude: parseFloat(longitude.toFixed(6)) 
+    return {
+      latitude: parseFloat(latitude.toFixed(6)),
+      longitude: parseFloat(longitude.toFixed(6)),
     };
   }, []);
 
@@ -116,26 +123,38 @@ function FaceRec() {
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
-        const { isNearby, distance } = isWithinRadius(latitude, longitude, data1, data2);
-        
+        const { isNearby, distance } = isWithinRadius(
+          latitude,
+          longitude,
+          data1,
+          data2
+        );
+
         if (isNearby) {
-          setProximityStatus(`✅ Within office range! (${distance.toFixed(2)} km)`);
+          setProximityStatus(
+            `✅ Within office range! (${distance.toFixed(2)} km)`
+          );
           setLocationStatus("ok");
         } else {
-          setProximityStatus(`❌ Outside office range (${distance.toFixed(2)} km from office)`);
+          setProximityStatus(
+            `❌ Outside office range (${distance.toFixed(2)} km from office)`
+          );
           setLocationStatus(false);
         }
       },
       (error) => {
         setProximityStatus(null);
-        
+
         const errorMessages = {
-          [error.PERMISSION_DENIED]: "Please enable location access in your browser settings. Or browse to you destop settings and enable location access.",
+          [error.PERMISSION_DENIED]:
+            "Please enable location access in your browser settings. Or browse to you destop settings and enable location access.",
           [error.POSITION_UNAVAILABLE]: "Location information is unavailable.",
           [error.TIMEOUT]: "Location request timed out.",
         };
 
-        const errorMessage = errorMessages[error.code as keyof typeof errorMessages] || "An unknown error occurred.";
+        const errorMessage =
+          errorMessages[error.code as keyof typeof errorMessages] ||
+          "An unknown error occurred.";
 
         Swal.fire({
           icon: "error",
@@ -160,10 +179,10 @@ function FaceRec() {
         faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
         faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
       ]);
-      
+
       setIsModelsLoaded(true);
       console.log("Face models loaded successfully");
-      
+
       if (isDataLoaded && faces.length > 0) {
         await initializeFaceMatcher();
         startFaceDetection();
@@ -185,7 +204,7 @@ function FaceRec() {
           return new faceapi.LabeledFaceDescriptors(label.label, descriptions);
         })
       );
-      
+
       faceMatcher.current = new faceapi.FaceMatcher(labeledFaceDescriptors);
     } catch (error) {
       console.error("Error initializing face matcher:", error);
@@ -198,14 +217,14 @@ function FaceRec() {
       // Stop existing stream
       if (videoRef.current?.srcObject) {
         const stream = videoRef.current.srcObject as MediaStream;
-        stream.getTracks().forEach(track => track.stop());
+        stream.getTracks().forEach((track) => track.stop());
         videoRef.current.srcObject = null;
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: camera } 
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: camera },
       });
-      
+
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         // Wait for video to be ready before loading models
@@ -232,19 +251,26 @@ function FaceRec() {
 
     const detectFaces = async () => {
       try {
-        if (!videoRef.current || !canvasRef.current || !faceMatcher.current) return;
+        if (!videoRef.current || !canvasRef.current || !faceMatcher.current)
+          return;
 
         const detections = await faceapi
-          .detectAllFaces(videoRef.current, new faceapi.TinyFaceDetectorOptions())
+          .detectAllFaces(
+            videoRef.current,
+            new faceapi.TinyFaceDetectorOptions()
+          )
           .withFaceLandmarks()
           .withFaceDescriptors()
           .withFaceExpressions();
 
         const canvas = canvasRef.current;
         const displaySize = { width: 500, height: 600 };
-        
+
         faceapi.matchDimensions(canvas, displaySize);
-        const resizedDetections = faceapi.resizeResults(detections, displaySize);
+        const resizedDetections = faceapi.resizeResults(
+          detections,
+          displaySize
+        );
 
         // Clear canvas
         const ctx = canvas.getContext("2d");
@@ -253,13 +279,13 @@ function FaceRec() {
         }
 
         if (resizedDetections.length > 0) {
-          const results = resizedDetections.map((d: any) => 
+          const results = resizedDetections.map((d: any) =>
             faceMatcher.current!.findBestMatch(d.descriptor)
           );
 
           // Draw detections
           faceapi.draw.drawDetections(canvas, resizedDetections);
-          
+
           results.forEach((result: any, i: number) => {
             const box = resizedDetections[i].detection.box;
             const drawBox = new faceapi.draw.DrawBox(box, {
@@ -277,7 +303,9 @@ function FaceRec() {
 
           if (isRecognized && smiling) {
             setLivelinessStatus("passed");
-            setLivelinessMessage("Liveliness confirmed: Recognized and smiling!");
+            setLivelinessMessage(
+              "Liveliness confirmed: Recognized and smiling!"
+            );
           } else if (isRecognized && !smiling) {
             setLivelinessStatus("pending");
             setLivelinessMessage("Please smile to verify liveliness.");
@@ -312,19 +340,23 @@ function FaceRec() {
       });
 
       const data = response.data;
-      
+
       if (data?.description) {
-        const faceData = [{
-          label: data.full_name,
-          descriptors: data.description,
-        }];
-        
-        const personData = [{
-          id: data.full_name,
-          name: data.full_name,
-          position: data.job_title,
-        }];
-        
+        const faceData = [
+          {
+            label: data.full_name,
+            descriptors: data.description,
+          },
+        ];
+
+        const personData = [
+          {
+            id: data.full_name,
+            name: data.full_name,
+            position: data.job_title,
+          },
+        ];
+
         setFaces(faceData);
         setPersons(personData);
         setIsDataLoaded(true);
@@ -363,10 +395,13 @@ function FaceRec() {
     const checkPermissionAndFetch = async () => {
       if (navigator.permissions) {
         try {
-          const permissionStatus = await navigator.permissions.query({ name: "geolocation" });
-          
+          const permissionStatus = await navigator.permissions.query({
+            name: "geolocation",
+          });
+
           if (permissionStatus.state === "granted") {
             fetchData();
+            setLocationStatus(true)
           } else if (permissionStatus.state === "denied") {
             setProximityStatus("❌ Location access denied.");
             setLocationStatus(false);
@@ -396,7 +431,7 @@ function FaceRec() {
       // Stop video tracks
       if (videoRef.current?.srcObject) {
         const stream = videoRef.current.srcObject as MediaStream;
-        stream.getTracks().forEach(track => track.stop());
+        stream.getTracks().forEach((track) => track.stop());
         videoRef.current.srcObject = null;
       }
 
@@ -404,7 +439,7 @@ function FaceRec() {
       if (detectionIntervalRef.current) {
         clearInterval(detectionIntervalRef.current);
       }
-      
+
       if (requestAnimationFrameId.current) {
         cancelAnimationFrame(requestAnimationFrameId.current);
       }
@@ -413,72 +448,80 @@ function FaceRec() {
       if (canvasRef.current) {
         const ctx = canvasRef.current.getContext("2d");
         if (ctx) {
-          ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-        }
+          ctx.clearRect(
+            0,
+            0,
+            canvasRef.current.width,
+            canvasRef.current.height
+          );
+        }   
       }
 
       setStatus("Stopped");
     };
   }, []);
 
-const getCurrentISOTime = () => {
-  // Use the local time directly since we're already in PH timezone
-  const now = new Date();
-  
-  // Format the date parts
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  const hours = String(now.getHours()).padStart(2, '0');
-  const minutes = String(now.getMinutes()).padStart(2, '0');
-  const seconds = String(now.getSeconds()).padStart(2, '0');
+  const getCurrentISOTime = () => {
+    // Use the local time directly since we're already in PH timezone
+    const now = new Date();
 
-  // Create ISO string with PH timezonez
-  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}Z`;
-};
+    // Format the date parts
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    const hours = String(now.getHours()).padStart(2, "0");
+    const minutes = String(now.getMinutes()).padStart(2, "0");
+    const seconds = String(now.getSeconds()).padStart(2, "0");
+
+    // Create ISO string with PH timezonez
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}Z`;
+  };
   const handleTimeAction = useCallback((action: "in" | "out") => {
     const message = action === "in" ? "clocked in" : "clocked out";
-
-
     const currentTime = getCurrentISOTime();
 
-    axios.post('checkinoutregion/create/', {
-        "CHECKTIME": currentTime,
-        "CHECKTYPE": action === "in" ? "I" : "o",
-        "VERIFYCODE": JSON.parse(localStorage.getItem("user") || "{}").deptid,
-        "SENSORID": JSON.parse(localStorage.getItem("user") || "{}").deptid
-    },
-{
-        headers: {
-          Authorization: `Token ${localStorage.getItem("accessToken")}`,
+  
+
+         axios
+      .post(
+        "checkinoutregion/create/",
+        {
+          CHECKTIME: currentTime,
+          CHECKTYPE: action === "in" ? "I" : "o",
+          VERIFYCODE: JSON.parse(localStorage.getItem("user") || "{}").deptid,
+          SENSORID: JSON.parse(localStorage.getItem("user") || "{}").deptid,
         },
-      }
-
-).then(() => {
-
-    Swal.fire({
-      title: "Success!",
-      text: `You have successfully ${message}!`,
-      icon: "success",
-      confirmButtonColor: "#3085d6",
-    });
-}
-       
-    
-    
-    )
-      .catch((error) => {  
-
+        {
+          headers: {
+            Authorization: `Token ${localStorage.getItem("accessToken")}`,
+          },
+        }
+      )
+      .then(() => {
+        Swal.fire({
+          title: "Success!",
+          text: `You have successfully ${message}!`,
+          icon: "success",
+          confirmButtonColor: "#3085d6",
+        });
+      })
+      .catch((error) => {
         Swal.fire({
           icon: "error",
-            title: "Error",
-            text: error.response?.data?.detail || "An error occurred while processing your request.",
-            confirmButtonColor: "#d33",
-       })})
-
-
+          title: "Error",
+          text:
+            error.response?.data?.detail ||
+            "An error occurred while processing your request.",
+          confirmButtonColor: "#d33",
+        });
+      });
+    
 
     
+
+   
+
+
   }, []);
 
   return (
@@ -497,72 +540,73 @@ const getCurrentISOTime = () => {
           <p className="text-2xl font-bold sm:text-base text-primary">
             Digital Biometric
           </p>
-          <p className=" text-secondary-foreground text-sm mt-2">Please Smile🙂 To enable the Clock In/Out Button </p>
+          <p className=" text-secondary-foreground text-sm mt-2">
+            Please Smile🙂 To enable the Clock In/Out Button{" "}
+          </p>
 
           {true ? (
             <div className="flex w-full justify-center mt-10">
               <div className=" flex self-center   w-[80%] sm:w-[90%] sm:h-[50vh]  h-[60vh] bg-border border round">
                 <div className=" border border-border  flex flex-col gap-5 items-center justify-center h-full w-full relative ">
-
-                     <p className=" absolute bottom-0 left-0 p-4 justify-start justify-self-start text-secondary-foreground ">
-                        Biometric Status:  &nbsp;
-                      <span
-                        className={
-                          status == "Running"
-                            ? "  justify-end justify-self-end text-green-600"
-                            : " text-red-500 justify-end justify-self-end"
-                        }
-                      >
-                        {status}
-                      </span>
-                    </p>
-
-                    <RotateCcwIcon
+                  <p className=" absolute bottom-0 left-0 p-4 justify-start justify-self-start text-secondary-foreground ">
+                    Biometric Status: &nbsp;
+                    <span
                       className={
-                        camera == "user"
-                          ? " absolute bottom-0 z-40 cursor-pointer m-5 sm:right-0  justify-end justify-self-end text-foreground rotate-180 transition-all duration-700 col-span-1 "
-                          : " absolute bottom-0 sm:right-0 z-40 cursor-pointer m-5  justify-end justify-self-end text-foreground col-span-1  rotate-0 transition-all duration-700"
+                        status == "Running"
+                          ? "  justify-end justify-self-end text-green-600"
+                          : " text-red-500 justify-end justify-self-end"
                       }
-                      onClick={() => {
-                        setCamera(prevState => prevState === "user" ? "environment" : "user");
-                      }}
-                    />
-                    
-                  <div className=" overflow-hidden w-full max-w-[500px] h-[500px] relative flex">
-                        <div className="w-full absolute top-0 max-w-[500px]">
-              <div className="text-center my-2">
-                <span
-                  className={
-                    livelinessStatus === "passed"
-                      ? "text-green-600"
-                      : "text-yellow-600"
-                  }
-                >
-                  {livelinessMessage}
-                </span>
-              </div>
-            </div>
+                    >
+                      {status}
+                    </span>
+                  </p>
 
-                    <div className=" ml-2 mt-5 absolute gap-2 text-primary col-span-1 flex flex-col ">
-                      {name &&
-                        name.map((response: any, key: any) => {
-                          const matchedData = persons.find(
-                            (item) => item.id === response._label
-                          );
-                          if (matchedData) {
-                            return (
-                              <div
-                                key={key}
-                                className=" text-sm bg-card/50 backdrop-blur-md p-2 rounded-md"
-                              >
-                                <h3>{matchedData.name}</h3>
-                                <p>{matchedData.position}</p>
-                              </div>
-                            );
+                  <RotateCcwIcon
+                    className={
+                      camera == "user"
+                        ? " absolute bottom-0 z-40 cursor-pointer m-5 sm:right-0  justify-end justify-self-end text-foreground rotate-180 transition-all duration-700 col-span-1 "
+                        : " absolute bottom-0 sm:right-0 z-40 cursor-pointer m-5  justify-end justify-self-end text-foreground col-span-1  rotate-0 transition-all duration-700"
+                    }
+                    onClick={() => {
+                      setCamera((prevState) =>
+                        prevState === "user" ? "environment" : "user"
+                      );
+                    }}
+                  />
+
+                  <div className=" overflow-hidden w-full max-w-[500px] h-[500px] relative flex">
+                    <div className="w-full absolute top-0 max-w-[500px]">
+                      <div className="text-center my-2">
+                        <span
+                          className={
+                            livelinessStatus === "passed"
+                              ? "text-green-600"
+                              : "text-yellow-600"
                           }
-                          return null;
-                        })}
+                        >
+                          {livelinessMessage}
+                        </span>
+                      </div>
                     </div>
+
+                   
+<div className=" ml-2 mt-5 absolute gap-2 text-primary col-span-1 flex flex-col ">
+  {name &&
+    name.map((response: any, key: any) => {
+      const matchedData = persons.find(
+        (item) => item.id === response._label
+      );
+      return (
+        <div
+          key={key}
+          className=" text-sm bg-card/50 backdrop-blur-md p-2 rounded-md"
+        >
+          <h3>{matchedData ? matchedData.name : 'Unknown'}</h3>
+          <p>{matchedData ? matchedData.position : 'Unrecognized Person'}</p>
+        </div>
+      );
+    })}
+</div>
 
                     <video
                       crossOrigin="anonymous"
@@ -578,9 +622,7 @@ const getCurrentISOTime = () => {
                     />
                   </div>
 
-                  <div className=" w-[300px]  grid  justify-center items-center  grid-cols-3  ">
-                   
-                  </div>
+                  <div className=" w-[300px]  grid  justify-center items-center  grid-cols-3  "></div>
                 </div>
               </div>
             </div>
@@ -594,11 +636,11 @@ const getCurrentISOTime = () => {
               </div>
             </div>
           )}
-         
+
           <div className=" mt-10 flex gap-6  justify-center">
             <Button
               className={
-                 livelinessStatus === "passed"
+                livelinessStatus === "passed" && locationStatus === "ok"
                   ? " bg-primary "
                   : "  pointer-events-none bg-red-500/50  "
               }
@@ -607,13 +649,15 @@ const getCurrentISOTime = () => {
               Time In
             </Button>
             <Button
-            className={
-                 livelinessStatus === "passed"
+              className={
+                livelinessStatus === "passed" && locationStatus === "ok"
                   ? " bg-primary "
                   : "  pointer-events-none bg-red-500/50  "
               }
               onClick={() => handleTimeAction("out")}
-            >Time Out</Button>
+            >
+              Time Out
+            </Button>
           </div>
         </div>
       </div>
