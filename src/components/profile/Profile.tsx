@@ -58,11 +58,7 @@ function Profile() {
         <DropdownMenuItem className=" flex items-center gap-2 cursor-pointer">
           <div
             onClick={() => {
-              if (user.access_lvl === 0) {
-                navigate(`${import.meta.env.VITE_BASE}/user/profile`);
-              } else {
-                navigate(`${import.meta.env.VITE_BASE}/admin/profile`);
-              }
+              navigate(`${import.meta.env.VITE_BASE}/user/profile`);
             }}
             className=" flex items-center gap-2 text-foreground cursor-pointer"
           >
