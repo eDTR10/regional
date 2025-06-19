@@ -14,18 +14,18 @@ import { Edit2Icon } from "lucide-react";
 import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 
-// Update the interface to handle array of wifi names
+// Update the interface to handle array of office names
 interface DepartmentData {
   deptid: number;
   dept_name: string;
-  wifi: string[];  // Changed to string array
+  office: string[];  // Changed to string array
   updatedAt?: string;
 }
 
 function EditDepartment({ deptData, fetchData }: { deptData: DepartmentData; fetchData: () => void }) {
   const [dept, setDept] = useState<DepartmentData>({
     ...deptData,
-    wifi: Array.isArray(deptData.wifi) ? deptData.wifi : []  // Ensure wifi is always an array
+    office: Array.isArray(deptData.office) ? deptData.office : []  // Ensure office is always an array
   });
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -58,27 +58,27 @@ function EditDepartment({ deptData, fetchData }: { deptData: DepartmentData; fet
     });
   }
 
-  // Add function to handle adding new wifi
-  const addWifi = () => {
+  // Add function to handle adding new office
+  const addoffice = () => {
     setDept(prev => ({
       ...prev,
-      wifi: [...prev.wifi, '']
+      office: [...prev.office, '']
     }));
   };
 
-  // Add function to handle removing wifi
-  const removeWifi = (index: number) => {
+  // Add function to handle removing office
+  const removeoffice = (index: number) => {
     setDept(prev => ({
       ...prev,
-      wifi: prev.wifi.filter((_, i) => i !== index)
+      office: prev.office.filter((_, i) => i !== index)
     }));
   };
 
-  // Add function to update specific wifi
-  const updateWifi = (index: number, value: string) => {
+  // Add function to update specific office
+  const updateoffice = (index: number, value: string) => {
     setDept(prev => ({
       ...prev,
-      wifi: prev.wifi.map((item, i) => (i === index ? value : item))
+      office: prev.office.map((item, i) => (i === index ? value : item))
     }));
   };
 
@@ -123,32 +123,32 @@ function EditDepartment({ deptData, fetchData }: { deptData: DepartmentData; fet
               className="text-foreground col-span-3"
             />
           </div>
-          {/* WiFi section */}
+          {/* office section */}
           <div className="flex flex-col gap-2">
             <div className="flex justify-between items-center">
-              <p className="text-foreground">WiFi Names</p>
+              <p className="text-foreground">office Names</p>
               <Button 
                 type="button" 
                 variant="outline" 
-                onClick={addWifi}
+                onClick={addoffice}
                 className="px-2 py-1 h-8"
               >
-                Add WiFi
+                Add office
               </Button>
             </div>
             
-            {dept.wifi.map((wifi, index) => (
+            {dept.office.map((office, index) => (
               <div key={index} className="flex gap-2 items-center">
                 <Input
-                  value={wifi}
-                  onChange={(e) => updateWifi(index, e.target.value)}
+                  value={office}
+                  onChange={(e) => updateoffice(index, e.target.value)}
                   className="text-foreground"
-                  placeholder="Enter WiFi name"
+                  placeholder="Enter office name"
                 />
                 <Button 
                   type="button"
                   variant="destructive"
-                  onClick={() => removeWifi(index)}
+                  onClick={() => removeoffice(index)}
                   className="px-2 py-1 h-8"
                 >
                   Remove

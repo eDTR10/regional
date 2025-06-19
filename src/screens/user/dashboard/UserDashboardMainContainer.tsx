@@ -90,7 +90,7 @@ const UserDashboardMainContainer = () => {
                         {statusDetails.icon}
                     </p>
                 </div>
-
+                
                 <DashboardCards data={data} />
 
             </div>

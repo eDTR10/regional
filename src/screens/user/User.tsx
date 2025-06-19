@@ -9,11 +9,12 @@ import { Link, Outlet } from "react-router-dom";
 
 import NavLink from "@/components/link/link";
 import { ModeToggle } from "@/components/mode-toggle";
-import { ArrowLeftIcon, Building2Icon, ListChecksIcon, LogOutIcon, MenuIcon, MapPinIcon } from "lucide-react";
-import { useState } from "react";
+import { ArrowLeftIcon, Building2Icon, ListChecksIcon, LogOutIcon, MenuIcon,ScanFaceIcon } from "lucide-react";
+import {useState } from "react";
 import Profile from "@/components/profile/Profile";
 
 import { useNavigate, } from "react-router-dom";
+
 
 /**
  * Calculates the distance between two points on Earth using the Haversine formula
@@ -23,22 +24,7 @@ import { useNavigate, } from "react-router-dom";
  * @param lon2 Longitude of the second point in decimal degrees
  * @returns Distance in kilometers
  */
-function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-    const R = 6371; // Radius of the Earth in kilometers
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
 
-    // Haversine formula
-    const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-        Math.sin(dLon / 2) * Math.sin(dLon / 2);
-
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const distance = R * c; // Distance in kilometers
-
-    return distance;
-}
 
 /**
  * Checks if a location is within a specified radius of a target destination
@@ -49,74 +35,22 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
  * @param radiusKm Radius in kilometers (default: 2km)
  * @returns Boolean indicating if location is within radius and distance in kilometers
  */
-function isWithinRadius(
-    currentLat: number,
-    currentLon: number,
-    targetLat: number = 8.486646,
-    targetLon: number = 124.6147548,
-    radiusKm: number = 2
-): { isNearby: boolean; distance: number } {
-    const distance = calculateDistance(currentLat, currentLon, targetLat, targetLon);
-    return {
-        isNearby: distance <= radiusKm,
-        distance: distance
-    };
-}
+
 
 
 function User() {
     const navigate = useNavigate()
     const [show, setShow] = useState(false)
-    const [locationInfo, setLocationInfo] = useState<string | null>(null)
-    const [proximityStatus, setProximityStatus] = useState<string | null>(null)
+    
 
+    // 8.4847692,124.6541419
     // Target office location coordinates (the ones provided)
-    const targetLocation = {
-        //8.4866874 , 124.6296183,
-        latitude: 8.4866874,
-        longitude: 124.6296183,
-        name: "Office Location"
-    };
-
-    const handleGetLocation = () => {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    const latitude = position.coords.latitude;
-                    const longitude = position.coords.longitude;
-
-                    // Check proximity to target location
-                    const { isNearby, distance } = isWithinRadius(
-                        latitude,
-                        longitude,
-                        targetLocation.latitude,
-                        targetLocation.longitude
-                    );
-
-                    setLocationInfo(`Lat: ${latitude.toFixed(4)}, Long: ${longitude.toFixed(4)}`);
-
-                    // Set proximity status
-                    if (isNearby) {
-                        setProximityStatus(`✅ Within office range! (${distance.toFixed(2)} km)`);
-                    } else {
-                        setProximityStatus(`❌ Outside office range (${distance.toFixed(2)} km from office)`);
-                    }
-                },
-                (error) => {
-                    setLocationInfo(`Error: ${error.message}`);
-                    setProximityStatus(null);
-                }
-            );
-        } else {
-            setLocationInfo("Geolocation not supported");
-            setProximityStatus(null);
-        }
-    }
+ 
 
     return (
         <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
             <div className=" bg-background  h-screen w-screen overflow-hidden flex  ">
-
+                
                 <div className=" absolute z-30 flex gap-3 items-center right-0 p-7">
                     <ModeToggle />
                     <Profile />
@@ -155,6 +89,11 @@ function User() {
                                     icon={<ListChecksIcon className="w-5 h-5 " />}
                                 />
                                 <NavLink
+                                    to={`${import.meta.env.VITE_BASE}/user/biometric`}
+                                    text="Biometric Attendance"
+                                    icon={<ScanFaceIcon className="w-5 h-5 " />}
+                                />
+                                <NavLink
                                     to={`${import.meta.env.VITE_BASE}/user/employee-status`}
                                     text="User Activity"
                                     icon={<Building2Icon className=" w-5 h-5 " />}
@@ -166,24 +105,9 @@ function User() {
                                 />
 
                                 {/* Location Button */}
-                                <div
-                                    className="flex items-center gap-2 cursor-pointer text-accent-foreground hover:text-white px-2 py-1.5 rounded-md hover:bg-accent/20"
-                                    onClick={handleGetLocation}
-                                >
-                                    <MapPinIcon className="w-5 h-5" />
-                                    <span>Check Office Range</span>
-                                </div>
+                               
 
-                                {locationInfo && (
-                                    <div className="text-xs bg-accent/10 p-2 rounded-md break-words max-w-[200px]" id="location">
-                                        {locationInfo}
-                                        {proximityStatus && (
-                                            <div className={`mt-1 font-medium ${proximityStatus.includes('✅') ? 'text-green-500' : 'text-red-500'}`}>
-                                                {proximityStatus}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
+                               
                             </div>
 
 

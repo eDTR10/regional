@@ -2,7 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { cn } from "@/lib/utils"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button";
-import { PenIcon, User2Icon } from "lucide-react";
+import {  User2Icon } from "lucide-react";
 import { Input } from "@/components/ui/input"
 import {  useState } from "react";
 import axios from '../../../plugin/axios';

@@ -35,6 +35,10 @@ const Department = lazy(() =>
   wait(1300).then(() => import("./screens/admin/department/DepartmentMainContainer.tsx"))
 );
 
+const  FaceRec = lazy(() =>
+  wait(1300).then(() => import("./screens/user/biometric/FaceRec.tsx"))
+);
+
 
 const Records = lazy(() =>
   wait(1300).then(() => import("./screens/admin/records/Records.tsx"))
@@ -179,6 +183,14 @@ const router = createBrowserRouter([
         element: <>
           <Suspense fallback={<Loader />}>
             <UserDashboard />
+          </Suspense>
+        </>,
+      },
+        {
+        path: `/regional/user/biometric`,
+        element: <>
+          <Suspense fallback={<Loader />}>
+            <FaceRec />
           </Suspense>
         </>,
       },

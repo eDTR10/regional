@@ -224,7 +224,7 @@ const undertimeCalc = (timeIn: string, timeOut: string): { hours: number, minute
   }
 
   // Convert to hours and minutes
-  const hours = Math.floor(undertimeMinutes / 60);
+  const hours = timeIn || timeOut? Math.floor(undertimeMinutes / 60) :8;
   const minutes = undertimeMinutes % 60;
 
   return { hours, minutes };

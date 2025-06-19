@@ -1,10 +1,10 @@
 
 import { Plane,  Home, Globe, Car, Building2 } from 'lucide-react';
-import { Avatar, AvatarImage } from '@radix-ui/react-avatar';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { convertDate } from '@/helper/date-time';
 import { convertStatus } from '@/helper/convert-status';
+import { DrawerDemo } from './AddFace';
 
 // Helper function to get status details
 const getStatusDetails = (status: number) => {
@@ -38,9 +38,9 @@ const AdminInformation = (profileData: any) => {
     return (
         <div>
             <div className='flex flex-col w-full items-center p-8 bg-primary-foreground border border-border'>
-                <Avatar>
-                    <AvatarImage src={false ? `${import.meta.env.VITE_URL}${profileData.profileData.photos}` : 'https://github.com/shadcn.png'} alt={fullName} className='rounded-full h-28 w-28 object-cover' />
-                </Avatar>
+                <DrawerDemo
+                                
+                                datas={data} />
 
                 <div className="flex flex-col items-center mt-4">
                     <p className="animate-pulse text-2xl text-primary truncate">I'm, {fullName}! 👋</p>

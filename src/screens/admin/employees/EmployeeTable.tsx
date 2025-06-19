@@ -8,7 +8,6 @@ import EditProfile from "./EditProfile";
 import { ListIcon, Search, Trash2Icon } from "lucide-react";
 import { getDepartmentName } from "@/helper/department";
 import { convertStatus } from "@/helper/convert-status";
-import { Button } from "@/components/ui/button";
 import AddEmployee from "./AddEmployee";
 
 function EmployeeTable() {
