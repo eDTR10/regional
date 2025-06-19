@@ -487,11 +487,7 @@ function FaceRec() {
       }
 
       setStatus("Stopped");
-      Swal.fire({
-        title: "Session Ended",
-        text: "Your biometric session has ended. Try refreshing the page to start a new session.",
-        icon: "info",
-        confirmButtonColor: "#3085d6",})
+      window.location.reload();
     };
   }, []);
 
