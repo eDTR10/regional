@@ -560,7 +560,7 @@ function FaceRec() {
           </p>
 
      
-          <p className=" text-xs text-center text-red-500 mt-2">If you If you've already registered your face and still see this page, just reload the page it.</p>
+          <p className=" text-xs text-center text-red-500 mt-2">If you've already registered your face and still see this page, just reload the page it.</p>
         </div>
       </div>
     );
