@@ -14,7 +14,7 @@ import {
 import * as React from "react";
 import { useCallback} from "react";
 import * as faceapi from "face-api.js";
-import axios from "./../../../../plugin/axios";
+import axios from "./../../../plugin/axios";
 import Swal from "sweetalert2";
 import { User2Icon } from "lucide-react";
 
@@ -22,6 +22,7 @@ const MODEL_URL = '/regional/models'; // adjust path according to your setup
 
 export function DrawerDemo(datas:any) {
   const [data, setData] = React.useState<any>({
+    uid: datas?.uid,
     name: datas?.full_name,
     id: datas?.employee_id,
     position: datas?.job_title,
@@ -95,7 +96,7 @@ export function DrawerDemo(datas:any) {
   )
     };
 
-    axios.put('users/user_update/',{
+    axios.put(`users/update/${datas?.uid}/`,{
         face_id:labeledFaceDescriptors.descriptors
     },{
           headers: {
@@ -117,7 +118,7 @@ export function DrawerDemo(datas:any) {
           photos: [],
         });
         setOpen(false); // <-- Close the drawer after success
-        window.location.reload();
+     
     }
     ).catch((error) => {
         
@@ -152,11 +153,15 @@ export function DrawerDemo(datas:any) {
     });
   }, [datas]);
 
+
+  console.log("Data in DrawerDemo:", data);
   return (
     <Drawer open={open} onOpenChange={setOpen}>
       <DrawerTrigger asChild>
-        <Button  onClick={() => setOpen(true)}> <User2Icon className=" w-4 h-4 mr-3 "/> Register your Face for Digital Biometric</Button>
+        <Button  onClick={() => setOpen(true)}> <User2Icon className=" w-4 h-4 mr-3 "/> Register Employee Face</Button>
+        
       </DrawerTrigger>
+      <p className=" text-xs mt-2 text-primary">*Note: Images won't be saved to the database — your privacy is safe!</p>
       <DrawerContent title="Register Face" description="Upload face and wait for the model to train">
         <div className="mx-auto w-full max-w-sm">
           <DrawerHeader>

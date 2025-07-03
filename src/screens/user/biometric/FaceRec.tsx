@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { RotateCcwIcon } from "lucide-react";
 import axios from "./../../../plugin/axios";
 
+
 function calculateDistance(
   lat1: number,
   lon1: number,
@@ -74,7 +75,7 @@ function isWithinRadiusAny(
 function FaceRec() {
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [isModelsLoaded, setIsModelsLoaded] = useState(false);
-
+  
   const [faces, setFaces] = useState<any[]>([]);
 
   // Memoize user data to avoid repeated parsing
@@ -367,10 +368,13 @@ function FaceRec() {
       });
 
       const data = response.data;
-
+      console.log(response.data);
+      localStorage.setItem('user', JSON.stringify(response.data));
       if (!data?.description) {
         throw new Error("No face description data in API response");
       }
+
+      
 
       const faceData = [{
         label: data.full_name,
@@ -544,6 +548,23 @@ function FaceRec() {
         });
       });
   }, []);
+
+  // Early return: Don't run camera/location logic if not registered
+  if (!userObject.current?.description || userObject.current.description.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen w-full">
+        <div className="bg-card border border-border rounded-md p-8 shadow-md flex flex-col items-center">
+          <p className="text-2xl font-bold text-primary mb-2">Face Registration Required</p>
+          <p className="text-foreground text-center">
+            Please register your face from your profile to use this page.
+          </p>
+
+     
+          <p className=" text-xs text-center text-red-500 mt-2">If you If you've already registered your face and still see this page, just reload the page it.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 h-full overflow-auto">

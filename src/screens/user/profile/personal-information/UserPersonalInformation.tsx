@@ -27,20 +27,25 @@ const getStatusDetails = (status: number) => {
 
 const UserPersonalInformation = (profileData: any) => {
 
-    const data = profileData.profileData;
+    const data:any = profileData.profileData;
     const fullName = data?.full_name;
 
     const status = data?.status ? data.status : 0;
     const statusDetails = getStatusDetails(status);
 
-
+    console.log("Profile Data:", data.description == "");
     return (
         <div>
             <div className='flex flex-col w-full items-center p-8 bg-primary-foreground border  border-border'>
+                {
+                    data?.description == ""?<DrawerDemo 
+                datas={data} />: ""
+                    
+
+                }
                 
-                <DrawerDemo 
-                
-                datas={data} />
+
+          
 
                 <div className="flex flex-col items-center mt-4">
                     <p className="animate-pulse text-2xl text-primary truncate">I'm, {fullName}! 👋</p>
