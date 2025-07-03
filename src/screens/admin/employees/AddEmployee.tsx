@@ -48,6 +48,7 @@ function AddEmployee({getAllUsers, departments}:any) {
       street:employees.street,
       employee_id: employees.employee_id,
       zip: employees.zip,
+      access_lvl: 0,
       password:"@user322w"
     }],{
       headers: {
