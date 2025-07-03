@@ -16,10 +16,10 @@ import { convertDate } from '@/helper/date-time';
 const DashboardTableAttendance = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterType, setFilterType] = useState('All');
-    const [data, setData] = useState([]);
+    const [filterDept, setFilterDept] = useState('All');
+    const [data, setData] = useState<any[]>([]);
 
     useEffect(() => {
-        // console.log(localStorage.getItem("accessToken"));
         const fetchData = async () => {
             try {
                 const response = await axios.get(`${import.meta.env.VITE_POINT}/today/`, {
@@ -28,7 +28,6 @@ const DashboardTableAttendance = () => {
                     },
                 });
                 setData(response.data);
-                console.log('Fetched data:', response.data);
             } catch (error: any) {
                 console.error('Error fetching data:', error.response ? error.response.data : error.message);
                 Swal.fire({
@@ -42,16 +41,26 @@ const DashboardTableAttendance = () => {
         fetchData();
     }, []);
 
+    // Department options mapping
+    const departmentOptions = [
+        { value: "Regional Office", label: "Regional Office" },
+        { value: "Bukidnon Provincial Office", label: "Bukidnon Provincial Office" },
+        { value: "Camiguin Provincial Office", label: "Camiguin Provincial Office" },
+        { value: "Misamis Oriental Provincial Office", label: "Misamis Oriental Provincial Office" },
+        { value: "Misamis Occidental Provincial Office", label: "Misamis Occidental Provincial Office" },
+        { value: "Lanao del Norte Provincial Office", label: "Lanao del Norte Provincial Office" },
+    ];
+
     const filteredCheckData = data.filter((item: any) => {
         const matchesSearchTerm = item.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             convertDate(item.CHECKTIME).localeTime12HourFormat.toLowerCase().includes(searchTerm.toLowerCase()) ||
             item.CHECKTYPE.toLowerCase().includes(searchTerm.toLowerCase());
 
         const matchesFilterType = filterType === 'All' || convertCheckType(item?.CHECKTYPE) === filterType;
+        const matchesDept = filterDept === 'All' || item.deptid === filterDept;
 
-        return matchesSearchTerm && matchesFilterType;
+        return matchesSearchTerm && matchesFilterType && matchesDept;
     });
-
 
     return (
         <div className=' relative w-xl p-2 m-4 border border-border bg-primary-foreground min-h-[130px]'>
@@ -70,7 +79,7 @@ const DashboardTableAttendance = () => {
                 />
             </div>
 
-            <div className="  flex gap-2 py-2">
+            <div className="flex gap-2 py-2 flex-wrap">
                 <button
                     onClick={() => setFilterType('All')}
                     className={`p-2 border border-border text-primary rounded ${filterType === 'All' ? 'bg-blue-500 text-white' : ''}`}
@@ -101,6 +110,17 @@ const DashboardTableAttendance = () => {
                 >
                     PM Departure
                 </button>
+                {/* Department Filter */}
+                <select
+                    value={filterDept}
+                    onChange={e => setFilterDept(e.target.value)}
+                    className="p-2 border border-border text-primary rounded ml-2"
+                >
+                    <option value="All">All Departments</option>
+                    {departmentOptions.map((dept) => (
+                        <option key={dept.value} value={dept.value}>{dept.label}</option>
+                    ))}
+                </select>
             </div>
 
             <div className="overflow-auto bg-primary-foreground max-h-full">
@@ -115,7 +135,10 @@ const DashboardTableAttendance = () => {
                     <TableBody>
                         {filteredCheckData.map((item: any, index) => (
                             <TableRow key={index} className=' border border-border'>
-                                <TableCell className="font-small">{item?.full_name}</TableCell>
+                                <TableCell className="font-small">{item?.full_name} 
+                                   <br />
+                                   <span className=' text-[7px]'>{item?.deptid}</span>
+                                </TableCell>
                                 <TableCell>{convertDate(item?.CHECKTIME).localeTime12HourFormat}</TableCell>
                                 <TableCell>
                                     {convertCheckType(item?.CHECKTYPE)}

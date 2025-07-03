@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import  { useEffect, useState } from 'react';
 import {
     Table,
     TableBody,
@@ -8,20 +8,18 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Search, Sheet } from 'lucide-react';
-import axios from '../../../../plugin/axios';
+import axios from './../../../../plugin/axios';
 import Swal from 'sweetalert2';
-
 import { convertCheckType } from '@/helper/check-type';
 import { convertDate } from '@/helper/date-time';
 
-const UserDashboardTableAttendance = () => {
-
+const DashboardTableAttendance = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterType, setFilterType] = useState('All');
-    const [data, setData] = useState([]);
+    const [filterDept, setFilterDept] = useState('All');
+    const [data, setData] = useState<any[]>([]);
 
     useEffect(() => {
-        // console.log(localStorage.getItem("accessToken"));
         const fetchData = async () => {
             try {
                 const response = await axios.get(`${import.meta.env.VITE_POINT}/today/`, {
@@ -30,7 +28,6 @@ const UserDashboardTableAttendance = () => {
                     },
                 });
                 setData(response.data);
-                console.log('Fetched data:', response.data);
             } catch (error: any) {
                 console.error('Error fetching data:', error.response ? error.response.data : error.message);
                 Swal.fire({
@@ -44,21 +41,31 @@ const UserDashboardTableAttendance = () => {
         fetchData();
     }, []);
 
+    // Department options mapping
+    const departmentOptions = [
+        { value: "Regional Office", label: "Regional Office" },
+        { value: "Bukidnon Provincial Office", label: "Bukidnon Provincial Office" },
+        { value: "Camiguin Provincial Office", label: "Camiguin Provincial Office" },
+        { value: "Misamis Oriental Provincial Office", label: "Misamis Oriental Provincial Office" },
+        { value: "Misamis Occidental Provincial Office", label: "Misamis Occidental Provincial Office" },
+        { value: "Lanao del Norte Provincial Office", label: "Lanao del Norte Provincial Office" },
+    ];
+
     const filteredCheckData = data.filter((item: any) => {
         const matchesSearchTerm = item.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             convertDate(item.CHECKTIME).localeTime12HourFormat.toLowerCase().includes(searchTerm.toLowerCase()) ||
             item.CHECKTYPE.toLowerCase().includes(searchTerm.toLowerCase());
 
         const matchesFilterType = filterType === 'All' || convertCheckType(item?.CHECKTYPE) === filterType;
+        const matchesDept = filterDept === 'All' || item.deptid === filterDept;
 
-        return matchesSearchTerm && matchesFilterType;
+        return matchesSearchTerm && matchesFilterType && matchesDept;
     });
-
 
     return (
         <div className=' relative w-xl p-2 m-4 border border-border bg-primary-foreground min-h-[130px]'>
             <div className='flex p-4 justify-between items-center bg-primary mb-2'>
-                <p className='text-white '>DAILY ATTENDANCE</p>
+                <p className='text-white '>TODAY'S ATTENDANCE</p>
                 <Sheet className='text-6xl text-white' />
             </div>
             <div className='flex items-center content-center py-2 '>
@@ -72,7 +79,7 @@ const UserDashboardTableAttendance = () => {
                 />
             </div>
 
-            <div className="  flex gap-2 py-2">
+            <div className="flex gap-2 py-2 flex-wrap">
                 <button
                     onClick={() => setFilterType('All')}
                     className={`p-2 border border-border text-primary rounded ${filterType === 'All' ? 'bg-blue-500 text-white' : ''}`}
@@ -103,10 +110,21 @@ const UserDashboardTableAttendance = () => {
                 >
                     PM Departure
                 </button>
+                {/* Department Filter */}
+                <select
+                    value={filterDept}
+                    onChange={e => setFilterDept(e.target.value)}
+                    className="p-2 border border-border text-primary rounded ml-2"
+                >
+                    <option value="All">All Departments</option>
+                    {departmentOptions.map((dept) => (
+                        <option key={dept.value} value={dept.value}>{dept.label}</option>
+                    ))}
+                </select>
             </div>
 
             <div className="overflow-auto bg-primary-foreground max-h-full">
-                <Table>
+                <Table tableName="attendance">
                     <TableHeader>
                         <TableRow>
                             <TableHead className="w-[170px] border border-border text-white sticky top-0 bg-primary">FULLNAME</TableHead>
@@ -117,7 +135,10 @@ const UserDashboardTableAttendance = () => {
                     <TableBody>
                         {filteredCheckData.map((item: any, index) => (
                             <TableRow key={index} className=' border border-border'>
-                                <TableCell className="font-small">{item?.full_name}</TableCell>
+                                <TableCell className="font-small">{item?.full_name} 
+                                   <br />
+                                   <span className=' text-[7px]'>{item?.deptid}</span>
+                                </TableCell>
                                 <TableCell>{convertDate(item?.CHECKTIME).localeTime12HourFormat}</TableCell>
                                 <TableCell>
                                     {convertCheckType(item?.CHECKTYPE)}
@@ -131,4 +152,4 @@ const UserDashboardTableAttendance = () => {
     );
 };
 
-export default UserDashboardTableAttendance;
+export default DashboardTableAttendance;
