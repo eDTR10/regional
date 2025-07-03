@@ -24,7 +24,7 @@ function Login() {
         email: "", password: ""
     })
     useEffect(() => {
-        localStorage.getItem("accessToken") ? navigate(`${import.meta.env.VITE_BASE}/admin/home`) : ""
+        localStorage.getItem("accessToken") ? navigate(`${import.meta.env.VITE_BASE}/user/home`) : ""
     }, [])
 
     // useEffect(() => {
