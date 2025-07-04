@@ -135,12 +135,11 @@ export function DrawerDemo(datas:any) {
 
     setLoading(false);
     // window.location.reload();
-    console.log(data);
+   
   };
 
   React.useEffect(() => {
     loadModels();
-    console.log("sdsdsd ", datas)
   }, [loadModels]);
 
   React.useEffect(() => {

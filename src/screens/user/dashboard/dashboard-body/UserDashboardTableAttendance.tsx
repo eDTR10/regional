@@ -116,7 +116,7 @@ const DashboardTableAttendance = () => {
                     onChange={e => setFilterDept(e.target.value)}
                     className="p-2 border border-border text-primary rounded ml-2"
                 >
-                    <option value="All">All Departments</option>
+                    <option value="All">All Office</option>
                     {departmentOptions.map((dept) => (
                         <option key={dept.value} value={dept.value}>{dept.label}</option>
                     ))}

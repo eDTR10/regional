@@ -59,6 +59,11 @@ const ResetPassword= lazy(() =>
   wait(1300).then(() => import("./screens/auth/ResetPassword.tsx"))
 );
 
+const TempPage = lazy(() =>
+  wait(1300).then(() => import("./screens/user/biometric/TempPage.tsx"))
+);
+
+
 
 
 
@@ -122,6 +127,8 @@ const router = createBrowserRouter([
           </Suspense>
         </>,
       },
+      
+      
       {
         path: `/regional/admin/employee`,
         element: <>
@@ -199,6 +206,14 @@ const router = createBrowserRouter([
         element: <>
           <Suspense fallback={<Loader />}>
             <UserProfile />
+          </Suspense>
+        </>,
+      },
+      {
+        path: `/regional/user/temp`,
+        element: <>
+          <Suspense fallback={<Loader />}>
+            <TempPage />
           </Suspense>
         </>,
       },

@@ -315,7 +315,7 @@ const UserEditPersonalInformation = (profileData: any, onPhotoUpdate: any) => {
           <InputText2
             value={birthday}
             onChange={(e: any) => {
-              console.log(e.target.value);
+              
               setBirthday(e.target.value);
             }}
             className=" text-foreground flex justify-between"

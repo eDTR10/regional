@@ -24,7 +24,7 @@ const DashboardCards = (data: any) => {
         }
     }, [])
 
-    console.log(data)
+  
 
     return (
         <div>

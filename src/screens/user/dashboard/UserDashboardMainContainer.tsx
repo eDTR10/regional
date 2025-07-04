@@ -70,7 +70,6 @@ const UserDashboardMainContainer = () => {
                     },
                 });
                 setProfileData(response.data);
-                console.log('Fetched data:', response.data);
             } catch (error: any) {
                 console.error('Error fetching data:', error.response ? error.response.data : error.message);
 
