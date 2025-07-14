@@ -536,7 +536,10 @@ const convertTo24Hour = (time: any): string => {
             </Text>
 
             <View style={{ fontSize: 8, textAlign: 'center', marginTop: 30 }}>
-              <Text style={{ borderBottom: 0.5, paddingTop: 2,fontStyle:'bold' }}></Text>
+              <Text style={{ borderBottom: 0.5, paddingTop: 2,fontStyle:'bold' }}>{
+              
+              JSON.parse(localStorage.getItem('user')||'').deptid  == 4? " NIDELIZA FE O. NACILLA":""
+              }</Text>
               <Text style={{ fontSize: 7 ,fontStyle:'italic',marginTop:2}}>Name and Signature of Immediate Supervisor</Text>
             </View>
 

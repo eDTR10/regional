@@ -35,7 +35,7 @@ function isWithinRadiusAny(
   currentLat: number,
   currentLon: number,
   targetLocations: string[],
-  radiusKm: number = 0.15
+  radiusKm: number = 0.030
 ): { isNearby: boolean; distance: number; nearestLocation: string } {
   let minDistance = Infinity;
   let isNearAny = false;

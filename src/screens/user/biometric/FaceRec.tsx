@@ -8,7 +8,7 @@ import DashboardAnalogClock from "@/screens/admin/dashboard/dashboard-body/Dashb
 function FaceRec() {
   const [userData, setUserData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [timer, setTimer] = useState(20); // 15 seconds for testing
+  const [timer, setTimer] = useState(60); // 15 seconds for testing
   const navigate = useNavigate();
 
   useEffect(() => {

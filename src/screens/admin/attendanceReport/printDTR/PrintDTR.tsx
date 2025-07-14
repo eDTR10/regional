@@ -35,6 +35,8 @@ export default function PrintDTR({name = '', data, date, show, selectedYear, sel
     return savedSchedule || "7"
   });
 
+
+  console.log(data, 'data in printDTR')
   useEffect(() => {
     localStorage.setItem('selectedSchedule', selectedSchedule)
   }, [selectedSchedule])
