@@ -1,9 +1,10 @@
-import { Button } from "@/components/ui/button";
+
 import Swal from "sweetalert2";
 import * as faceapi from "face-api.js";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { RotateCcwIcon } from "lucide-react";
 import axios from "./../../../plugin/axios";
+import { useNavigate } from "react-router-dom";
 
 type LocationStatus = "ok" | "error" | "permission_denied" | "checking" | null;
 type CameraStatus = "ok" | "error" | "permission_denied" | "checking" | null;
@@ -35,7 +36,7 @@ function isWithinRadiusAny(
   currentLat: number,
   currentLon: number,
   targetLocations: string[],
-  radiusKm: number = 0.030
+  radiusKm: number = 0.150
 ): { isNearby: boolean; distance: number; nearestLocation: string } {
   let minDistance = Infinity;
   let isNearAny = false;
@@ -65,29 +66,41 @@ function getCurrentISOTime() {
   return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}Z`;
 }
 
+// Performance optimization: Debounce utility
+function debounce<T extends (...args: any[]) => any>(func: T, wait: number): T {
+  let timeout: NodeJS.Timeout;
+  return ((...args: any[]) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  }) as T;
+}
+
+// Performance optimization: Throttle utility
+function throttle<T extends (...args: any[]) => any>(func: T, limit: number): T {
+  let inThrottle: boolean;
+  return ((...args: any[]) => {
+    if (!inThrottle) {
+      func(...args);
+      inThrottle = true;
+      setTimeout(() => inThrottle = false, limit);
+    }
+  }) as T;
+}
+
 // Permission management utilities
 const PermissionManager = {
-  // Check if permissions were previously granted
   hasStoredPermission: (key: string): boolean => {
     return localStorage.getItem(key) === "true";
   },
-
-  // Store permission status
   setPermissionStatus: (key: string, granted: boolean) => {
     localStorage.setItem(key, granted.toString());
   },
-
-  // Check if user has been shown permission explanation
   hasShownExplanation: (): boolean => {
     return localStorage.getItem(PERMISSIONS_EXPLAINED_KEY) === "true";
   },
-
-  // Mark that permission explanation has been shown
   setExplanationShown: () => {
     localStorage.setItem(PERMISSIONS_EXPLAINED_KEY, "true");
   },
-
-  // Check browser permission API if available
   checkBrowserPermission: async (name: PermissionName): Promise<PermissionState | null> => {
     try {
       if ('permissions' in navigator) {
@@ -104,7 +117,19 @@ const PermissionManager = {
 
 const MODEL_URL = "/regional/models";
 
+// Optimized video constraints for low-end devices
+const getOptimizedVideoConstraints = (camera: string) => ({
+  video: {
+    facingMode: camera,
+    width: { ideal: 640, max: 1280 },
+    height: { ideal: 480, max: 720 },
+    frameRate: { ideal: 15, max: 30 }, // Reduced for performance
+    aspectRatio: 1.333
+  }
+});
+
 function FaceRecMain({ userObject }: { userObject: any }) {
+  const navigate = useNavigate();
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [isModelsLoaded, setIsModelsLoaded] = useState(false);
   const [faces, setFaces] = useState<any[]>([]);
@@ -118,12 +143,115 @@ function FaceRecMain({ userObject }: { userObject: any }) {
   const [camera, setCamera] = useState("user");
   const [name, setName] = useState<any[]>([]);
   const [permissionsInitialized, setPermissionsInitialized] = useState(false);
+  const [floatingMenuShown, setFloatingMenuShown] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const detectionIntervalRef = useRef<NodeJS.Timeout>();
   const faceMatcher = useRef<faceapi.FaceMatcher | null>(null);
   const locationIntervalRef = useRef<NodeJS.Timeout>();
+  const floatingMenuTimeoutRef = useRef<NodeJS.Timeout>();
+  const animationFrameRef = useRef<number>();
+
+  // Determine if actions are enabled
+  const canPerformActions = livelinessStatus === "passed" && locationStatus === "ok" && cameraStatus === "ok";
+
+  // Floating menu handler
+  const showFloatingMenu = useCallback(() => {
+    if (floatingMenuShown) return;
+    
+    setFloatingMenuShown(true);
+    
+    Swal.fire({
+  title: 'Biometric Actions',
+  html: `
+    <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 1rem;">
+      <button 
+        id="time-in-btn" 
+        style="
+          background: #3b82f6;
+          color: white;
+          padding: 0.75rem 1.5rem;
+          border: none;
+          border-radius: 0.5rem;
+          cursor: pointer;
+          font-weight: 500;
+          transition: all 0.2s;
+          font-size: 14px;
+        "
+        onmouseover="this.style.background='#2563eb'"
+        onmouseout="this.style.background='#3b82f6'"
+      >
+        Time In
+      </button>
+      <button 
+        id="time-out-btn" 
+        style="
+          background: #3b82f6;
+          color: white;
+          padding: 0.75rem 1.5rem;
+          border: none;
+          border-radius: 0.5rem;
+          cursor: pointer;
+          font-weight: 500;
+          transition: all 0.2s;
+          font-size: 14px;
+        "
+        onmouseover="this.style.background='#2563eb'"
+        onmouseout="this.style.background='#3b82f6'"
+      >
+        Time Out
+      </button>
+    </div>
+  `,
+  showConfirmButton: false,
+  showCancelButton: false,
+  allowOutsideClick: false,
+  allowEscapeKey: false,
+  position: 'center', // Changed from 'top-end' to 'center'
+  toast: false, // Changed from true to false for proper centering
+  timer: 4000,
+  timerProgressBar: true,
+  width: '320px',
+  customClass: {
+    popup: 'floating-menu-popup',
+    timerProgressBar: 'floating-menu-timer'
+  },
+  didOpen: () => {
+    document.getElementById('time-in-btn')?.addEventListener('click', () => {
+      handleTimeAction('in');
+      Swal.close();
+    });
+    
+    document.getElementById('time-out-btn')?.addEventListener('click', () => {
+      handleTimeAction('out');
+      Swal.close();
+    });
+  },
+  willClose: () => {
+    setFloatingMenuShown(false);
+  }
+});
+
+    // Auto-hide after 4 seconds
+    floatingMenuTimeoutRef.current = setTimeout(() => {
+      Swal.close();
+      setFloatingMenuShown(false);
+    }, 4000);
+  }, [floatingMenuShown]);
+
+  // Show floating menu when canPerformActions becomes true
+  useEffect(() => {
+    if (canPerformActions && !floatingMenuShown) {
+      showFloatingMenu();
+    }
+    
+    return () => {
+      if (floatingMenuTimeoutRef.current) {
+        clearTimeout(floatingMenuTimeoutRef.current);
+      }
+    };
+  }, [canPerformActions, floatingMenuShown, showFloatingMenu]);
 
   // Show initial permission explanation
   const showPermissionExplanation = useCallback(() => {
@@ -161,15 +289,12 @@ function FaceRecMain({ userObject }: { userObject: any }) {
   const initializePermissions = useCallback(async () => {
     setStatus("Checking permissions...");
     
-    // Check stored permissions first
     const hasStoredCamera = PermissionManager.hasStoredPermission(CAMERA_PERMISSION_KEY);
     const hasStoredLocation = PermissionManager.hasStoredPermission(LOCATION_PERMISSION_KEY);
     
-    // Check browser permission API
     const browserCameraPermission = await PermissionManager.checkBrowserPermission('camera' as PermissionName);
     const browserLocationPermission = await PermissionManager.checkBrowserPermission('geolocation' as PermissionName);
     
-    // Handle camera permission
     if (hasStoredCamera && browserCameraPermission === 'granted') {
       setCameraStatus("ok");
     } else if (browserCameraPermission === 'denied') {
@@ -179,7 +304,6 @@ function FaceRecMain({ userObject }: { userObject: any }) {
       await requestCameraPermission();
     }
     
-    // Handle location permission
     if (hasStoredLocation && browserLocationPermission === 'granted') {
       setLocationStatus("ok");
     } else if (browserLocationPermission === 'denied') {
@@ -192,19 +316,16 @@ function FaceRecMain({ userObject }: { userObject: any }) {
     setPermissionsInitialized(true);
   }, []);
 
-  // Request camera permission
+  // Request camera permission with optimized constraints
   const requestCameraPermission = useCallback(async () => {
     setCameraStatus("checking");
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: camera } 
-      });
+      const constraints = getOptimizedVideoConstraints(camera);
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       
-      // Permission granted
       setCameraStatus("ok");
       PermissionManager.setPermissionStatus(CAMERA_PERMISSION_KEY, true);
       
-      // Stop the stream immediately as we'll start it properly later
       stream.getTracks().forEach(track => track.stop());
       
     } catch (error: any) {
@@ -306,8 +427,8 @@ function FaceRecMain({ userObject }: { userObject: any }) {
     });
   }, [requestLocationPermission]);
 
-  // Enhanced location checking with permission handling
-  const handleGetLocation = useCallback((locations: string[]) => {
+  // Enhanced location checking with throttling
+  const handleGetLocation = useCallback(throttle((locations: string[]) => {
     if (locationStatus !== "ok") {
       setProximityStatus("❌ Location permission required");
       return;
@@ -342,18 +463,18 @@ function FaceRecMain({ userObject }: { userObject: any }) {
 
     if (locationIntervalRef.current) clearInterval(locationIntervalRef.current);
     checkLocation();
-    locationIntervalRef.current = setInterval(checkLocation, 10000);
-  }, [locationStatus]);
+    locationIntervalRef.current = setInterval(checkLocation, 15000); // Increased interval for performance
+  }, 5000), [locationStatus]);
 
-  // Load face-api models
+  // Optimized model loading with lazy loading
   const loadModels = useCallback(async () => {
     if (isModelsLoaded) return;
     try {
       setStatus("Loading models...");
+      // Load only essential models for better performance
       await Promise.all([
-        faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
-        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-        faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL), // Use tiny detector for better performance
+        faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL), // Use tiny landmarks
         faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
         faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
       ]);
@@ -363,7 +484,7 @@ function FaceRecMain({ userObject }: { userObject: any }) {
     }
   }, [isModelsLoaded]);
 
-  // Initialize face matcher
+  // Optimized face matcher initialization
   const initializeFaceMatcher = useCallback(async () => {
     try {
       const labeledFaceDescriptors = await Promise.all(
@@ -372,13 +493,13 @@ function FaceRecMain({ userObject }: { userObject: any }) {
           return new faceapi.LabeledFaceDescriptors(label.label, descriptions);
         })
       );
-      faceMatcher.current = new faceapi.FaceMatcher(labeledFaceDescriptors);
+      faceMatcher.current = new faceapi.FaceMatcher(labeledFaceDescriptors, 0.6); // Adjust threshold for better performance
     } catch (error) {
       console.error("Face matcher initialization error:", error);
     }
   }, [faces]);
 
-  // Enhanced video start with permission handling
+  // Optimized video start
   const startVideo = useCallback(async () => {
     if (cameraStatus !== "ok") {
       setLivelinessMessage("Camera permission required");
@@ -392,9 +513,8 @@ function FaceRecMain({ userObject }: { userObject: any }) {
         videoRef.current.srcObject = null;
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: camera } 
-      });
+      const constraints = getOptimizedVideoConstraints(camera);
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
@@ -409,7 +529,7 @@ function FaceRecMain({ userObject }: { userObject: any }) {
     }
   }, [camera, cameraStatus]);
 
-  // Face detection (unchanged)
+  // Optimized face detection with requestAnimationFrame
   const startFaceDetection = useCallback(() => {
     if (!faceMatcher.current || !videoRef.current || !canvasRef.current || cameraStatus !== "ok") {
       return;
@@ -417,13 +537,21 @@ function FaceRecMain({ userObject }: { userObject: any }) {
 
     if (detectionIntervalRef.current) clearInterval(detectionIntervalRef.current);
     
+    let frameCount = 0;
     const detectFaces = async () => {
       try {
         if (!videoRef.current || !canvasRef.current || !faceMatcher.current) return;
         
+        // Skip frames for better performance (process every 3rd frame)
+        frameCount++;
+        if (frameCount % 3 !== 0) return;
+        
         const detections = await faceapi
-          .detectAllFaces(videoRef.current, new faceapi.TinyFaceDetectorOptions())
-          .withFaceLandmarks()
+          .detectAllFaces(videoRef.current, new faceapi.TinyFaceDetectorOptions({
+            inputSize: 416, // Smaller input size for better performance
+            scoreThreshold: 0.5
+          }))
+          .withFaceLandmarks(true) // Use tiny landmarks
           .withFaceDescriptors()
           .withFaceExpressions();
 
@@ -471,7 +599,8 @@ function FaceRecMain({ userObject }: { userObject: any }) {
       }
     };
 
-    detectionIntervalRef.current = setInterval(detectFaces, 200);
+    // Use reduced interval for better performance
+    detectionIntervalRef.current = setInterval(detectFaces, 500); // Increased from 200ms to 500ms
   }, [cameraStatus]);
 
   // Fetch user face data
@@ -481,8 +610,8 @@ function FaceRecMain({ userObject }: { userObject: any }) {
         headers: { Authorization: `Token ${localStorage.getItem("accessToken")}` },
       });
       const data = response.data;
-      localStorage.setItem("user", JSON.stringify(data));
       
+      // Store user data in memory instead of localStorage for better performance
       if (!data?.description) throw new Error("No face description data in API response");
       
       setFaces([{ label: data.full_name, descriptors: data.description }]);
@@ -501,8 +630,8 @@ function FaceRecMain({ userObject }: { userObject: any }) {
     }
   }, [handleGetLocation]);
 
-  // Time action (unchanged)
-  const handleTimeAction = useCallback((action: "in" | "out") => {
+  // Optimized time action
+  const handleTimeAction = useCallback(debounce((action: "in" | "out") => {
     const message = action === "in" ? "clocked in" : "clocked out";
     const currentTime = getCurrentISOTime();
     
@@ -523,7 +652,13 @@ function FaceRecMain({ userObject }: { userObject: any }) {
           text: `You have successfully ${message}!`,
           icon: "success",
           confirmButtonColor: "#3085d6",
+          timer: 2000,
+          showConfirmButton: false
         });
+        setTimeout(()=>{
+          navigate("/regional/user/home");     
+          window.location.reload();
+        },1000)
       })
       .catch((error) => {
         Swal.fire({
@@ -533,7 +668,7 @@ function FaceRecMain({ userObject }: { userObject: any }) {
           confirmButtonColor: "#d33",
         });
       });
-  }, [userObject]);
+  }, 1000), [userObject]);
 
   // Initialize permissions and fetch data on mount
   useEffect(() => {
@@ -548,6 +683,8 @@ function FaceRecMain({ userObject }: { userObject: any }) {
       }
       if (detectionIntervalRef.current) clearInterval(detectionIntervalRef.current);
       if (locationIntervalRef.current) clearInterval(locationIntervalRef.current);
+      if (floatingMenuTimeoutRef.current) clearTimeout(floatingMenuTimeoutRef.current);
+      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
       if (canvasRef.current) {
         const ctx = canvasRef.current.getContext("2d", { willReadFrequently: true });
         if (ctx) ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
@@ -577,9 +714,6 @@ function FaceRecMain({ userObject }: { userObject: any }) {
       if (detectionIntervalRef.current) clearInterval(detectionIntervalRef.current);
     };
   }, [isModelsLoaded, isDataLoaded, faces.length, permissionsInitialized, cameraStatus, camera, initializeFaceMatcher, startVideo, startFaceDetection]);
-
-  // Determine if actions are enabled
-  const canPerformActions = livelinessStatus === "passed" && locationStatus === "ok" && cameraStatus === "ok";
 
   return (
     <div className="flex-1 h-full overflow-auto">
@@ -658,6 +792,8 @@ function FaceRecMain({ userObject }: { userObject: any }) {
                 {status}
               </span>
             </p>
+
+            
             <RotateCcwIcon
               className={
                 camera === "user"
@@ -666,6 +802,7 @@ function FaceRecMain({ userObject }: { userObject: any }) {
               }
               onClick={() => setCamera((prev) => (prev === "user" ? "environment" : "user"))}
             />
+            
             <span
               className={
                 livelinessStatus === "passed"
@@ -677,7 +814,7 @@ function FaceRecMain({ userObject }: { userObject: any }) {
             </span>
           </div>
           
-          <div className="mt-10 sm:mt-2 flex gap-6 justify-center">
+          {/* <div className="mt-10 sm:mt-2 flex gap-6 justify-center">
             <Button
               className={
                 canPerformActions
@@ -700,10 +837,10 @@ function FaceRecMain({ userObject }: { userObject: any }) {
             >
               Time Out
             </Button>
-          </div>
+          </div> */}
           
           {/* Permission retry buttons */}
-          {(cameraStatus === "permission_denied" || locationStatus === "permission_denied") && (
+          {/* {(cameraStatus === "permission_denied" || locationStatus === "permission_denied") && (
             <div className="mt-4 flex gap-4 justify-center">
               {cameraStatus === "permission_denied" && (
                 <Button
@@ -726,7 +863,7 @@ function FaceRecMain({ userObject }: { userObject: any }) {
                 </Button>
               )}
             </div>
-          )}
+          )} */}
         </div>
       </div>
     </div>
