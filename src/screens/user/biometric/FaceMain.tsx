@@ -1,4 +1,3 @@
-
 import Swal from "sweetalert2";
 import * as faceapi from "face-api.js";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -29,14 +28,14 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
 }
 
 function isSmiling(expressions: any) {
-  return expressions.happy > 0.7;
+  return expressions.happy > 0.5;
 }
 
 function isWithinRadiusAny(
   currentLat: number,
   currentLon: number,
   targetLocations: string[],
-  radiusKm: number = 0.150
+  radiusKm: number = 0.30
 ): { isNearby: boolean; distance: number; nearestLocation: string } {
   let minDistance = Infinity;
   let isNearAny = false;
@@ -145,6 +144,10 @@ function FaceRecMain({ userObject }: { userObject: any }) {
   const [permissionsInitialized, setPermissionsInitialized] = useState(false);
   const [floatingMenuShown, setFloatingMenuShown] = useState(false);
 
+  // Add these refs to track stable location state
+  const lastLocationStatusRef = useRef<boolean | null>(null); // true = nearby, false = outside, null = unknown
+  const locationPermissionGrantedRef = useRef<boolean>(false);
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const detectionIntervalRef = useRef<NodeJS.Timeout>();
@@ -154,7 +157,10 @@ function FaceRecMain({ userObject }: { userObject: any }) {
   const animationFrameRef = useRef<number>();
 
   // Determine if actions are enabled
-  const canPerformActions = livelinessStatus === "passed" && locationStatus === "ok" && cameraStatus === "ok";
+  const canPerformActions = livelinessStatus === "passed" && 
+                           locationPermissionGrantedRef.current && 
+                           cameraStatus === "ok" && 
+                           lastLocationStatusRef.current === true; // Only allow if actually nearby
 
   // Floating menu handler
   const showFloatingMenu = useCallback(() => {
@@ -295,6 +301,7 @@ function FaceRecMain({ userObject }: { userObject: any }) {
     const browserCameraPermission = await PermissionManager.checkBrowserPermission('camera' as PermissionName);
     const browserLocationPermission = await PermissionManager.checkBrowserPermission('geolocation' as PermissionName);
     
+    // Handle camera permission
     if (hasStoredCamera && browserCameraPermission === 'granted') {
       setCameraStatus("ok");
     } else if (browserCameraPermission === 'denied') {
@@ -304,10 +311,13 @@ function FaceRecMain({ userObject }: { userObject: any }) {
       await requestCameraPermission();
     }
     
+    // Handle location permission with enhanced tracking
     if (hasStoredLocation && browserLocationPermission === 'granted') {
       setLocationStatus("ok");
+      locationPermissionGrantedRef.current = true;
     } else if (browserLocationPermission === 'denied') {
       setLocationStatus("permission_denied");
+      locationPermissionGrantedRef.current = false;
       PermissionManager.setPermissionStatus(LOCATION_PERMISSION_KEY, false);
     } else {
       await requestLocationPermission();
@@ -340,32 +350,36 @@ function FaceRecMain({ userObject }: { userObject: any }) {
     }
   }, [camera]);
 
-  // Request location permission
+  // Enhanced location permission request
   const requestLocationPermission = useCallback(async () => {
     setLocationStatus("checking");
     
     if (!navigator.geolocation) {
       setLocationStatus("error");
       setProximityStatus("❌ Geolocation not supported");
+      locationPermissionGrantedRef.current = false;
       return;
     }
 
     navigator.geolocation.getCurrentPosition(
       (_position) => {
         setLocationStatus("ok");
+        locationPermissionGrantedRef.current = true;
         PermissionManager.setPermissionStatus(LOCATION_PERMISSION_KEY, true);
       },
       (error) => {
         if (error.code === error.PERMISSION_DENIED) {
           setLocationStatus("permission_denied");
+          locationPermissionGrantedRef.current = false;
           PermissionManager.setPermissionStatus(LOCATION_PERMISSION_KEY, false);
           showLocationPermissionError();
         } else {
           setLocationStatus("error");
+          locationPermissionGrantedRef.current = false;
           console.error("Location access error:", error);
         }
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 0 }
     );
   }, []);
 
@@ -427,10 +441,12 @@ function FaceRecMain({ userObject }: { userObject: any }) {
     });
   }, [requestLocationPermission]);
 
-  // Enhanced location checking with throttling
+  // Enhanced location checking with stable status tracking
   const handleGetLocation = useCallback(throttle((locations: string[]) => {
-    if (locationStatus !== "ok") {
+    // If location permission was never granted, don't try to check
+    if (!locationPermissionGrantedRef.current) {
       setProximityStatus("❌ Location permission required");
+      setLocationStatus("permission_denied");
       return;
     }
 
@@ -445,26 +461,54 @@ function FaceRecMain({ userObject }: { userObject: any }) {
         (position) => {
           const { latitude, longitude } = position.coords;
           const { isNearby, distance } = isWithinRadiusAny(latitude, longitude, locations);
-          setProximityStatus(
-            isNearby
-              ? `✅ Within office range! (${distance.toFixed(2)} km)`
-              : `❌ Outside office range (${distance.toFixed(2)} km from nearest office)`
-          );
-          setLocationStatus(isNearby ? "ok" : "error");
+          
+          // Update the last known location status
+          lastLocationStatusRef.current = isNearby;
+          
+          // Create the status message
+          const newProximityStatus = isNearby
+            ? `✅ Within office range! (${distance.toFixed(2)} km)`
+            : `❌ Outside office range (${distance.toFixed(2)} km from nearest office)`;
+          
+          // Always update proximity status since location is working
+          setProximityStatus(newProximityStatus);
+          setLocationStatus(isNearby ? "ok" : "ok"); // Keep status as "ok" even if outside range
         },
         (error) => {
           console.error("Location error:", error);
-          setProximityStatus("❌ Location access failed");
-          setLocationStatus("error");
+          
+          // Use the last known location status to maintain stability
+          if (lastLocationStatusRef.current !== null) {
+            // Keep the last known status instead of showing error
+            const lastKnownStatus = lastLocationStatusRef.current
+              ? "✅ Within office range! (checking...)"
+              : "❌ Outside office range (checking...)";
+            
+            setProximityStatus(prevStatus => {
+              // Only update if we don't have a valid previous status
+              if (!prevStatus || prevStatus.includes("Location permission required") || prevStatus.includes("Location access failed")) {
+                return lastKnownStatus;
+              }
+              return prevStatus; // Keep existing status
+            });
+          } else {
+            // If we have never successfully gotten location, show error
+            setProximityStatus("❌ Location access failed");
+            setLocationStatus("error");
+          }
         },
-        { enableHighAccuracy: true, timeout: 5000, maximumAge: 60000 }
+        { 
+          enableHighAccuracy: false, // Disable high accuracy for better stability
+          timeout: 8000, // Increased timeout
+          maximumAge: 300000 // 5 minutes cache - much longer for stability
+        }
       );
     };
 
     if (locationIntervalRef.current) clearInterval(locationIntervalRef.current);
     checkLocation();
-    locationIntervalRef.current = setInterval(checkLocation, 15000); // Increased interval for performance
-  }, 5000), [locationStatus]);
+    locationIntervalRef.current = setInterval(checkLocation, 45000); // Increased to 45 seconds
+  }, 15000), []); // Increased throttle to 15 seconds
 
   // Optimized model loading with lazy loading
   const loadModels = useCallback(async () => {
@@ -633,6 +677,7 @@ function FaceRecMain({ userObject }: { userObject: any }) {
   // Optimized time action
   const handleTimeAction = useCallback(debounce((action: "in" | "out") => {
     const message = action === "in" ? "clocked in" : "clocked out";
+    const actionEmoji = action === "in" ? "🎉" : "👋";
     const currentTime = getCurrentISOTime();
     
     axios
@@ -648,27 +693,53 @@ function FaceRecMain({ userObject }: { userObject: any }) {
       )
       .then(() => {
         Swal.fire({
-          title: "Success!",
-          text: `You have successfully ${message}!`,
+          title: `${actionEmoji} Success! ${actionEmoji}`,
+          html: `
+            <div style="text-align: center; margin: 20px 0;">
+              <p style="font-size: 18px; margin-bottom: 15px;">
+                You have successfully ${message}! 
+              </p>
+              <p style="font-size: 16px; color: #10b981; margin-bottom: 10px;">
+                😊 Nice smile, by the way! 😊
+              </p>
+              <p style="font-size: 14px; color: #666; font-style: italic;">
+                ${action === "in" ? "Have a great day at work! 💼" : "See you tomorrow! 🌅"}
+              </p>
+            </div>
+          `,
           icon: "success",
           confirmButtonColor: "#3085d6",
-          timer: 2000,
-          showConfirmButton: false
+          timer: 3000, // Increased timer to give time to read the nice message
+          showConfirmButton: false,
+          customClass: {
+            popup: 'success-popup',
+            title: 'success-title'
+          }
         });
         setTimeout(()=>{
           navigate("/regional/user/home");     
           window.location.reload();
-        },1000)
+        }, 3000) // Adjusted timeout to match the new timer
       })
       .catch((error) => {
         Swal.fire({
           icon: "error",
-          title: "Error",
-          text: error.response?.data?.detail || "An error occurred while processing your request.",
+          title: "❌ Oops! Something went wrong",
+          html: `
+            <div style="text-align: center; margin: 20px 0;">
+              <p style="font-size: 16px; margin-bottom: 10px;">
+                ${error.response?.data?.detail || "An error occurred while processing your request."}
+              </p>
+              <p style="font-size: 14px; color: #666; font-style: italic;">
+                😔 Don't worry, please try again!
+              </p>
+            </div>
+          `,
           confirmButtonColor: "#d33",
+          confirmButtonText: "Try Again 🔄"
         });
       });
-  }, 1000), [userObject]);
+  }, 1000), [userObject, navigate]);
 
   // Initialize permissions and fetch data on mount
   useEffect(() => {
@@ -751,7 +822,7 @@ function FaceRecMain({ userObject }: { userObject: any }) {
                   : "flex self-center w-[80%] sm:w-[90%] sm:h-[40vh] h-[50vh] bg-border border rounded-md"
               }
             >
-              <div className="flex flex-col gap-5 items-center justify-center h-full w-full relative">
+              <div className={lastLocationStatusRef.current?"flex flex-col gap-5 items-center justify-center h-full w-full relative border border-green-500 rounded-sm ":"flex flex-col gap-5 items-center justify-center h-full w-full relative border border-red-500 rounded-sm "}>
                 <div className="overflow-hidden w-full max-w-[500px] h-[500px] relative flex">
                   <div className="ml-2 mt-5 absolute gap-2 text-primary col-span-1 flex flex-col">
                     {name &&
@@ -870,4 +941,4 @@ function FaceRecMain({ userObject }: { userObject: any }) {
   );
 }
 
-export default FaceRecMain; 
+export default FaceRecMain;

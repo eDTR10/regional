@@ -203,6 +203,18 @@ const undertimeCalc = (timeIn: string, timeOut: string): { hours: number, minute
   const expectedTimeIn = schedule.timeIn;
   const expectedTimeOut = schedule.timeOut;
 
+  // If both timeIn and timeOut are blank, return 8 hours undertime
+  if ((!timeIn || timeIn.trim() === '') && (!timeOut || timeOut.trim() === '')) {
+    return { hours: 8, minutes: 0 };
+  }
+
+  // If no timeOut is provided (empty string or undefined), calculate full afternoon undertime
+  if (!timeOut || timeOut.trim() === '') {
+    // If there's no checkout time, assume they didn't work the afternoon
+    const afternoonHours = (expectedTimeOut - (12 * 60 + 60)) / 60; // From 1:00 PM to expected end time
+    return { hours: Math.floor(afternoonHours), minutes: (afternoonHours % 1) * 60 };
+  }
+
   // Convert input times to minutes
   const [inHour, inMinute] = timeIn?timeIn.split(':').map(Number):'12:00'.split(':').map(Number);
   const [outHour, outMinute] = timeOut.split(':').map(Number);
@@ -382,14 +394,14 @@ const convertTo24Hour = (time: any): string => {
                       <Text style={{ textAlign: 'center', marginTop: 2 }}>
 
                       {
-                      undertimeCalc("12:00", convertTo24Hour(renderCheckOutText(checkoutTimes))).hours }
+                      undertimeCalc("12:00", convertTo24Hour(renderCheckOutText(checkoutTimes)) || '').hours }
                     
                       </Text>
                       
                     </View>
                     <View style={{ width: '10%', paddingLeft: 2, height: '100%', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
                       <Text style={{ textAlign: 'center', marginTop: 2 }}>{
-                      undertimeCalc("12:00", convertTo24Hour(renderCheckOutText(checkoutTimes))).minutes }
+                      undertimeCalc("12:00", convertTo24Hour(renderCheckOutText(checkoutTimes)) || '').minutes }
 
                        
                       </Text>
@@ -414,14 +426,14 @@ const convertTo24Hour = (time: any): string => {
                       <Text style={{ textAlign: 'center', marginTop: 2 }}>
 
                       {
-                      undertimeCalc(renderCheckinText(checkinTimes), convertTo24Hour(renderCheckOutText(checkoutTimes))).hours }
+                      undertimeCalc(renderCheckinText(checkinTimes), convertTo24Hour(renderCheckOutText(checkoutTimes)) || '').hours }
                     
                       </Text>
                       
                     </View>
                     <View style={{ width: '10%', paddingLeft: 2, height: '100%', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
                       <Text style={{ textAlign: 'center', marginTop: 2 }}>{
-                      undertimeCalc(renderCheckinText(checkinTimes), convertTo24Hour(renderCheckOutText(checkoutTimes))).minutes }
+                      undertimeCalc(renderCheckinText(checkinTimes), convertTo24Hour(renderCheckOutText(checkoutTimes)) || '').minutes }
 
                        
                       </Text>
@@ -487,13 +499,13 @@ const convertTo24Hour = (time: any): string => {
                     <View style={{ width: '10%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
                       <Text style={{ textAlign: 'center', marginTop: 2 }}>
 
-                      {undertimeCalc(renderCheckinText(checkinTimes), convertTo24Hour(renderCheckOutText(checkoutTimes))).hours}
+                      {undertimeCalc(renderCheckinText(checkinTimes), convertTo24Hour(renderCheckOutText(checkoutTimes)) || '').hours}
                     
                       </Text>
                       
                     </View>
                     <View style={{ width: '10%', paddingLeft: 2, height: '100%', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-                      <Text style={{ textAlign: 'center', marginTop: 2 }}>{undertimeCalc(renderCheckinText(checkinTimes), convertTo24Hour(renderCheckOutText(checkoutTimes))).minutes}
+                      <Text style={{ textAlign: 'center', marginTop: 2 }}>{undertimeCalc(renderCheckinText(checkinTimes), convertTo24Hour(renderCheckOutText(checkoutTimes)) || '').minutes}
 
                        
                       </Text>
@@ -538,7 +550,7 @@ const convertTo24Hour = (time: any): string => {
             <View style={{ fontSize: 8, textAlign: 'center', marginTop: 30 }}>
               <Text style={{ borderBottom: 0.5, paddingTop: 2,fontStyle:'bold' }}>{
               
-              JSON.parse(localStorage.getItem('user')||'').deptid  == 4? " NIDELIZA FE O. NACILLA":""
+              JSON.parse(localStorage.getItem('user')||'').deptid  == 4 && name.toUpperCase() != "NIDELIZA FE O. NACILLA" ?  ` NIDELIZA FE O. NACILLA`:""
               }</Text>
               <Text style={{ fontSize: 7 ,fontStyle:'italic',marginTop:2}}>Name and Signature of Immediate Supervisor</Text>
             </View>
