@@ -31,6 +31,32 @@ function isSmiling(expressions: any) {
   return expressions.happy > 0.5;
 }
 
+// Browser/Device helpers
+const isMobileDevice = () =>
+  typeof navigator !== "undefined" && /android|iphone|ipad|ipod|iemobile|mobile/i.test(navigator.userAgent);
+
+const isChromeBrowser = () =>
+  typeof navigator !== "undefined" && /chrome|crios/i.test(navigator.userAgent) && !/edg|opr|brave|firefox/i.test(navigator.userAgent);
+
+// Adjust radius by +10 meters for Chrome to compensate observed gap
+const getEffectiveRadiusKm = (baseKm: number) => baseKm + (isChromeBrowser() ? 0.01 : 0);
+
+// Coarse device tier for adaptive tuning
+type DeviceTier = 'low' | 'mid' | 'high';
+const getDeviceTier = (): DeviceTier => {
+  try {
+    const mem = (navigator as any).deviceMemory ?? 4; // number of GB
+    const cores = navigator.hardwareConcurrency ?? 4;
+    const mobile = isMobileDevice();
+    if (mobile && (mem <= 2 || cores <= 4)) return 'low';
+    if (mem <= 2 || cores <= 2) return 'low';
+    if (mem <= 4 || cores <= 4) return 'mid';
+    return 'high';
+  } catch {
+    return 'mid';
+  }
+};
+
 function isWithinRadiusAny(
   currentLat: number,
   currentLon: number,
@@ -41,10 +67,12 @@ function isWithinRadiusAny(
   let isNearAny = false;
   let nearestLocation = "";
 
+  const effectiveRadiusKm = getEffectiveRadiusKm(radiusKm);
+
   targetLocations.forEach((location) => {
     const [targetLat, targetLon] = location.split(",").map((coord) => parseFloat(coord.trim()));
     const distance = calculateDistance(currentLat, currentLon, targetLat, targetLon);
-    if (distance <= radiusKm) isNearAny = true;
+    if (distance <= effectiveRadiusKm) isNearAny = true;
     if (distance < minDistance) {
       minDistance = distance;
       nearestLocation = location;
@@ -116,16 +144,37 @@ const PermissionManager = {
 
 const MODEL_URL = "/regional/models";
 
-// Optimized video constraints for low-end devices
-const getOptimizedVideoConstraints = (camera: string) => ({
-  video: {
-    facingMode: camera,
-    width: { ideal: 640, max: 1280 },
-    height: { ideal: 480, max: 720 },
-    frameRate: { ideal: 15, max: 30 }, // Reduced for performance
-    aspectRatio: 1.333
+// Optimized video constraints by device tier
+const getOptimizedVideoConstraints = (camera: string) => {
+  const tier = getDeviceTier();
+  let width: MediaTrackConstraints["width"] = { ideal: 640, max: 1280 };
+  let height: MediaTrackConstraints["height"] = { ideal: 480, max: 720 };
+  let frameRate: MediaTrackConstraints["frameRate"] = { ideal: 15, max: 30 };
+
+  if (tier === 'low') {
+    width = { ideal: 480, max: 640 };
+    height = { ideal: 360, max: 480 };
+    frameRate = { ideal: 12, max: 24 };
+  } else if (tier === 'mid') {
+    width = { ideal: 640, max: 960 };
+    height = { ideal: 480, max: 540 };
+    frameRate = { ideal: 15, max: 30 };
+  } else {
+    width = { ideal: 640, max: 1280 };
+    height = { ideal: 480, max: 720 };
+    frameRate = { ideal: 24, max: 30 };
   }
-});
+
+  return {
+    video: {
+      facingMode: camera,
+      width,
+      height,
+      frameRate,
+      aspectRatio: 1.333
+    }
+  } as MediaStreamConstraints;
+};
 
 function FaceRecMain({ userObject }: { userObject: any }) {
   const navigate = useNavigate();
@@ -157,6 +206,7 @@ function FaceRecMain({ userObject }: { userObject: any }) {
   const locationIntervalRef = useRef<NodeJS.Timeout>();
   const floatingMenuTimeoutRef = useRef<NodeJS.Timeout>();
   const animationFrameRef = useRef<number>();
+  const menuCooldownUntilRef = useRef<number>(0);
 
   // Determine if actions are enabled
   const canPerformActions = livelinessStatus === "passed" && 
@@ -166,7 +216,10 @@ function FaceRecMain({ userObject }: { userObject: any }) {
 
   // Floating menu handler
   const showFloatingMenu = useCallback(() => {
+    // Prevent if already shown, during cooldown, or if any Swal is visible (e.g., success dialog)
     if (floatingMenuShown) return;
+    if (Date.now() < menuCooldownUntilRef.current) return;
+    try { if ((Swal as any).isVisible && Swal.isVisible()) return; } catch {}
     
     setFloatingMenuShown(true);
     
@@ -227,16 +280,22 @@ function FaceRecMain({ userObject }: { userObject: any }) {
   },
   didOpen: () => {
     document.getElementById('time-in-btn')?.addEventListener('click', () => {
+      // start cooldown to avoid immediate re-open
+      menuCooldownUntilRef.current = Date.now() + 3000;
       handleTimeAction('in');
       Swal.close();
     });
     
     document.getElementById('time-out-btn')?.addEventListener('click', () => {
+      // start cooldown to avoid immediate re-open
+      menuCooldownUntilRef.current = Date.now() + 3000;
       handleTimeAction('out');
       Swal.close();
     });
   },
   willClose: () => {
+    // Ensure cooldown after any close path
+    menuCooldownUntilRef.current = Math.max(menuCooldownUntilRef.current, Date.now() + 3000);
     setFloatingMenuShown(false);
   }
 });
@@ -250,7 +309,13 @@ function FaceRecMain({ userObject }: { userObject: any }) {
 
   // Show floating menu when canPerformActions becomes true
   useEffect(() => {
-    if (canPerformActions && !floatingMenuShown) {
+    if (
+      canPerformActions &&
+      !floatingMenuShown &&
+      Date.now() >= menuCooldownUntilRef.current &&
+      // avoid showing while another Swal is on screen
+      (!(Swal as any).isVisible || !Swal.isVisible())
+    ) {
       showFloatingMenu();
     }
     
@@ -356,22 +421,32 @@ function FaceRecMain({ userObject }: { userObject: any }) {
   const openSiteSettings = useCallback(() => {
     const origin = window.location.origin;
     const ua = navigator.userAgent.toLowerCase();
-    let url: string | null = null;
     const isEdge = ua.includes('edg');
-    const isChrome = !!(window as any).chrome || ua.includes('chrome');
-    if (isChrome || isEdge) {
+    const isFirefox = ua.includes('firefox');
+    const isMobile = /android|iphone|ipad|ipod/i.test(ua);
+    const isChromeDesktop = (ua.includes('chrome') || ua.includes('crios')) && !isEdge && !ua.includes('opr');
+
+    let url: string | null = null;
+    if (!isMobile && (isChromeDesktop || isEdge)) {
       const proto = isEdge ? 'edge' : 'chrome';
       url = `${proto}://settings/content/siteDetails?site=${encodeURIComponent(origin)}`;
-    } else if (ua.includes('firefox')) {
+    } else if (!isMobile && isFirefox) {
       url = 'about:preferences#privacy';
     }
     if (url) {
       try { window.open(url, '_blank'); } catch {}
     }
+    const mobileInstructions = isMobile
+      ? `<ol style="text-align:left; padding-left: 20px;">
+           <li>Tap the lock icon in the address bar</li>
+           <li>Permissions ➜ Location</li>
+           <li>Choose "Allow while using"</li>
+         </ol>`
+      : `<p>In Site Settings, set Location to <strong>Allow</strong> for ${origin}, then return here.</p>`;
     Swal.fire({
       icon: 'info',
       title: 'Enable location for this site',
-      html: `<p>In Site Settings, set Location to "Allow" for ${origin}, then return here.</p>`,
+      html: mobileInstructions,
       confirmButtonText: 'Reload Page',
       allowOutsideClick: false,
       allowEscapeKey: false,
@@ -503,7 +578,7 @@ function FaceRecMain({ userObject }: { userObject: any }) {
         return;
       }
 
-      navigator.geolocation.getCurrentPosition(
+  navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
           const { isNearby, distance } = isWithinRadiusAny(latitude, longitude, locations);
@@ -543,9 +618,10 @@ function FaceRecMain({ userObject }: { userObject: any }) {
             setLocationStatus("error");
           }
         },
-        { 
-          enableHighAccuracy: false,
-          timeout: 10000,
+        {
+          // Prefer high accuracy on mobile/Chrome for tighter readings
+          enableHighAccuracy: isMobileDevice() || isChromeBrowser(),
+          timeout: isMobileDevice() ? 20000 : 10000,
           maximumAge: 0 // Force fresh read to avoid stale/delayed location
         }
       );
@@ -561,13 +637,39 @@ function FaceRecMain({ userObject }: { userObject: any }) {
     if (isModelsLoaded) return;
     try {
       setStatus("Loading models...");
+
+      // Prefer WebGL backend when available for faster inference
+      try {
+        const tf = (faceapi as any).tf;
+        if (tf?.setBackend) {
+          await tf.setBackend('webgl');
+          if (tf?.ready) await tf.ready();
+        }
+      } catch {}
+
       // Load only essential models for better performance
       await Promise.all([
-        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL), // Use tiny detector for better performance
-        faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL), // Use tiny landmarks
+        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+        faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL),
         faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
         faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
       ]);
+
+      // Warm-up pass to compile kernels and avoid first-frame jank
+      try {
+        const warmupCanvas = document.createElement('canvas');
+        warmupCanvas.width = 128; warmupCanvas.height = 128;
+        const ctx = warmupCanvas.getContext('2d');
+        ctx?.fillRect(0, 0, 1, 1);
+        await faceapi
+          .detectAllFaces(
+            warmupCanvas,
+            new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.9 })
+          )
+          .withFaceLandmarks(true)
+          .withFaceDescriptors()
+          .withFaceExpressions();
+      } catch {}
       setIsModelsLoaded(true);
     } catch (error) {
       setStatus("Error loading models");
@@ -626,21 +728,20 @@ function FaceRecMain({ userObject }: { userObject: any }) {
     }
 
     if (detectionIntervalRef.current) clearInterval(detectionIntervalRef.current);
-    
-    let frameCount = 0;
+
+    const tier = getDeviceTier();
+    const inputSize = tier === 'low' ? 224 : tier === 'mid' ? 320 : 416;
+    const intervalMs = tier === 'low' ? 700 : tier === 'mid' ? 500 : 350;
+
     const detectFaces = async () => {
       try {
         if (!videoRef.current || !canvasRef.current || !faceMatcher.current) return;
-        
-        // Skip frames for better performance (process every 3rd frame)
-        frameCount++;
-        if (frameCount % 3 !== 0) return;
-        
+
         const detections = await faceapi
-          .detectAllFaces(videoRef.current, new faceapi.TinyFaceDetectorOptions({
-            inputSize: 416, // Smaller input size for better performance
-            scoreThreshold: 0.5
-          }))
+          .detectAllFaces(
+            videoRef.current,
+            new faceapi.TinyFaceDetectorOptions({ inputSize, scoreThreshold: 0.6 })
+          )
           .withFaceLandmarks(true) // Use tiny landmarks
           .withFaceDescriptors()
           .withFaceExpressions();
@@ -689,8 +790,8 @@ function FaceRecMain({ userObject }: { userObject: any }) {
       }
     };
 
-    // Use reduced interval for better performance
-    detectionIntervalRef.current = setInterval(detectFaces, 500); // Increased from 200ms to 500ms
+  // Adaptive interval by device tier
+  detectionIntervalRef.current = setInterval(detectFaces, intervalMs);
   }, [cameraStatus]);
 
   // Fetch user face data
