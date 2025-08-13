@@ -147,6 +147,8 @@ function FaceRecMain({ userObject }: { userObject: any }) {
   // Add these refs to track stable location state
   const lastLocationStatusRef = useRef<boolean | null>(null); // true = nearby, false = outside, null = unknown
   const locationPermissionGrantedRef = useRef<boolean>(false);
+  const officeLocationsRef = useRef<string[] | null>(null);
+  const locationPromptShownRef = useRef<boolean>(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -350,37 +352,68 @@ function FaceRecMain({ userObject }: { userObject: any }) {
     }
   }, [camera]);
 
+  // Helper: open browser site settings for this origin, then prompt reload
+  const openSiteSettings = useCallback(() => {
+    const origin = window.location.origin;
+    const ua = navigator.userAgent.toLowerCase();
+    let url: string | null = null;
+    const isEdge = ua.includes('edg');
+    const isChrome = !!(window as any).chrome || ua.includes('chrome');
+    if (isChrome || isEdge) {
+      const proto = isEdge ? 'edge' : 'chrome';
+      url = `${proto}://settings/content/siteDetails?site=${encodeURIComponent(origin)}`;
+    } else if (ua.includes('firefox')) {
+      url = 'about:preferences#privacy';
+    }
+    if (url) {
+      try { window.open(url, '_blank'); } catch {}
+    }
+    Swal.fire({
+      icon: 'info',
+      title: 'Enable location for this site',
+      html: `<p>In Site Settings, set Location to "Allow" for ${origin}, then return here.</p>`,
+      confirmButtonText: 'Reload Page',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+    }).then(() => window.location.reload());
+  }, []);
+
   // Enhanced location permission request
-  const requestLocationPermission = useCallback(async () => {
+  const requestLocationPermission = useCallback(async (): Promise<"granted" | "denied" | "error"> => {
     setLocationStatus("checking");
     
     if (!navigator.geolocation) {
       setLocationStatus("error");
       setProximityStatus("❌ Geolocation not supported");
       locationPermissionGrantedRef.current = false;
-      return;
+      return "error";
     }
-
-    navigator.geolocation.getCurrentPosition(
-      (_position) => {
-        setLocationStatus("ok");
-        locationPermissionGrantedRef.current = true;
-        PermissionManager.setPermissionStatus(LOCATION_PERMISSION_KEY, true);
-      },
-      (error) => {
-        if (error.code === error.PERMISSION_DENIED) {
-          setLocationStatus("permission_denied");
-          locationPermissionGrantedRef.current = false;
-          PermissionManager.setPermissionStatus(LOCATION_PERMISSION_KEY, false);
-          showLocationPermissionError();
-        } else {
-          setLocationStatus("error");
-          locationPermissionGrantedRef.current = false;
-          console.error("Location access error:", error);
-        }
-      },
-      { enableHighAccuracy: false, timeout: 10000, maximumAge: 0 }
-    );
+    
+    return new Promise((resolve) => {
+      navigator.geolocation.getCurrentPosition(
+        (_position) => {
+          setLocationStatus("ok");
+          locationPermissionGrantedRef.current = true;
+          PermissionManager.setPermissionStatus(LOCATION_PERMISSION_KEY, true);
+          resolve("granted");
+        },
+        (error) => {
+          if (error.code === error.PERMISSION_DENIED) {
+            setLocationStatus("permission_denied");
+            locationPermissionGrantedRef.current = false;
+            PermissionManager.setPermissionStatus(LOCATION_PERMISSION_KEY, false);
+            showLocationPermissionError();
+            resolve("denied");
+          } else {
+            setLocationStatus("error");
+            locationPermissionGrantedRef.current = false;
+            console.error("Location access error:", error);
+            resolve("error");
+          }
+        },
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 0 }
+      );
+    });
   }, []);
 
   // Show camera permission error
@@ -425,24 +458,37 @@ function FaceRecMain({ userObject }: { userObject: any }) {
             <li>Refresh the page</li>
           </ol>
           <p style="margin-top: 15px; font-size: 14px; color: #666;">
-            <em>Or go to browser Settings > Privacy & Security > Site Settings > Location</em>
+            <em>Or use the button below to open your browser's site settings.</em>
           </p>
         </div>
       `,
       icon: 'warning',
-      confirmButtonText: 'Try Again',
-      showCancelButton: true,
-      cancelButtonText: 'Skip',
+      confirmButtonText: 'Grant Location Access',
+      showCancelButton: false, // remove Skip
       confirmButtonColor: '#3085d6'
     }).then((result) => {
       if (result.isConfirmed) {
-        requestLocationPermission();
+        // If permission is denied at browser level, open settings; otherwise prompt and then reload
+        PermissionManager.checkBrowserPermission('geolocation' as PermissionName)
+          .then((state) => {
+            if (state === 'denied') {
+              openSiteSettings();
+            } else {
+              requestLocationPermission().finally(() => window.location.reload());
+            }
+          })
+          .catch(() => requestLocationPermission().finally(() => window.location.reload()));
+      } else if (result.isDenied) {
+        openSiteSettings();
       }
     });
-  }, [requestLocationPermission]);
+  }, [requestLocationPermission, openSiteSettings]);
 
   // Enhanced location checking with stable status tracking
   const handleGetLocation = useCallback(throttle((locations: string[]) => {
+    // Remember office locations so we can retry automatically once permission is granted
+    officeLocationsRef.current = locations;
+
     // If location permission was never granted, don't try to check
     if (!locationPermissionGrantedRef.current) {
       setProximityStatus("❌ Location permission required");
@@ -498,16 +544,16 @@ function FaceRecMain({ userObject }: { userObject: any }) {
           }
         },
         { 
-          enableHighAccuracy: false, // Disable high accuracy for better stability
-          timeout: 8000, // Increased timeout
-          maximumAge: 300000 // 5 minutes cache - much longer for stability
+          enableHighAccuracy: false,
+          timeout: 10000,
+          maximumAge: 0 // Force fresh read to avoid stale/delayed location
         }
       );
     };
 
     if (locationIntervalRef.current) clearInterval(locationIntervalRef.current);
     checkLocation();
-    locationIntervalRef.current = setInterval(checkLocation, 45000); // Increased to 45 seconds
+    locationIntervalRef.current = setInterval(checkLocation, 45000);
   }, 15000), []); // Increased throttle to 15 seconds
 
   // Optimized model loading with lazy loading
@@ -663,6 +709,7 @@ function FaceRecMain({ userObject }: { userObject: any }) {
       setIsDataLoaded(true);
       
       if (data.location?.length > 0) {
+        officeLocationsRef.current = data.location;
         handleGetLocation(data.location);
       } else {
         setProximityStatus("❌ No office locations configured");
@@ -785,6 +832,56 @@ function FaceRecMain({ userObject }: { userObject: any }) {
       if (detectionIntervalRef.current) clearInterval(detectionIntervalRef.current);
     };
   }, [isModelsLoaded, isDataLoaded, faces.length, permissionsInitialized, cameraStatus, camera, initializeFaceMatcher, startVideo, startFaceDetection]);
+
+  // Auto-show location permission prompt when denied or required
+  useEffect(() => {
+    const shouldPrompt =
+      locationStatus === "permission_denied" ||
+      (proximityStatus && proximityStatus.includes("Location permission required"));
+    if (shouldPrompt && !locationPromptShownRef.current) {
+      locationPromptShownRef.current = true;
+      showLocationPermissionError();
+    }
+    if (locationStatus === "ok") {
+      // Reset so we can prompt again later if it becomes denied
+      locationPromptShownRef.current = false;
+    }
+  }, [locationStatus, proximityStatus, showLocationPermissionError]);
+  
+  // Listen for browser permission changes and refresh location automatically
+  useEffect(() => {
+    let perm: PermissionStatus | null = null;
+    const setup = async () => {
+      try {
+        // Some browsers may throw if Permissions API not fully supported
+        // @ts-ignore
+        const p = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
+        perm = p;
+        const onChange = () => {
+          if (p.state === 'granted') {
+            setLocationStatus('ok');
+            locationPermissionGrantedRef.current = true;
+            if (officeLocationsRef.current) {
+              handleGetLocation(officeLocationsRef.current);
+            }
+          } else if (p.state === 'denied') {
+            setLocationStatus('permission_denied');
+            locationPermissionGrantedRef.current = false;
+          }
+        };
+        p.onchange = onChange;
+      } catch {
+        // Silently ignore if not supported
+      }
+    };
+    setup();
+    return () => {
+      if (perm) {
+        // @ts-ignore
+        perm.onchange = null;
+      }
+    };
+  }, [handleGetLocation]);
 
   return (
     <div className="flex-1 h-full overflow-auto">
