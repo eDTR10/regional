@@ -70,7 +70,7 @@ export default function PrintDTR({name = '', data, date, show, selectedYear, sel
     const pdfDoc = await PDFDocument.load(await blob.arrayBuffer());
   
 
-    const pdfBytes = await pdfDoc.save();
+    const pdfBytes:any = await pdfDoc.save();
     const protectedBlob = new Blob([pdfBytes], { type: 'application/pdf' });
 
     // Create a temporary download link and programmatically click it
@@ -105,6 +105,7 @@ export default function PrintDTR({name = '', data, date, show, selectedYear, sel
                   <SelectValue  />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="4">6:00-6:00</SelectItem>
                   <SelectItem value="5">7:00-4:00</SelectItem>
                   <SelectItem value="6">7:30-4:30</SelectItem>
                   <SelectItem value="7">8:00-5:00</SelectItem>
@@ -129,10 +130,7 @@ export default function PrintDTR({name = '', data, date, show, selectedYear, sel
                   <SelectValue  />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="1">5:00-2:00</SelectItem>
-                  <SelectItem value="2">5:30-2:30</SelectItem>
-                  <SelectItem value="3">6:00-3:00</SelectItem>
-                  <SelectItem value="4">6:30-3:30</SelectItem>
+                  <SelectItem value="4">6:00-6:00</SelectItem>
                   <SelectItem value="5">7:00-4:00</SelectItem>
                   <SelectItem value="6">7:30-4:30</SelectItem>
                   <SelectItem value="7">8:00-5:00</SelectItem>
