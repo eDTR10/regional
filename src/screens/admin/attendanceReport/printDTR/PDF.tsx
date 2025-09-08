@@ -6,9 +6,9 @@ import { convertStatus } from '@/helper/convert-status';
 Font.register({
   family: 'Palatino',
   fonts: [
-    { src: `/${import.meta.env.VITE_URL}/palatino-linotype-family/palatinolinotype_regular.ttf` }, // normal
-    { src: `/${import.meta.env.VITE_URL}/palatino-linotype-family/palatinolinotype_italic.ttf`, fontStyle: 'italic' }, // italic
-    { src: `/${import.meta.env.VITE_URL}/palatino-linotype-family/palatinolinotype_bold.ttf`, fontStyle: 'bold' } // bold
+    { src: `/${import.meta.env.VITE_LINK}/palatino-linotype-family/palatinolinotype_regular.ttf` }, // normal
+    { src: `/${import.meta.env.VITE_LINK}/palatino-linotype-family/palatinolinotype_italic.ttf`, fontStyle: 'italic' }, // italic
+    { src: `/${import.meta.env.VITE_LINK}/palatino-linotype-family/palatinolinotype_bold.ttf`, fontStyle: 'bold' } // bold
   ]
 });
 
