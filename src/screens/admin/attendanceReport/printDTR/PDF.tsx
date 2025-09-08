@@ -4,11 +4,11 @@ import DICT from './../../../../assets/dict.png';
 import { convertStatus } from '@/helper/convert-status';
 
 Font.register({
-  family: 'Roboto',
+  family: 'Palatino',
   fonts: [
-    { src: `${import.meta.env.VITE_LINK}/calibri-font-family/calibri-regular.ttf` }, // normal
-    { src: `${import.meta.env.VITE_LINK}/calibri-font-family/calibri-italic.ttf`, fontStyle: 'italic' }, // italic
-    { src: `${import.meta.env.VITE_LINK}/calibri-font-family/calibri-bold.ttf`, fontStyle: 'bold' } // bold
+    { src: `/${import.meta.env.VITE_URL}/palatino-linotype-family/palatinolinotype_regular.ttf` }, // normal
+    { src: `/${import.meta.env.VITE_URL}/palatino-linotype-family/palatinolinotype_italic.ttf`, fontStyle: 'italic' }, // italic
+    { src: `/${import.meta.env.VITE_URL}/palatino-linotype-family/palatinolinotype_bold.ttf`, fontStyle: 'bold' } // bold
   ]
 });
 
@@ -264,18 +264,18 @@ const undertimeCalc = (timeIn: string, timeOut: string, day: number): { hours: n
 
   return (
     <Document title={`${name?name.toUpperCase():""}_DTR_${date}.pdf`}   >
-      <Page size="A4" style={{ fontFamily: 'Roboto', flexDirection: 'row', backgroundColor: '#ffffff', fontSize: 8, padding: 30 }}>
+      <Page size="A4" style={{ fontFamily: 'Palatino', flexDirection: 'row', backgroundColor: '#ffffff', fontSize: 8, padding: 30,gap:10 }}>
       {[1, 2].map((_, index) => (
-          <View key={index} style={{ width: '50%', paddingHorizontal: 8 }}>
+          <View key={index} style={{ width: '50%', border: 0.5, borderStyle: 'solid', padding: 8 }}>
             <Text style={{ fontSize: 6, marginBottom: 5,fontStyle: 'italic' }}>  Civil Service Form No. 48</Text>
             <Image src={DICT} style={{ height: 60, objectFit: 'contain', alignSelf: 'center', marginBottom: 10 }} />
-            <Text style={{ fontSize: 10, fontStyle: 'bold', textAlign: 'center', marginBottom: 3 }}>DAILY TIME RECORD</Text>
+            <Text style={{ fontSize: 14, fontStyle: 'bold', textAlign: 'center', marginBottom: 3 }}>DAILY TIME RECORD</Text>
             <Text style={{ fontSize: 10, textAlign: 'center', marginBottom: 10 }}></Text>
-            <Text style={{ fontSize: 9, textAlign: 'center', textTransform: 'uppercase', borderBottom: 0.5, marginBottom: 1,fontStyle:'bold' }}>{name?name.toUpperCase():"JOHN C. DOE"}</Text>
-            <Text style={{ fontSize: 8, textAlign: 'center' }}>( Name )</Text>
+            <Text style={{ fontSize: 9, textAlign: 'center', textTransform: 'uppercase', borderBottom: 0.5, marginBottom: 1,borderStyle:"dashed",fontStyle:'bold' }}>{name?name.toUpperCase():"JOHN C. DOE"}</Text>
+            
 
             <View style={{ flexDirection: 'row', marginTop: 10, marginBottom: 5 }}>
-              <View style={{ width: '50%',textAlign:'left' }}>
+              <View style={{ width: '50%',textAlign:'left', fontStyle: 'italic' }}>
                 <Text>For the month of</Text>
                 <Text>Official hours for arrival</Text>
                 <Text>and departure</Text>
@@ -295,15 +295,15 @@ const undertimeCalc = (timeIn: string, timeOut: string, day: number): { hours: n
               </View>
             </View>
 
-            <View style={{ border: 0.5 ,marginVertical:10}}>
-            <View key={index} style={{ flexDirection: 'row', borderBottom: 0.5, alignItems: 'center', height: 12, fontSize: 7 }}>
-                    <View style={{ width: '8%', borderRight: 0.5, paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
+            <View style={{ border: 0.5, marginVertical:10, borderStyle: 'solid', borderTopStyle: 'solid',borderTopColor:"#808080",borderTopWidth:1,borderLeftWidth:0, borderRightWidth:0, borderBottomStyle: 'solid',  }}>
+            <View key={index} style={{ flexDirection: 'row', borderBottom: 0.5, alignItems: 'center', height: 12, fontSize: 7, borderBottomStyle: 'solid' }}>
+                    <View style={{ width: '8%', borderRight: 0.5, paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center', borderRightStyle: 'solid' }}>
                       <Text>Day</Text>
                     </View>
-                    <View style={{ width: '34.5%', borderRight: 0.5, paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
+                    <View style={{ width: '34.5%', borderRight: 0.5, paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center', borderStyle: 'solid' }}>
                       <Text>AM</Text>
                     </View>
-                    <View style={{ width: '34.5%', borderRight: 0.5, paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
+                    <View style={{ width: '34.5%', borderRight: 0.5, paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center', borderStyle: 'solid' }}>
                       <Text>PM</Text>
                     </View>
                    
@@ -311,7 +311,7 @@ const undertimeCalc = (timeIn: string, timeOut: string, day: number): { hours: n
                       <Text>Undertime</Text>
                     </View>
                   </View>
-              <View key={index} style={{ flexDirection: 'row', borderBottom: 0.5, alignItems: 'center', height: 12, fontSize: 7 }}>
+              <View key={index} style={{ flexDirection: 'row', alignItems: 'center', height: 14, fontSize: 7,borderBottom: 1, borderBottomColor:"#808080" , textAlign: 'center', }}>
                     <View style={{ width: '8%', borderRight: 0.5, paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
                       <Text></Text>
                     </View>
@@ -498,7 +498,7 @@ const convertTo24Hour = (time: any): string => {
                         ):
                         dayName?
                         <>
-                            <View style={{ width: '69%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center', backgroundColor: "#c7e8f0" }}>
+                            <View style={{ width: '69%', borderRight: 0.5, alignItems: 'center', height: '100%', borderStyle:"solid" }}>
                               <Text style={{ textAlign: 'center', marginTop: 2 }}>{dayName}</Text>
                             </View>
                             <View style={{ width: '10%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
@@ -523,8 +523,8 @@ const convertTo24Hour = (time: any): string => {
     );
   } else {
      return (
-                  <View key={index} style={{ flexDirection: 'row', borderBottom: 0.5, alignItems: 'center', height: 12, fontSize: 7, textAlign: 'center' }}>
-                    <View style={{ width: '8%', borderRight: 0.5, height: '100%', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+                  <View key={index} style={{ flexDirection: 'row', borderBottom: 0.5, alignItems: 'center', height: 12, fontSize: 7, textAlign: 'center', borderStyle: 'dashed' }}>
+                    <View style={{ width: '8%', borderRight: 0.5, height: '100%', alignItems: 'center', justifyContent: 'center', textAlign: 'center', borderStyle: 'dashed' }}>
                       <Text style={{ textAlign: 'center', marginTop: 2 }}>{day} {dayName && `(${dayName})`}</Text>
                     </View>
                     <View style={{ width: '17.25%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
@@ -561,17 +561,20 @@ const convertTo24Hour = (time: any): string => {
 
               
 <View style={{ flexDirection: 'row', borderBottom: 'none', alignItems: 'center', height: 12 }}>
-                <View style={{ width: '77%', borderRight: 0.5, paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
-                  <Text style={{textAlign:'center',marginTop:2}}>Total</Text>
+                <View style={{ width: '60%', height: '100%', justifyContent: 'center', textAlign: 'center' }}>
+                 
                 </View>
-                <View style={{ width: '10%', borderRight: 0.5, paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}></View>
+                <View style={{ width: '17%',  height: '100%', justifyContent: 'center', textAlign: 'center', marginTop:5}}>
+                  <Text style={{fontStyle:'bold'}} >Total</Text>
+                </View>
+                <View style={{ width: '10%', borderRight: 0.5,borderLeft:0.5, paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}></View>
                 <View style={{ width: '13%', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}></View>
               </View>
 
             </View>
 
-            <Text style={{ fontSize: 7, marginTop: 5, textAlign: 'justify', fontStyle: 'italic',fontWeight:100 }}>
-              I certify on my honor that the above is a true and correct report of the hours of work performed, record of which was made daily at the time of arrival and departure from office.
+            <Text style={{ fontSize: 8, marginTop: 5, textAlign: 'justify', fontStyle: 'italic',fontWeight:400 }}>
+              I CERTIFY on my honor that the above is a true and correct report of the hours of work performed, record of which was made daily at the time of arrival and departure from office.
             </Text>
 
             <View style={{ fontSize: 8, textAlign: 'center', marginTop: 20 }}>
@@ -586,7 +589,7 @@ const convertTo24Hour = (time: any): string => {
               <Text style={{ borderBottom: 0.5, paddingTop: 2 ,fontStyle:'bold' }}>{name?name.toUpperCase():""}</Text>
             </View>
 
-            <Text style={{ fontSize: 7, marginTop: 10, textAlign: 'justify' }}>
+            <Text style={{ fontSize: 7, marginTop: 10, textAlign: 'justify',fontStyle: 'italic',fontWeight:100 }}>
               VERIFIED as to the prescribed office hours.
             </Text>
 

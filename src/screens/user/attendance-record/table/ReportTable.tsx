@@ -36,7 +36,7 @@ function ReportTable() {
     };
 
 
-  const [show,setShow] = useState(false)  
+  const [show,setShow] = useState(true)  
   const [loading,setLoading] = useState(false)  
 
 
