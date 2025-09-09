@@ -300,7 +300,7 @@ const undertimeCalc = (timeIn: string, timeOut: string, day: number): { hours: n
                 </View>
                 <View style={{flexDirection: 'row'}}>
                     <Text>Saturdays</Text>
-                    <View style={{borderBottom: 0.5,marginLeft:20,width: '100%', }}><Text style={{fontStyle:'bold', marginLeft:20,marginTop:2,fontSize:7}}>As requireds</Text></View>
+                    <View style={{borderBottom: 0.5,marginLeft:20,width: '100%', }}><Text style={{fontStyle:'bold', marginLeft:20,marginTop:2,fontSize:7}}></Text></View>
                 </View>
                 
                 
