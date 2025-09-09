@@ -224,6 +224,10 @@ const DARDocument = ({ activities, dateRange, name, position, project, verifiedB
           <Text style={styles.signatureTitle}>{verifiedBy.designation || 'Designation'}</Text>
         </View>
       </View>
+
+      <View style={{marginTop:40,textAlign:'center',}}>
+        <Text style={{fontStyle: 'italic', fontSize: 10}}>--- This is a system-generated file.---</Text>
+      </View>
     </Page>
   </Document>
 );
