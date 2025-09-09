@@ -269,7 +269,7 @@ const undertimeCalc = (timeIn: string, timeOut: string, day: number): { hours: n
         <View key={index} style={{ width: '50%', border: 0.5, borderStyle: 'solid',padding:1 }}>
           <View key={index} style={{ width: '100%', border: 0.5, borderStyle: 'solid', padding: 8 }}>
             <Text style={{ fontSize: 6, marginBottom: 5,fontStyle: 'italic',fontWeight: 'bold' }}>  Civil Service Form No. 48</Text>
-            <Image src={DICT} style={{ height: 65, objectFit: 'contain', alignSelf: 'center', marginBottom: 5 }} />
+            <Image src={DICT} style={{ height: 50, objectFit: 'contain', alignSelf: 'center', marginBottom: 5 }} />
             <Text style={{ fontSize: 14, fontStyle: 'bold', textAlign: 'center', marginBottom: 3 }}>DAILY TIME RECORD</Text>
             <Text style={{ fontSize: 10, textAlign: 'center', marginBottom: 5 }}></Text>
             <View style={{ marginBottom: 1 }}>
