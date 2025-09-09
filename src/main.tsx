@@ -64,7 +64,9 @@ const TempPage = lazy(() =>
 );
 
 
-
+const ActivityReport = lazy(() =>
+  wait(1300).then(() => import("./screens/user/activity-record/activityReport.tsx"))
+);
 
 
 const router = createBrowserRouter([
@@ -230,6 +232,14 @@ const router = createBrowserRouter([
         element: <>
           <Suspense fallback={<Loader />}>
             <UserAttendanceRecord />
+          </Suspense>
+        </>,
+      },
+      {
+        path: `/regional/user/activity-report`,
+        element: <>
+          <Suspense fallback={<Loader />}>
+            <ActivityReport />
           </Suspense>
         </>,
       },

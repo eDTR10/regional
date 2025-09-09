@@ -266,72 +266,86 @@ const undertimeCalc = (timeIn: string, timeOut: string, day: number): { hours: n
     <Document title={`${name?name.toUpperCase():""}_DTR_${date}.pdf`}   >
       <Page size="A4" style={{ fontFamily: 'Palatino', flexDirection: 'row', backgroundColor: '#ffffff', fontSize: 8, padding: 30,gap:10 }}>
       {[1, 2].map((_, index) => (
-          <View key={index} style={{ width: '50%', border: 0.5, borderStyle: 'solid', padding: 8 }}>
-            <Text style={{ fontSize: 6, marginBottom: 5,fontStyle: 'italic' }}>  Civil Service Form No. 48</Text>
-            <Image src={DICT} style={{ height: 60, objectFit: 'contain', alignSelf: 'center', marginBottom: 10 }} />
+        <View key={index} style={{ width: '50%', border: 0.5, borderStyle: 'solid',padding:1 }}>
+          <View key={index} style={{ width: '100%', border: 0.5, borderStyle: 'solid', padding: 8 }}>
+            <Text style={{ fontSize: 6, marginBottom: 5,fontStyle: 'italic',fontWeight: 'bold' }}>  Civil Service Form No. 48</Text>
+            <Image src={DICT} style={{ height: 65, objectFit: 'contain', alignSelf: 'center', marginBottom: 5 }} />
             <Text style={{ fontSize: 14, fontStyle: 'bold', textAlign: 'center', marginBottom: 3 }}>DAILY TIME RECORD</Text>
-            <Text style={{ fontSize: 10, textAlign: 'center', marginBottom: 10 }}></Text>
-            <Text style={{ fontSize: 9, textAlign: 'center', textTransform: 'uppercase', borderBottom: 0.5, marginBottom: 1,borderStyle:"dashed",fontStyle:'bold' }}>{name?name.toUpperCase():"JOHN C. DOE"}</Text>
+            <Text style={{ fontSize: 10, textAlign: 'center', marginBottom: 5 }}></Text>
+            <View style={{ marginBottom: 1 }}>
+  <Text style={{ 
+    fontSize: 9, 
+    textAlign: 'center', 
+    textTransform: 'uppercase', 
+    fontStyle: 'bold', 
+    borderBottom: .7, 
+    borderBottomStyle: 'dashed',
+  }}>
+    {name?name.toUpperCase():"JOHN C. DOE"}
+  </Text>
+</View>
             
 
-            <View style={{ flexDirection: 'row', marginTop: 10, marginBottom: 5 }}>
+            <View style={{ flexDirection: 'row', marginTop: 5, marginBottom: 5 }}>
               <View style={{ width: '50%',textAlign:'left', fontStyle: 'italic' }}>
                 <Text>For the month of</Text>
                 <Text>Official hours for arrival</Text>
                 <Text>and departure</Text>
               </View>
               <View style={{ width: '50%' }}>
-                <Text style={{ borderBottom: 0.5, marginBottom: 1 , fontStyle: 'bold',textAlign:'center'}}>{date}</Text>
+                <Text style={{ borderBottom: 0.5, marginBottom: 2, fontStyle: 'bold',textAlign:'center'}}>{date}</Text>
                 <View style={{flexDirection: 'row'}}>
                     <Text>Regular days</Text>
                     <View style={{borderBottom: 0.5, marginBottom: 1,marginLeft:22,width: '100%' }}></View>
                 </View>
                 <View style={{flexDirection: 'row'}}>
                     <Text>Saturdays</Text>
-                    <View style={{borderBottom: 0.5, marginBottom: 1,marginLeft:20,width: '100%' }}></View>
+                    <View style={{borderBottom: 0.5,marginLeft:20,width: '100%', }}><Text style={{fontStyle:'bold', marginLeft:20,marginTop:2,fontSize:7}}>As requireds</Text></View>
                 </View>
                 
                 
               </View>
             </View>
 
-            <View style={{ border: 0.5, marginVertical:10, borderStyle: 'solid', borderTopStyle: 'solid',borderTopColor:"#808080",borderTopWidth:1,borderLeftWidth:0, borderRightWidth:0, borderBottomStyle: 'solid',  }}>
-            <View key={index} style={{ flexDirection: 'row', borderBottom: 0.5, alignItems: 'center', height: 12, fontSize: 7, borderBottomStyle: 'solid' }}>
+            <View style={{ border: 0, marginVertical:15, borderStyle: 'solid', borderTopStyle: 'solid',borderTopWidth:0,borderLeftWidth:0, borderRightWidth:0, borderBottomStyle: 'solid',borderBottomWidth:1 }}>
+            
+
+            <View key={index} style={{ flexDirection: 'row', borderBottom: 0.5, alignItems: 'center', height: 16, fontSize: 7, borderBottomStyle: 'solid',justifyContent: 'center', textAlign: 'center', borderTopWidth:1, borderTopColor:'#1b1b1b' }}>
                     <View style={{ width: '8%', borderRight: 0.5, paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center', borderRightStyle: 'solid' }}>
-                      <Text>Day</Text>
+                      <Text style={{marginTop:4,fontStyle:'bold'}}>Day</Text>
                     </View>
                     <View style={{ width: '34.5%', borderRight: 0.5, paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center', borderStyle: 'solid' }}>
-                      <Text>AM</Text>
+                      <Text style={{marginTop:4, fontStyle:'bold'}}>AM</Text>
                     </View>
                     <View style={{ width: '34.5%', borderRight: 0.5, paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center', borderStyle: 'solid' }}>
-                      <Text>PM</Text>
+                      <Text style={{marginTop:4, fontStyle:'bold'}}>PM</Text>
                     </View>
                    
                     <View style={{ width: '23%', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
-                      <Text>Undertime</Text>
+                      <Text style={{marginTop:4, fontStyle:'bold'}}>Undertime</Text>
                     </View>
                   </View>
-              <View key={index} style={{ flexDirection: 'row', alignItems: 'center', height: 14, fontSize: 7,borderBottom: 1, borderBottomColor:"#808080" , textAlign: 'center', }}>
+              <View key={index} style={{ flexDirection: 'row', borderBottom: 1, alignItems: 'center', height: 15, fontSize: 7, borderBottomStyle: 'solid',justifyContent: 'center', textAlign: 'center', borderBottomColor:'#1b1b1b' }}>
                     <View style={{ width: '8%', borderRight: 0.5, paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
                       <Text></Text>
                     </View>
                     <View style={{ width: '17.25%', borderRight: 0.5, paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
-                      <Text>Arrival</Text>
+                      <Text style={{marginTop:4, fontStyle:'bold'}}>Arrival</Text>
                     </View>
                     <View style={{ width: '17.25%', borderRight: 0.5, paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
-                      <Text>Departure</Text>
+                      <Text style={{marginTop:4, fontStyle:'bold'}}>Departure</Text>
                     </View>
                     <View style={{ width: '17.25%', borderRight: 0.5, paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
-                      <Text>Arrival</Text>
+                      <Text style={{marginTop:4, fontStyle:'bold'}}>Arrival</Text>
                     </View>
                     <View style={{ width: '17.25%', borderRight: 0.5, paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
-                      <Text>Departure</Text>
+                      <Text style={{marginTop:4, fontStyle:'bold'}}>Departure</Text>
                     </View>
                     <View style={{ width: '10%',borderRight: 0.5, paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
-                      <Text>Hours</Text>
+                      <Text style={{marginTop:4, fontStyle:'bold'}}>Hours</Text>
                     </View>
                     <View style={{ width: '13%', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
-                      <Text>Minutes</Text>
+                      <Text style={{marginTop:4, fontStyle:'bold'}}>Minutes</Text>
                     </View>
                   </View>
 
@@ -371,9 +385,9 @@ const convertTo24Hour = (time: any): string => {
                              (checkoutTimes2 && checkoutTimes2.length > 0);
 
     return (
-      <View key={index} style={{ flexDirection: 'row', borderBottom: 0.5, alignItems: 'center', height: 12, fontSize: 7, textAlign: 'center' }}>
+      <View key={index} style={{ flexDirection: 'row', borderBottom: 0.5, alignItems: 'center', height: 12, fontSize: 7, textAlign: 'center',borderBottomStyle: 'dashed' }}>
         <View style={{ width: '8%', borderRight: 0.5, height: '100%', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-          <Text style={{ textAlign: 'center', marginTop: 2 }}>{day} </Text>
+          <Text style={{ textAlign: 'center', marginTop: 2 }}>{day}</Text>
         </View>
 
         {/* If there's attendance data, prioritize showing actual times over activities/holidays */}
@@ -498,7 +512,7 @@ const convertTo24Hour = (time: any): string => {
                         ):
                         dayName?
                         <>
-                            <View style={{ width: '69%', borderRight: 0.5, alignItems: 'center', height: '100%', borderStyle:"solid" }}>
+                            <View style={{ width: '69%', borderRight: 0.5, alignItems: 'center', height: '100%', paddingLeft: 2, }}>
                               <Text style={{ textAlign: 'center', marginTop: 2 }}>{dayName}</Text>
                             </View>
                             <View style={{ width: '10%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
@@ -524,8 +538,8 @@ const convertTo24Hour = (time: any): string => {
   } else {
      return (
                   <View key={index} style={{ flexDirection: 'row', borderBottom: 0.5, alignItems: 'center', height: 12, fontSize: 7, textAlign: 'center', borderStyle: 'dashed' }}>
-                    <View style={{ width: '8%', borderRight: 0.5, height: '100%', alignItems: 'center', justifyContent: 'center', textAlign: 'center', borderStyle: 'dashed' }}>
-                      <Text style={{ textAlign: 'center', marginTop: 2 }}>{day} {dayName && `(${dayName})`}</Text>
+                    <View style={{ width: '8%', borderRight: 0.5, height: '100%', alignItems: 'center', justifyContent: 'center', textAlign: 'center', borderStyle: 'solid', }}>
+                      <Text style={{ textAlign: 'center', marginTop:2 }}>{day} {dayName && `(${dayName})`}</Text>
                     </View>
                     <View style={{ width: '17.25%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
                       <Text style={{ textAlign: 'center', marginTop: 2 }}>{renderCheckinText(checkinTimes)}</Text>
@@ -573,7 +587,7 @@ const convertTo24Hour = (time: any): string => {
 
             </View>
 
-            <Text style={{ fontSize: 8, marginTop: 5, textAlign: 'justify', fontStyle: 'italic',fontWeight:400 }}>
+            <Text style={{ fontSize: 8, marginTop: 0, textAlign: 'justify', fontStyle: 'italic',fontWeight:400 }}>
               I CERTIFY on my honor that the above is a true and correct report of the hours of work performed, record of which was made daily at the time of arrival and departure from office.
             </Text>
 
@@ -604,6 +618,7 @@ const convertTo24Hour = (time: any): string => {
             
             
           </View>
+        </View>
         ))}
       </Page>
     </Document>

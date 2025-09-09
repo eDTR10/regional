@@ -9,7 +9,7 @@ import { Link, Outlet } from "react-router-dom";
 
 import NavLink from "@/components/link/link";
 import { ModeToggle } from "@/components/mode-toggle";
-import { ArrowLeftIcon, Building2Icon, ListChecksIcon, LogOutIcon, MenuIcon,ScanFaceIcon } from "lucide-react";
+import { ArrowLeftIcon, Building2Icon, LayoutGridIcon, ListChecksIcon, LogOutIcon, MenuIcon,PenIcon,ScanFaceIcon } from "lucide-react";
 import {useState } from "react";
 import Profile from "@/components/profile/Profile";
 
@@ -89,7 +89,7 @@ function User() {
                                 <NavLink
                                     to={`${import.meta.env.VITE_BASE}/user/home`}
                                     text="Dashboard"
-                                    icon={<ListChecksIcon className="w-5 h-5 " />}
+                                    icon={<LayoutGridIcon className="w-5 h-5 " />}
                                 />
                                 <NavLink
                                     to={`${import.meta.env.VITE_BASE}/user/biometric`}
@@ -99,12 +99,17 @@ function User() {
                                 <NavLink
                                     to={`${import.meta.env.VITE_BASE}/user/employee-status`}
                                     text="User Activity"
-                                    icon={<Building2Icon className=" w-5 h-5 " />}
+                                    icon={<PenIcon className=" w-5 h-5 " />}
                                 />
                                 <NavLink
                                     to={`${import.meta.env.VITE_BASE}/user/attendance-record`}
                                     text="Attendance Record"
                                     icon={<Building2Icon className=" w-5 h-5 " />}
+                                />
+                                <NavLink
+                                    to={`${import.meta.env.VITE_BASE}/user/activity-report`}
+                                    text="Activity Report"
+                                    icon={<ListChecksIcon className=" w-5 h-5 " />}
                                 />
 
                                 {/* Location Button */}
