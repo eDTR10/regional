@@ -34,7 +34,6 @@ const styles = StyleSheet.create({
     fontSize: 10
   },
   headerSection: {
-    marginBottom: 20,
     alignItems: 'center'
   },
   headerText: {
@@ -86,7 +85,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0.5,
     borderBottomColor: '#000',
     borderStyle: 'dotted',
-    minHeight: 30
+    minHeight: 20
   },
   tableHeader: {
     borderTopWidth: 1,
@@ -102,33 +101,32 @@ const styles = StyleSheet.create({
   dateCell: {
     width: '10%',
     marginTop:5,
-    padding: 5,
-    fontSize: 10,
+    padding: 2,
+    fontSize: 8,
     textAlign: 'center'
   },
   dayCell: {
     width: '10%',
     marginTop:5,
-    padding: 5,
-    fontSize: 10,
+    padding: 2,
+    fontSize: 8,
     textAlign: 'center'
   },
   activityCell: {
     width: '60%',
-    padding: 5,
-    fontSize: 10,
+    padding: 2,
+    marginTop:5,
+    fontSize: 8,
     paddingLeft: 10
   },
   remarksCell: {
     width: '20%',
     marginTop:5,
-    padding: 5,
-    fontSize: 10
+    padding: 2,
+    fontSize: 8,
   },
   activityItem: {
-    marginTop:5,
-    marginBottom: 2,
-    fontSize: 10
+    fontSize: 8
   },
   signatureSection: {
     marginTop: 30,
@@ -164,12 +162,12 @@ const styles = StyleSheet.create({
 // PDF Document Component
 const DARDocument = ({ activities, dateRange, name, position, project, verifiedBy }: any) => (
   <Document>
-    <Page size="LETTER" style={styles.page}>
+    <Page size="A4" style={styles.page}>
       <Text style={styles.afpCode}>AED-HIS-T-005/v0/{dateRange}</Text>
       
       <View style={styles.headerSection}>
        
-         <Image src={DICT} style={{ height: 105, objectFit: 'contain', alignSelf: 'center', marginBottom: 5 }} />
+         <Image src={DICT} style={{  width:270, objectFit: 'contain', alignSelf: 'center', marginBottom: 5 }} />
        
         <Text style={styles.title}>Daily Accomplishment Report</Text>
         <Text style={styles.dateRange}>{dateRange}</Text>
