@@ -581,7 +581,7 @@ const convertTo24Hour = (time: any): string => {
                 <View style={{ width: '17%',  height: '100%', justifyContent: 'center', textAlign: 'center', marginTop:5}}>
                   <Text style={{fontStyle:'bold'}} >Total</Text>
                 </View>
-                <View style={{ width: '10%', borderRight: 0.5,borderLeft:0.5, paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}></View>
+                <View style={{ width: '10.2%', borderRight: 0.5,borderLeft:0.5, paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}></View>
                 <View style={{ width: '13%', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}></View>
               </View>
 
