@@ -267,7 +267,7 @@ const undertimeCalc = (timeIn: string, timeOut: string, day: number): { hours: n
       <Page size="A4" style={{ fontFamily: 'Palatino', flexDirection: 'row', backgroundColor: '#ffffff', fontSize: 8, padding: 30,gap:10 }}>
       {[1, 2].map((_, index) => (
         <View key={index} style={{ width: '50%', border: 0.5, borderStyle: 'solid',padding:1 }}>
-          <View key={index} style={{ width: '100%', border: 0.5, borderStyle: 'solid', padding: 8 }}>
+          <View key={index} style={{ width: '100%', border: 0.5, borderStyle: 'solid', padding:8,paddingBottom:30}}>
             <Text style={{ fontSize: 6, marginBottom: 5,fontStyle: 'italic',fontWeight: 'bold' }}>  Civil Service Form No. 48</Text>
             <Image src={DICT} style={{ height: 50, objectFit: 'contain', alignSelf: 'center', marginBottom: 5 }} />
             <Text style={{ fontSize: 14, fontStyle: 'bold', textAlign: 'center', marginBottom: 3 }}>DAILY TIME RECORD</Text>
