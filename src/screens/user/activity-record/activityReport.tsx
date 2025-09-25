@@ -13,6 +13,7 @@ import { Page, Text, View, Document, StyleSheet, Font, PDFDownloadLink, Image } 
 import { Plus, X, FileDown } from 'lucide-react';
 
 import DICT from './../../../assets/dict.png';
+import { getDepartmentName } from '@/helper/department';
 
 // Register Palatino font for PDF
 Font.register({
@@ -78,7 +79,8 @@ const styles = StyleSheet.create({
     fontSize: 10
   },
   table: {
-    marginTop: 10
+    marginTop: 0,
+    width: '100%'
   },
   tableRow: {
     flexDirection: 'row',
@@ -98,32 +100,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     fontWeight: 'bold'
   },
-  dateCell: {
-    width: '10%',
-    marginTop:5,
-    padding: 2,
+  dutiesCell: {
+    width: '50%',
+    padding: 8,
     fontSize: 8,
-    textAlign: 'center'
-  },
-  dayCell: {
-    width: '10%',
-    marginTop:5,
-    padding: 2,
-    fontSize: 8,
-    textAlign: 'center'
+    borderRightWidth: 1,
+    borderRightColor: '#000',
+    borderStyle: 'dashed',
+    textAlign: 'left'
   },
   activityCell: {
-    width: '60%',
+    width: '50%',
     padding: 2,
-    marginTop:5,
     fontSize: 8,
     paddingLeft: 10
-  },
-  remarksCell: {
-    width: '20%',
-    marginTop:5,
-    padding: 2,
-    fontSize: 8,
   },
   activityItem: {
     fontSize: 8
@@ -160,16 +150,16 @@ const styles = StyleSheet.create({
 });
 
 // PDF Document Component
-const DARDocument = ({ activities, dateRange, name, position, project, verifiedBy }: any) => (
+const DARDocument = ({ activities, dateRange, name, position, project, verifiedBy, duties }: any) => (
   <Document>
     <Page size="A4" style={styles.page}>
-      <Text style={styles.afpCode}>AED-HIS-T-005/v0/{dateRange}</Text>
+      <Text style={styles.afpCode}>AFD-HR-T-005/r0/{dateRange}</Text>
       
       <View style={styles.headerSection}>
        
-         <Image src={DICT} style={{  width:270, objectFit: 'contain', alignSelf: 'center', marginBottom: 5 }} />
+         <Image src={DICT} style={{  width:290, objectFit: 'contain', alignSelf: 'center', marginBottom: 5 }} />
        
-        <Text style={styles.title}>Daily Accomplishment Report</Text>
+        <Text style={styles.title}>Accomplishment Report</Text>
         <Text style={styles.dateRange}>{dateRange}</Text>
       </View>
 
@@ -178,7 +168,7 @@ const DARDocument = ({ activities, dateRange, name, position, project, verifiedB
           <Text style={styles.label}>Name</Text>
           <Text style={styles.infoValue}>{name || '[Surname, First Name, MI]'}</Text>
           <Text style={[styles.label, { marginLeft: 20 }]}>Office</Text>
-          <Text style={styles.infoValue}>Regional Office</Text>
+          <Text style={styles.infoValue}>{getDepartmentName(JSON.parse(localStorage.getItem('user')||"").deptid)}</Text>
         </View>
         <View style={styles.infoRow}>
           <Text style={styles.label}>Position</Text>
@@ -190,24 +180,20 @@ const DARDocument = ({ activities, dateRange, name, position, project, verifiedB
 
       <View style={styles.table}>
         <View style={[styles.tableRow, styles.tableHeader]}>
-          <Text style={styles.dateCell}>Date</Text>
-          <Text style={styles.dayCell}>Day</Text>
+          <Text style={styles.dutiesCell}>Duties and Responsibilities</Text>
           <Text style={styles.activityCell}>Actual Activities / Outputs</Text>
-          <Text style={styles.remarksCell}>MOVs / Remarks</Text>
         </View>
         
-        {activities.map((activity: any, index: number) => (
-          <View key={index} style={styles.tableRow}>
-            <Text style={styles.dateCell}>{activity.date}</Text>
-            <Text style={styles.dayCell}>{activity.day}</Text>
-            <View style={styles.activityCell}>
-              {activity.activities.map((act: string, i: number) => (
+        <View style={styles.tableRow}>
+          <Text style={styles.dutiesCell}>{duties || '(Consistent with the approved and submitted Terms of Reference)'}</Text>
+          <View style={styles.activityCell}>
+            {activities.flatMap((activity: { activities: string[] }) => 
+              activity.activities.map((act: string, i: number) => (
                 <Text key={i} style={styles.activityItem}>• {act}</Text>
-              ))}
-            </View>
-            <Text style={styles.remarksCell}>{activity.remarks}</Text>
+              ))
+            )}
           </View>
-        ))}
+        </View>
       </View>
 
       <View style={styles.signatureSection}>
@@ -248,7 +234,8 @@ function ActivityReport() {
     return saved ? JSON.parse(saved) : {
       name: '',
       position: '',
-      project: ''
+      project: '',
+      duties: ''
     };
   });
   const [verifiedBy, setVerifiedBy] = useState(() => {
@@ -406,7 +393,7 @@ function ActivityReport() {
         {/* Control Panel */}
         <div className="bg-white rounded-xl shadow-lg p-8 mb-6">
           <div className="flex items-center justify-between mb-6 border-b pb-4">
-            <h2 className="text-2xl font-bold text-gray-800">Daily Activity Report</h2>
+            <h2 className="text-2xl font-bold text-gray-800">Accomplishment Report</h2>
             <div className="text-sm text-gray-500">
               {getDateRange() && `Current Period: ${getDateRange()}`}
             </div>
@@ -495,6 +482,18 @@ function ActivityReport() {
                 />
               </div>
             </div>
+            
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-600 mb-2">Duties and Responsibilities</label>
+              <textarea 
+                className="w-full p-4 border rounded-md text-sm text-left"
+                placeholder="Enter your duties and responsibilities"
+                rows={4}
+                value={userData.duties}
+                onChange={(e) => setUserData({...userData, duties: e.target.value})}
+                style={{ textAlign: 'left' }}
+              />
+            </div>
           </div>
 
           {/* Additional Information Section */}
@@ -541,6 +540,7 @@ function ActivityReport() {
                       name={userData.name}
                       position={userData.position}
                       project={userData.project}
+                      duties={userData.duties}
                       verifiedBy={verifiedBy}
                     />
                   }
@@ -599,21 +599,20 @@ function ActivityReport() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-black">
-                    <th className="border-r border-black px-2 py-2 text-center w-24">Date</th>
-                    <th className="border-r border-black px-2 py-2 text-center w-24">Day</th>
-                    <th className="border-r border-black px-2 py-2 text-left">Actual Activities / Outputs</th>
-                    <th className="px-2 py-2 text-left w-52">MOVs / Remarks</th>
+                    <th className="border-r border-black px-2 py-2 text-left w-1/2">Duties and Responsibilities</th>
+                    <th className="px-2 py-2 text-left w-1/2">Actual Activities / Outputs</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {activities.map((day, dayIndex) => (
-                    <tr key={dayIndex} className="border-b border-dotted border-gray-400">
-                      <td className="border-r border-dotted border-gray-400 px-2 py-2 text-center">{day.date}</td>
-                      <td className="border-r border-dotted border-gray-400 px-2 py-2 text-center">{day.day}</td>
-                      <td className="border-r border-dotted border-gray-400 px-2 py-2">
-                        <div className="min-h-[30px]">
-                          {day.activities.map((activity, activityIndex) => (
-                            <div key={activityIndex} className="flex items-start gap-2 group mb-1">
+                  <tr className="border-b border-dotted border-gray-400">
+                    <td className="border-r border-dotted border-gray-400 px-4 py-4 whitespace-pre-wrap text-sm text-left align-top">
+                      {userData.duties || '(Consistent with the approved and submitted Terms of Reference)'}
+                    </td>
+                    <td className="px-2 py-2">
+                      <div className="min-h-[30px]">
+                        {activities.flatMap((day, dayIndex) => 
+                          day.activities.map((activity, activityIndex) => (
+                            <div key={`${dayIndex}-${activityIndex}`} className="flex items-start gap-2 group mb-1">
                               <span>• {activity}</span>
                               <button
                                 onClick={() => removeActivity(dayIndex, activityIndex)}
@@ -622,58 +621,49 @@ function ActivityReport() {
                                 <X className="w-3 h-3" />
                               </button>
                             </div>
-                          ))}
-                          {currentEditingDay === dayIndex ? (
-                            <div className="flex gap-1 mt-1">
-                              <textarea
-                                value={newActivity}
-                                onChange={(e) => setNewActivity(e.target.value)}
-                                placeholder="Type or paste multiple activities (each line will be a separate bullet point)"
-                                className="flex-1 text-xs px-2 py-1 border rounded min-h-[100px]"
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter' && e.ctrlKey) {
-                                    e.preventDefault();
-                                    addActivity(dayIndex);
-                                  }
-                                }}
-                              />
-                              <button 
-                                onClick={() => addActivity(dayIndex)}
-                                className="px-2 py-1 bg-blue-500 text-white rounded text-xs"
-                              >
-                                Add
-                              </button>
-                              <button 
-                                onClick={() => {
-                                  setCurrentEditingDay(null);
-                                  setNewActivity('');
-                                }}
-                                className="px-2 py-1 border rounded text-xs"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => setCurrentEditingDay(dayIndex)}
-                              className="flex items-center gap-1 text-blue-600 hover:text-blue-700 text-xs mt-1"
+                          ))
+                        )}
+                        <button
+                          onClick={() => setCurrentEditingDay(0)}
+                          className="flex items-center gap-1 text-blue-600 hover:text-blue-700 text-xs mt-1"
+                        >
+                          <Plus className="w-3 h-3" />
+                          Add activity
+                        </button>
+                        {currentEditingDay === 0 && (
+                          <div className="flex gap-1 mt-1">
+                            <textarea
+                              value={newActivity}
+                              onChange={(e) => setNewActivity(e.target.value)}
+                              placeholder="Type or paste multiple activities (each line will be a separate bullet point)"
+                              className="flex-1 text-xs px-2 py-1 border rounded min-h-[100px]"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && e.ctrlKey) {
+                                  e.preventDefault();
+                                  addActivity(0);
+                                }
+                              }}
+                            />
+                            <button 
+                              onClick={() => addActivity(0)}
+                              className="px-2 py-1 bg-blue-500 text-white rounded text-xs"
                             >
-                              <Plus className="w-3 h-3" />
-                              Add activity
+                              Add
                             </button>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-2 py-2">
-                        <input
-                          value={day.remarks}
-                          onChange={(e) => updateRemarks(dayIndex, e.target.value)}
-                          placeholder=""
-                          className="w-full text-xs px-1 py-0.5 border-0 focus:border-b focus:border-blue-500 outline-none"
-                        />
-                      </td>
-                    </tr>
-                  ))}
+                            <button 
+                              onClick={() => {
+                                setCurrentEditingDay(null);
+                                setNewActivity('');
+                              }}
+                              className="px-2 py-1 border rounded text-xs"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>
