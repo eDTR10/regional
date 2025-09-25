@@ -16,6 +16,8 @@ const MyDocument = ({ name, date, data,selectedYear, selectedMonth,previewUrl,se
   const getDateFromChecktime = (checktime: any) => new Date(checktime).getUTCDate();
 
 
+
+
   let groupedData: any = {};
 
   data.results?.forEach((item: any) => {
@@ -185,7 +187,6 @@ const renderPMArivalText = (inTime:any,outTime:any) => {
 
 const getScheduleTime = (scheduleValue: string): { timeIn: number, timeOut: number } => {
   const schedules: { [key: string]: { timeIn: number, timeOut: number } } = {
-
     "4": { timeIn: 6 * 60, timeOut: 18 * 60 },  // 6:00-6:00
     "5": { timeIn: 7 * 60, timeOut: 16 * 60 },  // 7:00-4:00
     "6": { timeIn: 7.5 * 60, timeOut: 16.5 * 60 }, // 7:30-4:30
@@ -197,6 +198,21 @@ const getScheduleTime = (scheduleValue: string): { timeIn: number, timeOut: numb
   };
   
   return schedules[scheduleValue] || schedules["7"]; // Default to 8:00-5:00 if invalid
+};
+
+const convertScheduleToTimeRange = (scheduleValue: string): string => {
+  const scheduleRanges: { [key: string]: string } = {
+    "4": "6:00-6:00",
+    "5": "7:00-4:00",
+    "6": "7:30-4:30",
+    "7": "8:00-5:00",
+    "8": "8:30-5:30",
+    "9": "9:00-6:00",
+    "10": "9:30-6:30",
+    "11": "10:00-7:00"
+  };
+  
+  return scheduleRanges[scheduleValue] || "8:00-5:00"; // Default to 8:00-5:00 if invalid
 };
 
 
@@ -212,6 +228,17 @@ const undertimeCalc = (timeIn: string, timeOut: string, day: number): { hours: n
     return { hours: '', minutes: '' };
   }
 
+  // Check if the day has any activities or holidays
+  const activities = activitiesByDate[day] || [];
+  const hasFullDayActivity = activities.some((activity: any) => activity.period === 1);
+  const hasAMActivity = activities.some((activity: any) => activity.period === 2);
+  const hasPMActivity = activities.some((activity: any) => activity.period === 3);
+
+  // If it's a full day activity/holiday, return 0 undertime
+  if (hasFullDayActivity) {
+    return { hours: 0, minutes: 0 };
+  }
+
   // Get selected schedule from localStorage
   const selectedSched = selectedSchedule || "7";
   const schedule = getScheduleTime(selectedSched);
@@ -220,41 +247,47 @@ const undertimeCalc = (timeIn: string, timeOut: string, day: number): { hours: n
   const expectedTimeIn = schedule.timeIn;
   const expectedTimeOut = schedule.timeOut;
 
-  // If both timeIn and timeOut are blank, return full day undertime based on schedule
-  if ((!timeIn || timeIn.trim() === '') && (!timeOut || timeOut.trim() === '')) {
-    const totalWorkHours = (expectedTimeOut - expectedTimeIn - 60) / 60; // Subtract 1 hour for lunch
-    return { hours: totalWorkHours, minutes: 0 };
+  // Special case: If it's a regular day with no times at all
+  if (!timeIn && !timeOut) {
+    if (hasAMActivity && hasPMActivity) return { hours: 0, minutes: 0 };
+    if (hasAMActivity) return { hours: Math.floor((expectedTimeOut - (13 * 60)) / 60), minutes: 0 };
+    if (hasPMActivity) return { hours: Math.floor((12 * 60 - expectedTimeIn) / 60), minutes: 0 };
+    const totalWorkMinutes = expectedTimeOut - expectedTimeIn - 60; // Full day minus lunch
+    return { hours: Math.floor(totalWorkMinutes / 60), minutes: totalWorkMinutes % 60 };
   }
 
-  // If no timeOut is provided (empty string or undefined), calculate full afternoon undertime
-  if (!timeOut || timeOut.trim() === '') {
-    // If there's no checkout time, assume they didn't work the afternoon
-    const afternoonHours = (expectedTimeOut - (12 * 60 + 60)) / 60; // From 1:00 PM to expected end time
-    return { hours: Math.floor(afternoonHours), minutes: (afternoonHours % 1) * 60 };
-  }
-
-  // Convert input times to minutes
-  const [inHour, inMinute] = timeIn?timeIn.split(':').map(Number):'12:00'.split(':').map(Number);
-  const [outHour, outMinute] = timeOut.split(':').map(Number);
-  
-  const actualTimeIn = (inHour * 60) + inMinute;
-  const actualTimeOut = (outHour * 60) + outMinute;
-
-  // Calculate total undertime minutes
   let undertimeMinutes = 0;
-
-  // Check if came in late
-  if (actualTimeIn > expectedTimeIn) {
-    undertimeMinutes += actualTimeIn - expectedTimeIn;
+  
+  // Handle morning undertime (blank or late arrival)
+  if (!hasAMActivity) {
+    if (!timeIn) {
+      // If no time-in, count full morning as undertime
+      undertimeMinutes += (12 * 60) - expectedTimeIn;
+    } else {
+      const [inHour, inMinute] = timeIn.split(':').map(Number);
+      const actualTimeIn = (inHour * 60) + inMinute;
+      if (actualTimeIn > expectedTimeIn) {
+        undertimeMinutes += actualTimeIn - expectedTimeIn;
+      }
+    }
   }
 
-  // Check if left early 
-  if (actualTimeOut < expectedTimeOut) {
-    undertimeMinutes += expectedTimeOut - actualTimeOut;
+  // Handle afternoon undertime (blank or early departure)
+  if (!hasPMActivity) {
+    if (!timeOut) {
+      // If no time-out, count full afternoon as undertime
+      undertimeMinutes += expectedTimeOut - (13 * 60); // From 1:00 PM to expected end time
+    } else {
+      const [outHour, outMinute] = timeOut.split(':').map(Number);
+      const actualTimeOut = (outHour * 60) + outMinute;
+      if (actualTimeOut < expectedTimeOut) {
+        undertimeMinutes += expectedTimeOut - actualTimeOut;
+      }
+    }
   }
 
   // Convert to hours and minutes
-  const hours = timeIn || timeOut? Math.floor(undertimeMinutes / 60) : Math.floor((expectedTimeOut - expectedTimeIn - 60) / 60);
+  const hours = Math.floor(undertimeMinutes / 60);
   const minutes = undertimeMinutes % 60;
 
   return { hours, minutes };
@@ -264,50 +297,52 @@ const undertimeCalc = (timeIn: string, timeOut: string, day: number): { hours: n
 
   return (
     <Document title={`${name?name.toUpperCase():""}_DTR_${date}.pdf`}   >
-      <Page size="A4" style={{ fontFamily: 'Palatino', flexDirection: 'row', backgroundColor: '#ffffff', fontSize: 8, padding: 30,gap:10 }}>
-      {[1, 2].map((_, index) => (
+      <Page size="A4" style={{ fontFamily: 'Palatino', flexDirection: 'row', backgroundColor: '#ffffff', fontSize: 8, padding: 30,gap:10,alignContent:'center',justifyContent:'center' }}>
+      {[1].map((_, index) => (
         <View key={index} style={{ width: '50%', border: 0.5, borderStyle: 'solid',padding:1 }}>
           <View key={index} style={{ width: '100%', border: 0.5, borderStyle: 'solid', padding:8,paddingBottom:30}}>
-            <Text style={{ fontSize: 6, marginBottom: 5,fontStyle: 'italic',fontWeight: 'bold' }}>  Civil Service Form No. 48</Text>
+            <Text style={{ fontSize: 6, marginBottom: 5,fontStyle: 'italic',fontWeight: 'bold' }}>Civil Service Form No. 48 - RX</Text>
             <Image src={DICT} style={{ height: 50, objectFit: 'contain', alignSelf: 'center', marginBottom: 5 }} />
             <Text style={{ fontSize: 14, fontStyle: 'bold', textAlign: 'center', marginBottom: 3 }}>DAILY TIME RECORD</Text>
             <Text style={{ fontSize: 10, textAlign: 'center', marginBottom: 5 }}></Text>
             <View style={{ marginBottom: 1 }}>
-  <Text style={{ 
-    fontSize: 9, 
-    textAlign: 'center', 
-    textTransform: 'uppercase', 
-    fontStyle: 'bold', 
-    borderBottom: .7, 
-    borderBottomStyle: 'dashed',
-  }}>
-    {name?name.toUpperCase():"JOHN C. DOE"}
-  </Text>
-</View>
+              <Text style={{ 
+                fontSize: 9, 
+                textAlign: 'center', 
+                textTransform: 'uppercase', 
+                fontStyle: 'bold', 
+                borderBottom: .7, 
+                borderBottomStyle: 'dashed',
+              }}>
+                {name?name.toUpperCase():"JOHN C. DOE"}
+              </Text>
+            </View>
             
 
-            <View style={{ flexDirection: 'row', marginTop: 5, marginBottom: 5 }}>
+            <View style={{ flexDirection: 'row', marginTop: 5, marginBottom: 2,padding:2}}>
               <View style={{ width: '50%',textAlign:'left', fontStyle: 'italic' }}>
                 <Text>For the month of</Text>
                 <Text>Official hours for arrival</Text>
                 <Text>and departure</Text>
               </View>
               <View style={{ width: '50%' }}>
-                <Text style={{ borderBottom: 0.5, marginBottom: 2, fontStyle: 'bold',textAlign:'center'}}>{date}</Text>
+                <Text style={{ borderBottom: 0.5,borderStyle: 'dashed', marginBottom: 2, fontStyle: 'bold',textAlign:'center'}}>{date}</Text>
                 <View style={{flexDirection: 'row'}}>
-                    <Text>Regular days</Text>
-                    <View style={{borderBottom: 0.5, marginBottom: 1,marginLeft:22,width: '100%' }}></View>
+                    <Text style={{marginTop:2}}>Regular days</Text>
+                    <View style={{borderBottom: 0.5,borderStyle: 'dashed', marginBottom: 1,marginLeft:22,width: '100%' }}>
+                      <Text style={{ marginTop: 2, fontStyle: 'bold',textAlign:'center'}}>{convertScheduleToTimeRange(selectedSchedule || "8:00-5:00")}</Text>
+                    </View>
                 </View>
                 <View style={{flexDirection: 'row'}}>
                     <Text>Saturdays</Text>
-                    <View style={{borderBottom: 0.5,marginLeft:20,width: '100%', }}><Text style={{fontStyle:'bold', marginLeft:20,marginTop:2,fontSize:7}}></Text></View>
+                    <View style={{borderBottom: 0.5,borderStyle: 'dashed',marginLeft:20,width: '100%', }}><Text style={{fontStyle:'bold', marginLeft:20,marginTop:2,fontSize:7}}>As Required</Text></View>
                 </View>
                 
                 
               </View>
             </View>
 
-            <View style={{ border: 0, marginVertical:15, borderStyle: 'solid', borderTopStyle: 'solid',borderTopWidth:0,borderLeftWidth:0, borderRightWidth:0, borderBottomStyle: 'solid',borderBottomWidth:1 }}>
+            <View style={{ border: 0, marginTop:8,marginBottom:15, borderStyle: 'solid', borderTopStyle: 'solid',borderTopWidth:0,borderLeftWidth:0, borderRightWidth:0, borderBottomStyle: 'solid',borderBottomWidth:1 }}>
             
 
             <View key={index} style={{ flexDirection: 'row', borderBottom: 0.5, alignItems: 'center', height: 16, fontSize: 7, borderBottomStyle: 'solid',justifyContent: 'center', textAlign: 'center', borderTopWidth:1, borderTopColor:'#1b1b1b' }}>
@@ -342,10 +377,10 @@ const undertimeCalc = (timeIn: string, timeOut: string, day: number): { hours: n
                       <Text style={{marginTop:4, fontStyle:'bold'}}>Departure</Text>
                     </View>
                     <View style={{ width: '10%',borderRight: 0.5, paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
-                      <Text style={{marginTop:4, fontStyle:'bold'}}>Hours</Text>
+                      <Text style={{marginTop:4, fontStyle:'bold'}}>Hrs</Text>
                     </View>
                     <View style={{ width: '13%', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
-                      <Text style={{marginTop:4, fontStyle:'bold'}}>Minutes</Text>
+                      <Text style={{marginTop:4, fontStyle:'bold'}}>Mins.</Text>
                     </View>
                   </View>
 
@@ -385,29 +420,49 @@ const convertTo24Hour = (time: any): string => {
                              (checkoutTimes2 && checkoutTimes2.length > 0);
 
     return (
-      <View key={index} style={{ flexDirection: 'row', borderBottom: 0.5, alignItems: 'center', height: 12, fontSize: 7, textAlign: 'center',borderBottomStyle: 'dashed' }}>
-        <View style={{ width: '8%', borderRight: 0.5, height: '100%', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+      <View key={index} style={{ flexDirection: 'row', borderBottom: 0.5, alignItems: 'center', height: 12, fontSize: 7, textAlign: 'center', borderBottomStyle: 'dashed' }}>
+        <View style={{ width: '8%', borderRight: 0.5, height: '100%', alignItems: 'center', justifyContent: 'center', textAlign: 'center', borderRightStyle: 'solid' }}>
           <Text style={{ textAlign: 'center', marginTop: 2 }}>{day}</Text>
         </View>
 
         {/* If there's attendance data, prioritize showing actual times over activities/holidays */}
-        {hasAttendanceData ? (
-          // Show actual check times when employee worked (even on holidays)
-          // Use green background if it's a holiday/activity day AND employee worked
+        {activities?.length > 0 ? (
+          // Show holiday/activity description and times if they exist
           <>
-            <View style={{ width: '17.25%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center', backgroundColor: activities.length > 0 || dayName ? "#bff6bf" : "transparent" }}>
-              <Text style={{ textAlign: 'center', marginTop: 2 }}>{renderCheckinText(checkinTimes)}</Text>
+            <View style={{ width: '34.5%', borderRight: 0.5, alignItems: 'center', height: '100%', justifyContent: 'center', textAlign: 'center', borderRightStyle: 'solid' }}>
+              
+              { checkinTimes.length === 0  ? activities.map((activity: any, idx: number) => (
+                activity.period === 1 || activity.period === 2 ? (
+                  <Text key={idx} style={{ textAlign: 'center', marginTop: 1, fontSize: 6 }}>{activity.description}</Text>
+                ) : null
+              )) : null}
+              {checkinTimes.length > 0 && (
+              <View style={{ flexDirection: 'row', width: '100%'}}>
+                <View style={{ width: '50%', alignItems: 'center', paddingLeft: 2, justifyContent: 'center',height:'100%', backgroundColor: (hasAttendanceData && renderCheckinText(checkinTimes) && activities.some((a: { period: number }) => a.period === 1 || a.period === 2)) ? "#bff6bf" : "transparent", borderRight: 0.5, borderRightStyle: 'solid' }}>
+                  <Text style={{ textAlign: 'center', marginTop: 1 }}>{renderCheckinText(checkinTimes)}</Text>
+                </View>
+                <View style={{ width: '50%', alignItems: 'center', paddingLeft: 2, justifyContent: 'center', backgroundColor: (hasAttendanceData && renderAmDepartureText(checkoinTimes2,checkinTimes) && activities.some((a: { period: number }) => a.period === 1 || a.period === 2)) ? "#bff6bf" : "transparent" }}>
+                  <Text style={{ textAlign: 'center', marginTop: 1 }}>{renderAmDepartureText(checkoinTimes2,checkinTimes)}</Text>
+                </View>
+              </View>)}
             </View>
-            <View style={{ width: '17.25%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center', backgroundColor: activities.length > 0 || dayName ? "#bff6bf" : "transparent" }}>
-              <Text style={{ textAlign: 'center', marginTop: 2 }}>{renderAmDepartureText(checkoinTimes2,checkinTimes)}</Text>
+            <View style={{ width: '34.5%', borderRight: 0.5, alignItems: 'center', height: '100%', justifyContent: 'center', textAlign: 'center', borderRightStyle: 'solid' }}>
+              {checkoutTimes.length === 0  ? activities.map((activity: any, idx: number) => (
+                activity.period === 1 || activity.period === 3 ? (
+                  <Text key={idx} style={{ textAlign: 'center', marginTop: 1, fontSize: 6 }}>{activity.description}  </Text>
+                ) : null
+              )) : null}
+              {checkoutTimes.length > 0 && (
+              <View style={{ flexDirection: 'row', width: '100%' }}>
+                <View style={{ width: '50%', alignItems: 'center', justifyContent: 'center', backgroundColor: (hasAttendanceData && renderPMArivalText(checkoutTimes2,checkoutTimes) && activities.some((a: { period: number }) => a.period === 1 || a.period === 3)) ? "#bff6bf" : "transparent", borderRight: 0.5, borderRightStyle: 'solid' }}>
+                  <Text style={{ textAlign: 'center', marginTop: 1 }}>{renderPMArivalText(checkoutTimes2,checkoutTimes) } </Text>
+                </View>
+                <View style={{ width: '50%', alignItems: 'center', paddingLeft: 2, justifyContent: 'center', backgroundColor: (hasAttendanceData && renderCheckOutText(checkoutTimes) && activities.some((a: { period: number }) => a.period === 1 || a.period === 3)) ? "#bff6bf" : "transparent" }}>
+                  <Text style={{ textAlign: 'center', marginTop: 1 }}>{renderCheckOutText(checkoutTimes)}</Text>
+                </View>
+              </View>)}
             </View>
-            <View style={{ width: '17.25%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center', backgroundColor: activities.length > 0 || dayName ? "#bff6bf" : "transparent" }}>
-              <Text style={{ textAlign: 'center', marginTop: 2 }}>{renderPMArivalText(checkoutTimes2,checkoutTimes)}</Text>
-            </View>
-            <View style={{ width: '17.25%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center', backgroundColor: activities.length > 0 || dayName ? "#bff6bf" : "transparent" }}>
-              <Text style={{ textAlign: 'center', marginTop: 2 }}>{renderCheckOutText(checkoutTimes)}</Text>
-            </View>
-            <View style={{ width: '10%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
+            <View style={{ width: '10%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center', borderRightStyle: 'solid' }}>
               <Text style={{ textAlign: 'center', marginTop: 2 }}>
                 {undertimeCalc(renderCheckinText(checkinTimes), convertTo24Hour(renderCheckOutText(checkoutTimes)) || '', day).hours}
               </Text>
@@ -482,17 +537,17 @@ const convertTo24Hour = (time: any): string => {
                       <Text style={{ textAlign: 'center', marginTop: 2 }}>{renderCheckinText(checkinTimes)}</Text>
                     </View>
                     <View style={{ width: '17.25%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
-                      <Text style={{ textAlign: 'center', marginTop: 2 }}>{renderAmDepartureText(checkoinTimes2,checkinTimes)}</Text>
+                      <Text style={{ textAlign: 'center', marginTop: 2 }}>{renderAmDepartureText(checkoinTimes2,checkinTimes)} </Text>
                     </View>
                                  
                                   <View key={idx} style={{ width: '34.5%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
-                                    <Text style={{ textAlign: 'center', marginTop: 2 }}>{ `${activity.description}`}</Text>
+                                    <Text style={{ textAlign: 'center', marginTop: 2 }}>{ `${activity.description} 1` }</Text>
                                   </View>
                                   <View style={{ width: '10%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
                       <Text style={{ textAlign: 'center', marginTop: 2 }}>
 
                       {
-                      undertimeCalc(renderCheckinText(checkinTimes), convertTo24Hour(renderCheckOutText(checkoutTimes)) || '', day).hours }
+                      undertimeCalc(renderCheckinText(checkinTimes), convertTo24Hour(renderCheckOutText(checkoutTimes)) || '', day).hours } 
                     
                       </Text>
                       
@@ -576,13 +631,23 @@ const convertTo24Hour = (time: any): string => {
               
 <View style={{ flexDirection: 'row', borderBottom: 'none', alignItems: 'center', height: 12 }}>
                 <View style={{ width: '60%', height: '100%', justifyContent: 'center', textAlign: 'center' }}>
-                 
                 </View>
-                <View style={{ width: '17%',  height: '100%', justifyContent: 'center', textAlign: 'center', marginTop:5}}>
-                  <Text style={{fontStyle:'bold'}} >Total</Text>
+                <View style={{ width: '17%', height: '100%', justifyContent: 'center', textAlign: 'center', marginTop:5}}>
+                  <Text style={{fontStyle:'bold'}} >Total
+                    
+                  </Text>
                 </View>
-                <View style={{ width: '10.2%', borderRight: 0.5,borderLeft:0.5, paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}></View>
-                <View style={{ width: '13%', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}></View>
+                <View style={{ width: '10.2%', borderRight: 0.5, borderLeft:0.5, paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
+                  <Text style={{ textAlign: 'center', marginTop: 2, fontStyle:'bold' }}>
+                    
+                    
+                  </Text>
+                </View>
+                <View style={{ width: '13%', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
+                  <Text style={{ textAlign: 'center', marginTop: 2, fontStyle:'bold' }}>
+                    
+                  </Text>
+                </View>
               </View>
 
             </View>

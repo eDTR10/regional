@@ -20,7 +20,7 @@ import { convertDate } from "@/helper/date-time";
 import Swal from "sweetalert2";
 import PrintButton from "../printDTR/PrintDTR";
 import { Skeleton } from "@/components/ui/skeleton";
-import { LoaderIcon, StickyNote } from "lucide-react";
+import { LoaderIcon, StickyNote,Trash2 } from "lucide-react";
 
 function ReportTable() {
   const [inputData, setInputData] = useState({
@@ -35,12 +35,48 @@ function ReportTable() {
   
     return { month, year };
   };
-
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   const [show, setShow] = useState(false)
   const [loading, setLoading] = useState(false)
 
+ const handleDelete = async (id: number) => {
+    try {
+      const result = await Swal.fire({
+        title: 'Are you sure?',
+        text: "You won't be able to revert this!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Yes, delete it!'
+      });
 
+      if (result.isConfirmed) {
+        setDeleteLoading(true);
+        await axios.delete(`/checkinoutregion/${id}/`, {
+          headers: {
+            Authorization: `Token ${localStorage.getItem('accessToken')}`,
+          },
+        });
+        
+        setDeleteLoading(false);
+        await Swal.fire(
+          'Deleted!',
+          'The record has been deleted.',
+          'success'
+        );
+        getAttendace(); // Refresh the table
+      }
+    } catch (error) {
+      setDeleteLoading(false);
+      Swal.fire(
+        'Error!',
+        'There was an error deleting the record.',
+        'error'
+      );
+    }
+  };
 
   const [data, setData] = useState<any>([])
   const [printableData, setPrintableData] = useState([])
@@ -248,73 +284,87 @@ function ReportTable() {
       </form >
 
       <div className="overflow-auto bg-primary-foreground max-h-full">
-        <Table >
-          <TableHeader>
-            <TableRow>
+       <Table tableName="attendances" className=" ">
+    <TableHeader>
+      <TableRow>
 
+          
+        <TableHead 
+          className="w-[170px] border border-border text-white sticky top-0 bg-primary cursor-pointer"
+          onClick={() => requestSort('full_name')}
+        >
+          Employee name {sortConfig.key === 'full_name' ? (sortConfig.direction === 'ascending' ? '↑' : '↓') : ''}
+        </TableHead>
 
-              <TableHead
-                className="w-[170px] border border-border text-white sticky top-0 bg-primary cursor-pointer"
-                onClick={() => requestSort('full_name')}
-              >
-                Employee name {sortConfig.key === 'full_name' ? (sortConfig.direction === 'ascending' ? '↑' : '↓') : ''}
-              </TableHead>
+        <TableHead 
+          className="text-white border border-border text-md sticky top-0 bg-primary cursor-pointer"
+          onClick={() => requestSort('CHECKTIME')}
+        >
+          Checked date {sortConfig.key === 'CHECKTIME' ? (sortConfig.direction === 'ascending' ? '↑' : '↓') : ''}
+        </TableHead>
 
-              <TableHead
-                className="text-white border border-border text-md sticky top-0 bg-primary cursor-pointer"
-                onClick={() => requestSort('CHECKTIME')}
-              >
-                Checked date {sortConfig.key === 'CHECKTIME' ? (sortConfig.direction === 'ascending' ? '↑' : '↓') : ''}
-              </TableHead>
+        <TableHead 
+          className="text-white border border-border text-md sticky top-0 bg-primary cursor-pointer"
+          onClick={() => requestSort('CHECKTIME')}
+        >
+          Checked time {sortConfig.key === 'CHECKTIME' ? (sortConfig.direction === 'ascending' ? '↑' : '↓') : ''}
+        </TableHead>
 
-              <TableHead
-                className="text-white border border-border text-md sticky top-0 bg-primary cursor-pointer"
-                onClick={() => requestSort('CHECKTIME')}
-              >
-                Checked time {sortConfig.key === 'CHECKTIME' ? (sortConfig.direction === 'ascending' ? '↑' : '↓') : ''}
-              </TableHead>
+        <TableHead 
+          className="text-white border border-border text-md sticky top-0 bg-primary cursor-pointer"
+          onClick={() => requestSort('CHECKTYPE')}
+        >
+          Checked type {sortConfig.key === 'CHECKTYPE' ? (sortConfig.direction === 'ascending' ? '↑' : '↓') : ''}
+        </TableHead>
+        <TableHead className="text-white border border-border text-md sticky top-0 bg-primary">
+          Actions
+        </TableHead>
+      </TableRow>
+    </TableHeader>
+    {loading?
+    <TableBody>
+      {[1,2,3,4,5,6,7,8].map((e:any)=>(
+        <TableRow key={e} className="border border-border">
+          <TableCell colSpan={4}>
+              <Skeleton className=" w-full h-[30px] py-3"/>
+          </TableCell>
+      </TableRow>  
+      ))}
+      
+      
 
-              <TableHead
-                className="text-white border border-border text-md sticky top-0 bg-primary cursor-pointer"
-                onClick={() => requestSort('CHECKTYPE')}
-              >
-                Checked type {sortConfig.key === 'CHECKTYPE' ? (sortConfig.direction === 'ascending' ? '↑' : '↓') : ''}
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          {loading ?
-            <TableBody>
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((e: any) => (
-                <TableRow key={e} className="border border-border">
-                  <TableCell colSpan={4}>
-                    <Skeleton className=" w-full h-[30px] py-3" />
-                  </TableCell>
-                </TableRow>
-              ))}
+    </TableBody>
 
+    :
+    <TableBody>
+      {sortedData ? sortedData.map((item: any, index: any) => (
+        <TableRow key={index} className="border border-border">
+          <TableCell className="font-small">{item?.full_name}</TableCell>
+          <TableCell>{convertDate(item.CHECKTIME).customLongDateFormat}</TableCell>
+          <TableCell>{convertDate(item?.CHECKTIME).localeTime12HourFormat}</TableCell>
+          <TableCell>{convertCheckType(item?.CHECKTYPE)}</TableCell>
+          <TableCell>
+            <Button
+              variant="ghost"
+              className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-100"
+              onClick={() => handleDelete(item.attendance_number)}
+              disabled={deleteLoading}
+            >
+              <Trash2 className="h-4 w-4" />
+              {deleteLoading && <LoaderIcon className="ml-2 h-4 w-4 animate-spin" />}
+            </Button>
+          </TableCell>
+        </TableRow>
+      )) : ""}
+    </TableBody>
 
-
-            </TableBody>
-
-            :
-            <TableBody>
-              {sortedData ? sortedData.map((item: any, index: any) => (
-                <TableRow key={index} className="border border-border">
-                  <TableCell className="font-small">{item?.full_name}</TableCell>
-                  <TableCell>{convertDate(item.CHECKTIME).customLongDateFormat}</TableCell>
-                  <TableCell>{convertDate(item?.CHECKTIME).localeTime12HourFormat}</TableCell>
-                  <TableCell>{convertCheckType(item?.CHECKTYPE)}</TableCell>
-                </TableRow>
-              )) : ""}
-            </TableBody>
-
-
-
-
-
-          }
-
-        </Table>
+    
+    
+  
+  
+  }
+    
+  </Table>
       </div>
 
       <div className=" flex gap-5">
