@@ -181,7 +181,7 @@ const DARDocument = ({ activities, dateRange, name, position, project, verifiedB
       <View style={styles.table}>
         <View style={[styles.tableRow, styles.tableHeader]}>
           <Text style={styles.dutiesCell}>Duties and Responsibilities</Text>
-          <Text style={styles.activityCell}>Actual Activities / Outputs</Text>
+          <Text style={styles.activityCell}>Actual Deliverables</Text>
         </View>
         
         <View style={styles.tableRow}>
@@ -375,11 +375,6 @@ function ActivityReport() {
     setActivities(updatedActivities);
   };
 
-  const updateRemarks = (dayIndex: number, remarks: string) => {
-    const updatedActivities = [...activities];
-    updatedActivities[dayIndex].remarks = remarks;
-    setActivities(updatedActivities);
-  };
 
   const getDateRange = () => {
     if (!selectedMonth || !selectedYear || !selectedPeriod) return '';
@@ -389,9 +384,9 @@ function ActivityReport() {
 
   return (
     <div className="min-h-screen bg-gray-50 w-full overflow-y-auto">
-      <div className="container mx-auto p-6 max-w-[1200px]">
+      <div className="container mx-auto p-3 sm:p-6 max-w-[1200px]">
         {/* Control Panel */}
-        <div className="bg-white rounded-xl shadow-lg p-8 mb-6">
+        <div className="bg-white rounded-xl shadow-lg p-4 sm:p-8 mb-6">
           <div className="flex items-center justify-between mb-6 border-b pb-4">
             <h2 className="text-2xl font-bold text-gray-800">Accomplishment Report</h2>
             <div className="text-sm text-gray-500">
@@ -600,7 +595,7 @@ function ActivityReport() {
                 <thead>
                   <tr className="border-b border-black">
                     <th className="border-r border-black px-2 py-2 text-left w-1/2">Duties and Responsibilities</th>
-                    <th className="px-2 py-2 text-left w-1/2">Actual Activities / Outputs</th>
+                    <th className="px-2 py-2 text-left w-1/2">Actual Deliverables</th>
                   </tr>
                 </thead>
                 <tbody>
