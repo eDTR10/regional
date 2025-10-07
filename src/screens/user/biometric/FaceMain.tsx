@@ -226,70 +226,122 @@
       Swal.fire({
     title: 'Biometric Actions',
     html: `
-      <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 1rem;">
+      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; justify-content: center; margin-top: 1rem; max-width: 400px; margin-left: auto; margin-right: auto;">
         <button 
           id="time-in-btn" 
           style="
-            background: #3b82f6;
+            background: linear-gradient(135deg, #2196F3, #1976D2);
             color: white;
-            padding: 0.75rem 1.5rem;
+            padding: 1rem;
             border: none;
-            border-radius: 0.5rem;
+            border-radius: 0.75rem;
             cursor: pointer;
-            font-weight: 500;
-            transition: all 0.2s;
+            font-weight: 600;
+            transition: all 0.3s;
             font-size: 14px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
           "
-          onmouseover="this.style.background='#2563eb'"
-          onmouseout="this.style.background='#3b82f6'"
+          onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.2)'"
+          onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)'"
         >
-          Time In
+         🏢 Time In
         </button>
-        <button 
+          <button 
           id="time-out-btn" 
           style="
-            background: #3b82f6;
+            background: linear-gradient(135deg, #2196F3, #1976D2);
             color: white;
-            padding: 0.75rem 1.5rem;
+            padding: 1rem;
             border: none;
-            border-radius: 0.5rem;
+            border-radius: 0.75rem;
             cursor: pointer;
-            font-weight: 500;
-            transition: all 0.2s;
+            font-weight: 600;
+            transition: all 0.3s;
             font-size: 14px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
           "
-          onmouseover="this.style.background='#2563eb'"
-          onmouseout="this.style.background='#3b82f6'"
+          onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.2)'"
+          onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)'"
         >
-          Time Out
+          🌙 Time Out
         </button>
+        <button 
+          id="break-in-btn" 
+          style="
+            background: linear-gradient(135deg, #2196F3, #1976D2);
+            color: white;
+            padding: 1rem;
+            border: none;
+            border-radius: 0.75rem;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            font-size: 14px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          "
+          onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.2)'"
+          onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)'"
+        >
+          ☕ Break In
+        </button>
+        <button 
+          id="break-out-btn" 
+          style="
+            background: linear-gradient(135deg, #2196F3, #1976D2);
+            color: white;
+            padding: 1rem;
+            border: none;
+            border-radius: 0.75rem;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            font-size: 14px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          "
+          onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.2)'"
+          onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)'"
+        >
+          🍽️ Break Out
+        </button>
+      
       </div>
     `,
     showConfirmButton: false,
     showCancelButton: false,
     allowOutsideClick: false,
     allowEscapeKey: false,
-    position: 'center', // Changed from 'top-end' to 'center'
-    toast: false, // Changed from true to false for proper centering
-    timer: 4000,
+    position: 'center',
+    toast: false,
+    timer: 6000, // Increased time because there are more options
     timerProgressBar: true,
-    width: '320px',
+    width: '420px',
+    background: '#fff',
     customClass: {
       popup: 'floating-menu-popup',
       timerProgressBar: 'floating-menu-timer'
     },
     didOpen: () => {
       document.getElementById('time-in-btn')?.addEventListener('click', () => {
-        // start cooldown to avoid immediate re-open
         menuCooldownUntilRef.current = Date.now() + 3000;
-        handleTimeAction('in');
+        handleTimeAction('I');
+        Swal.close();
+      });
+      
+      document.getElementById('break-in-btn')?.addEventListener('click', () => {
+        menuCooldownUntilRef.current = Date.now() + 3000;
+        handleTimeAction('i');
+        Swal.close();
+      });
+
+      document.getElementById('break-out-btn')?.addEventListener('click', () => {
+        menuCooldownUntilRef.current = Date.now() + 3000;
+        handleTimeAction('0');
         Swal.close();
       });
       
       document.getElementById('time-out-btn')?.addEventListener('click', () => {
-        // start cooldown to avoid immediate re-open
         menuCooldownUntilRef.current = Date.now() + 3000;
-        handleTimeAction('out');
+        handleTimeAction('o');
         Swal.close();
       });
     },
@@ -822,10 +874,17 @@
       }
     }, [handleGetLocation]);
 
+    // Time action message mapping
+    const timeActionMessages = {
+      'I': { message: 'clocked in', emoji: '🌅' },
+      'i': { message: 'started break', emoji: '☕' },
+      '0': { message: 'ended break', emoji: '🍽️' },
+      'o': { message: 'clocked out', emoji: '🌙' }
+    };
+
     // Optimized time action
-    const handleTimeAction = useCallback(debounce((action: "in" | "out") => {
-      const message = action === "in" ? "clocked in" : "clocked out";
-      const actionEmoji = action === "in" ? "🎉" : "👋";
+    const handleTimeAction = useCallback(debounce((action: "I" | "i" | "0" | "o") => {
+      const { message, emoji } = timeActionMessages[action];
       const currentTime = getCurrentISOTime();
       
       axios
@@ -833,15 +892,22 @@
           "checkinoutregion/create/",
           {
             CHECKTIME: currentTime,
-            CHECKTYPE: action === "in" ? "I" : "o",
+            CHECKTYPE: action,
             VERIFYCODE: userObject.deptid,
             SENSORID: userObject.deptid,
           },
           { headers: { Authorization: `Token ${localStorage.getItem("accessToken")}` } }
         )
         .then(() => {
+          const successMessages = {
+            'I': "Have a great day at work! 💼",
+            'i': "Enjoy your break! ☕",
+            '0': "Welcome back! 🔋",
+            'o': "See you tomorrow! 🌙"
+          };
+
           Swal.fire({
-            title: `${actionEmoji} Success! ${actionEmoji}`,
+            title: `${emoji} Success! ${emoji}`,
             html: `
               <div style="text-align: center; margin: 20px 0;">
                 <p style="font-size: 18px; margin-bottom: 15px;">
@@ -851,7 +917,7 @@
                   😊 Nice smile, by the way! 😊
                 </p>
                 <p style="font-size: 14px; color: #666; font-style: italic;">
-                  ${action === "in" ? "Have a great day at work! 💼" : "See you tomorrow! 🌅"}
+                  ${successMessages[action]}
                 </p>
               </div>
             `,

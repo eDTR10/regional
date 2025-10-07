@@ -1,10 +1,10 @@
 export function convertCheckType(status: string): string {
     const statusMap: { [key: string]: string } = {
-        'I': 'AM Arrival',
-        'i': 'AM Departure',
-        '0': 'PM Arrival',
-        'o': 'PM Departure',
-        'O': 'PM Departure'
+        'I': 'Time-In',
+        'i': 'Break-In',
+        '0': 'Break-Out',
+        'o': 'Time-Out',
+        'O': 'Break-Out'
     };
 
     return status.split('').map(char => statusMap[char] || char).join(', ');
