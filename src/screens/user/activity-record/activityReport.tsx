@@ -602,7 +602,7 @@ function ActivityReport() {
                   <tr className="border-b border-dotted border-gray-400">
                     <td className="border-r border-dotted border-gray-400 px-4 py-4 whitespace-pre-wrap text-sm text-left align-top">
                       {userData.duties || '(Consistent with the approved and submitted Terms of Reference)'}
-                    </td>
+                    </td>   
                     <td className="px-2 py-2">
                       <div className="min-h-[30px]">
                         {activities.flatMap((day, dayIndex) => 

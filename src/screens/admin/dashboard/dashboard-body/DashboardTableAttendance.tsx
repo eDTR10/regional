@@ -49,6 +49,7 @@ const DashboardTableAttendance = () => {
         { value: "Misamis Oriental Provincial Office", label: "Misamis Oriental Provincial Office" },
         { value: "Misamis Occidental Provincial Office", label: "Misamis Occidental Provincial Office" },
         { value: "Lanao del Norte Provincial Office", label: "Lanao del Norte Provincial Office" },
+        { value: "Iligan City Office", label: "Iligan City Office" },
     ];
 
     const filteredCheckData = data.filter((item: any) => {

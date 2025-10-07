@@ -40,9 +40,9 @@ const DashboardCards = (data: any) => {
 
 
                             <div key={index} className=" overflow-hidden animate-fadeIn bg-primary-foreground border border-border w-full rounded-lg p-6 py-4 flex flex-col justify-between">
-                                <div className="flex justify-between items-start">
-                                    <h2 className="text-md text-foreground font-bold pr-2">{data.category}</h2>
-                                    <data.icon className={`text-4xl ${data.color}`} /> {/* Icon */}
+                                <div className="flex justify-between items-start ">
+                                    <h2 className="text-md text-foreground font-bold w-[80%] pr-2">{data.category}</h2>
+                                    <data.icon className={`text-4xl w-10 ${data.color}`} /> 
                                 </div>
                                 <p className="text-3xl text-right font-bold text-foreground md:mt-4">{data.count}</p> {/* Value */}
                                 {selectedCelebrant && <Confetti />}
@@ -51,8 +51,8 @@ const DashboardCards = (data: any) => {
 
                             <div key={index} className="animate-fadeIn bg-primary-foreground border border-border w-full rounded-lg p-6 py-4 flex flex-col justify-between">
                                 <div className="flex justify-between items-start">
-                                    <h2 className="text-md text-foreground font-bold pr-2">{data.category}</h2>
-                                    <data.icon className={`text-4xl ${data.color}`} /> {/* Icon */}
+                                    <h2 className="text-md text-foreground font-bold w-[80%] pr-2">{data.category}</h2>
+                                    <data.icon className={` w-10 ${data.color}`} /> 
                                 </div>
                                 <p className="text-3xl text-right font-bold text-foreground md:mt-4">{data.count}</p> {/* Value */}
                             </div>

@@ -12,6 +12,8 @@ export function getDepartmentName(deptid:any){
             return 'Misamis Occidental Provincial Office';
         case 6:
             return 'Lanao del Norte Provincial Office';
+        case 8:
+            return 'Iligan City Office';
         default:
             return 'Unknown Department';
         }

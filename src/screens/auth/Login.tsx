@@ -1,6 +1,6 @@
 import R10bg from './../../assets/r10-bg.jpg'
 import Logo from './../../assets/eDTR-logo.webp'
-import Logo2 from './../../assets/DICT-Logo-Final-2-300x153.png'
+import Logo2 from './../../assets/DICT-Logo-Login.webp'
 
 
 import InputText from '@/components/input/InputText'
