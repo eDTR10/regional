@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Page, Text, View, Document, StyleSheet, Font, PDFDownloadLink, Image } from '@react-pdf/renderer';
-import { Plus, X, FileDown } from 'lucide-react';
+import { Plus, X, FileDown, ChevronDown } from 'lucide-react';
 
 import DICT from './../../../assets/dict.png';
 import { getDepartmentName } from '@/helper/department';
@@ -220,6 +220,14 @@ function ActivityReport() {
   const [selectedPeriod, setSelectedPeriod] = useState<string>('');
   const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
+
+  const isPersonalInfoComplete = () => {
+    return !!userData.name && !!userData.position && !!userData.duties;
+  };
+
+  const isAdditionalDetailsComplete = () => {
+    return !!verifiedBy.name && !!verifiedBy.designation;
+  };
   const [_attendanceData, setAttendanceData] = useState<any>(null);
   const [activities, setActivities] = useState<Array<{
     date: string;
@@ -246,6 +254,16 @@ function ActivityReport() {
     };
   });
 
+  const [isPersonalInfoExpanded, setIsPersonalInfoExpanded] = useState(() => {
+    const saved = localStorage.getItem('personalInfoExpanded');
+    return saved ? JSON.parse(saved) : true;
+  });
+
+  const [isAdditionalDetailsExpanded, setIsAdditionalDetailsExpanded] = useState(() => {
+    const saved = localStorage.getItem('additionalDetailsExpanded');
+    return saved ? JSON.parse(saved) : true;
+  });
+
   // Save to localStorage whenever the data changes
   useEffect(() => {
     localStorage.setItem('userDAR', JSON.stringify(userData));
@@ -254,6 +272,14 @@ function ActivityReport() {
   useEffect(() => {
     localStorage.setItem('verifierDAR', JSON.stringify(verifiedBy));
   }, [verifiedBy]);
+
+  useEffect(() => {
+    localStorage.setItem('personalInfoExpanded', JSON.stringify(isPersonalInfoExpanded));
+  }, [isPersonalInfoExpanded]);
+
+  useEffect(() => {
+    localStorage.setItem('additionalDetailsExpanded', JSON.stringify(isAdditionalDetailsExpanded));
+  }, [isAdditionalDetailsExpanded]);
 
   const fetchAttendanceData = async (fromDate: string, toDate: string) => {
     try {
@@ -447,7 +473,21 @@ function ActivityReport() {
 
           {/* Personal Information Section */}
           <div className="mb-8">
-            <h3 className="text-lg font-semibold text-gray-700 mb-4">Personal Information</h3>
+            <div className={`flex items-center justify-between border rounded-lg p-3 transition-colors cursor-pointer ${isPersonalInfoComplete() ? 'bg-green-50 hover:bg-green-100' : 'bg-red-50 hover:bg-red-100'}`}
+              onClick={() => setIsPersonalInfoExpanded(!isPersonalInfoExpanded)}
+            >
+              <div className="flex items-center gap-2">
+                <h3 className={`text-lg font-semibold ${isPersonalInfoComplete() ? 'text-green-700' : 'text-red-700'}`}>Personal Information</h3>
+                <span className="text-xs text-gray-500">{isPersonalInfoExpanded ? '(Click to collapse)' : '(Click to expand)'}</span>
+              </div>
+              <button 
+                className={`p-2 rounded-full bg-white border shadow-sm hover:bg-gray-50 transition-all transform ${isPersonalInfoExpanded ? 'rotate-180' : 'rotate-0'}`}
+                aria-label={isPersonalInfoExpanded ? 'Collapse section' : 'Expand section'}
+              >
+                <ChevronDown className="w-5 h-5 text-gray-600" />
+              </button>
+            </div>
+            <div className={`mt-4 transition-all duration-300 ease-in-out overflow-hidden ${isPersonalInfoExpanded ? 'opacity-100 max-h-[1000px]' : 'opacity-0 max-h-0'}`}>
             <div className="grid grid-cols-3 sm:grid-cols-1 gap-6 mb-6">
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-600">Name</label>
@@ -490,11 +530,26 @@ function ActivityReport() {
               />
             </div>
           </div>
+          </div>
 
           {/* Additional Information Section */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-700 mb-4">Additional Details</h3>
-            <div className="grid grid-cols-3 gap-6">
+          <div className="mb-8">
+            <div className={`flex items-center justify-between border rounded-lg p-3 transition-colors cursor-pointer ${isAdditionalDetailsComplete() ? 'bg-green-50 hover:bg-green-100' : 'bg-red-50 hover:bg-red-100'}`}
+              onClick={() => setIsAdditionalDetailsExpanded(!isAdditionalDetailsExpanded)}
+            >
+              <div className="flex items-center gap-2">
+                <h3 className={`text-lg font-semibold ${isAdditionalDetailsComplete() ? 'text-green-700' : 'text-red-700'}`}>Additional Details</h3>
+                <span className="text-xs text-gray-500">{isAdditionalDetailsExpanded ? '(Click to collapse)' : '(Click to expand)'}</span>
+              </div>
+              <button 
+                className={`p-2 rounded-full bg-white border shadow-sm hover:bg-gray-50 transition-all transform ${isAdditionalDetailsExpanded ? 'rotate-180' : 'rotate-0'}`}
+                aria-label={isAdditionalDetailsExpanded ? 'Collapse section' : 'Expand section'}
+              >
+                <ChevronDown className="w-5 h-5 text-gray-600" />
+              </button>
+            </div>
+            <div className={`mt-4 transition-all duration-300 ease-in-out overflow-hidden ${isAdditionalDetailsExpanded ? 'opacity-100 max-h-[1000px]' : 'opacity-0 max-h-0'}`}>
+              <div className="grid grid-cols-3 sm:grid-cols-1 gap-6">
              
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-600">Verified by (Name)</label>
@@ -557,38 +612,7 @@ function ActivityReport() {
               <p className="text-sm mt-1">{getDateRange()}</p>
             </div>
 
-            {/* User Info */}
-            {/* <div className="mb-4 text-sm">
-              <div className="flex gap-8 mb-2">
-                <div className="flex flex-1">
-                  <span className="font-medium mr-2">Name:</span>
-                  <span className="border-b border-dotted border-gray-400 flex-1 px-1">
-                    {userData.name || '[Surname, First Name, MI]'}
-                  </span>
-                </div>
-                <div className="flex flex-1">
-                  <span className="font-medium mr-2">Office:</span>
-                  <span className="border-b border-dotted border-gray-400 flex-1 px-1">
-                    Regional Office
-                  </span>
-                </div>
-              </div>
-              <div className="flex gap-8">
-                <div className="flex flex-1">
-                  <span className="font-medium mr-2">Position:</span>
-                  <span className="border-b border-dotted border-gray-400 flex-1 px-1">
-                    {userData.position || '[Do not abbreviate position]'}
-                  </span>
-                </div>
-                <div className="flex flex-1">
-                  <span className="font-medium mr-2">Project:</span>
-                  <span className="border-b border-dotted border-gray-400 flex-1 px-1">
-                    {userData.project || ''}
-                  </span>
-                </div>
-              </div>
-            </div> */}
-
+          
             {/* Activity Table */}
             <div className="border border-black">
               <table className="w-full text-sm">
@@ -680,6 +704,7 @@ function ActivityReport() {
             </div>
           </div>
         )}
+      </div>
       </div>
     </div>
   );

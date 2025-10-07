@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react'
 import axios from "../../../plugin/axios";
 import UserDashboardTableAttendance from './dashboard-body/UserDashboardTableAttendance';
 
-import DashboardCards from './dashboard-body/DashboardCards';
-
+import DashboardCards from '@/screens/admin/dashboard/dashboard-body/DashboardCards';
 import DashboardAnalogClock from '@/screens/admin/dashboard/dashboard-body/DashboardAnalogClock';
 import DashboardTableBirthday from '@/screens/admin/dashboard/dashboard-body/DashboardTableBirthday';
 import { Building2, Car, Globe, Home, Plane } from 'lucide-react';

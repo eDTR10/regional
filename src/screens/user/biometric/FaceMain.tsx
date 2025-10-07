@@ -1082,57 +1082,7 @@
                 {livelinessMessage}
               </span>
             </div>
-            
-            {/* <div className="mt-10 sm:mt-2 flex gap-6 justify-center">
-              <Button
-                className={
-                  canPerformActions
-                    ? "bg-primary"
-                    : "pointer-events-none bg-red-500/50"
-                }
-                onClick={() => handleTimeAction("in")}
-                disabled={!canPerformActions}
-              >
-                Time In
-              </Button>
-              <Button
-                className={
-                  canPerformActions
-                    ? "bg-primary"
-                    : "pointer-events-none bg-red-500/50"
-                }
-                onClick={() => handleTimeAction("out")}
-                disabled={!canPerformActions}
-              >
-                Time Out
-              </Button>
-            </div> */}
-            
-            {/* Permission retry buttons */}
-            {/* {(cameraStatus === "permission_denied" || locationStatus === "permission_denied") && (
-              <div className="mt-4 flex gap-4 justify-center">
-                {cameraStatus === "permission_denied" && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={requestCameraPermission}
-                    className="text-xs"
-                  >
-                    Enable Camera
-                  </Button>
-                )}
-                {locationStatus === "permission_denied" && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={requestLocationPermission}
-                    className="text-xs"
-                  >
-                    Enable Location
-                  </Button>
-                )}
-              </div>
-            )} */}
+          
           </div>
         </div>
       </div>
