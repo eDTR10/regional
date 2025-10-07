@@ -1,0 +1,1 @@
+import{p as a}from"./index-718650ec.js";const s=a("Loader2",[["path",{d:"M21 12a9 9 0 1 1-6.219-8.56",key:"13zald"}]]),e="/regional/assets/r10-bg-5c6ac8f3.jpg",t="/regional/assets/eDTR-logo-409a9ffa.webp";export{t as L,e as R,s as a};
