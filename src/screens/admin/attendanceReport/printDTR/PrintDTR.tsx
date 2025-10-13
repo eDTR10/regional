@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { Suspense, useRef, useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { FileCodeIcon,  PrinterIcon } from 'lucide-react';
 
 import {
@@ -22,9 +22,9 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 export default function PrintDTR({name = '', data, date, show, selectedYear, selectedMonth}:any) {
-  const [_image, setImage] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+
+
   
   // Initialize SupervisorsName from localStorage
   const [SupervisorsName, setSupervisorsName] = useState<string>(() => {
@@ -47,13 +47,7 @@ export default function PrintDTR({name = '', data, date, show, selectedYear, sel
     localStorage.setItem('supervisorsName', SupervisorsName)
   }, [SupervisorsName])
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setImage(file);
-      setPreviewUrl(URL.createObjectURL(file));
-    }
-  };
+
 
 
 
@@ -61,7 +55,7 @@ export default function PrintDTR({name = '', data, date, show, selectedYear, sel
     // Generate the PDF using @react-pdf/renderer
     const doc = <MyDocument 
       name={name?.toUpperCase() || ''} 
-      previewUrl={previewUrl} 
+      previewUrl={null} 
       date={date} 
       data={data} 
 
@@ -100,11 +94,15 @@ export default function PrintDTR({name = '', data, date, show, selectedYear, sel
 
       <DrawerContent  title="DTR" 
   description="Optional Description">
-    <div className='h-[70vh] sm:h-[30vh]   w-full overflow-y-scroll sm:overflow-hidden  bg-white '>
+    <div className='h-[70vh] sm:h-[50vh]   w-full overflow-y-scroll sm:overflow-hidden  bg-white '>
 
     
     {isMobile ? (
-      <div className=' flex w-full items-center justify-center h-20 gap-5'>
+
+     
+
+     
+      <div className=' flex w-full items-center md:flex-col justify-center  sm:h-48 gap-5'>
         <Select value={selectedSchedule} onValueChange={(value) => {
     setSelectedSchedule(value)
   }}>
@@ -123,10 +121,15 @@ export default function PrintDTR({name = '', data, date, show, selectedYear, sel
                   <SelectItem value="11">10:00-7:00</SelectItem>
                 </SelectContent>
               </Select>
+
+              <input type="text"  className='border border-gray-300 rounded-md p-2 outline-none'
+      value={SupervisorsName} onChange={(e) => setSupervisorsName(e.target.value)}
+      placeholder="Supervisors Name Here " />
          <Button onClick={handleDownload} value=''>Save DTR  <FileCodeIcon  className=' h-4 w-4 ml-2 animate-bounce'/> </Button>
          
+       </div>
       
-      </div>
+     
         ) : (
         <Suspense fallback={<div></div>}>
           <div className=' flex w-full items-center justify-center h-20 gap-5'>
@@ -152,13 +155,13 @@ export default function PrintDTR({name = '', data, date, show, selectedYear, sel
 
               
 
-            <input
+            {/* <input
         type="file"
         accept="image/*"
         onChange={handleImageUpload}
         ref={fileInputRef}
         className="hidden"
-      />
+      /> */}
 
       {/* Button to trigger file input */}
 
@@ -172,7 +175,7 @@ export default function PrintDTR({name = '', data, date, show, selectedYear, sel
           <PDFViewer className="w-full h-full" >
           <MyDocument 
       name={name?.toUpperCase() || ''} 
-      previewUrl={previewUrl} 
+      previewUrl={null} 
       selectedSchedule={selectedSchedule}
       date={date} 
       data={data} 
