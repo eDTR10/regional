@@ -12,7 +12,7 @@ Font.register({
   ]
 });
 
-const MyDocument = ({ name, date, data,selectedYear, selectedMonth,previewUrl,selectedSchedule }: any) => {
+const MyDocument = ({ name, date, data,selectedYear, selectedMonth,previewUrl,selectedSchedule,SupervisorsName }: any) => {
   const getDateFromChecktime = (checktime: any) => new Date(checktime).getUTCDate();
 
 
@@ -715,7 +715,7 @@ const activities = activitiesByDate[day] || [];
             <View style={{ fontSize: 8, textAlign: 'center', marginTop: 30 }}>
               <Text style={{ borderBottom: 0.5, paddingTop: 2,fontStyle:'bold' }}>{
               
-              JSON.parse(localStorage.getItem('user')||'').deptid  == 4 && name.toUpperCase() != "NIDELIZA FE O. NACILLA" ?  ` NIDELIZA FE O. NACILLA`:""
+              JSON.parse(localStorage.getItem('user')||'').deptid  == 4 && name.toUpperCase() != "NIDELIZA FE O. NACILLA" ?  ` NIDELIZA FE O. NACILLA`: SupervisorsName
               }</Text>
               <Text style={{ fontSize: 7 ,fontStyle:'italic',marginTop:2}}>Name and Signature of Immediate Supervisor</Text>
             </View>

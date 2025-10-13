@@ -87,28 +87,28 @@ const DashboardTableAttendance = () => {
                     All
                 </button>
                 <button
-                    onClick={() => setFilterType('AM Arrival')}
-                    className={`p-2 border border-border text-primary rounded ${filterType === 'AM Arrival' ? 'bg-blue-500 text-white' : ''}`}
+                    onClick={() => setFilterType('Time-In')}
+                    className={`p-2 border border-border text-primary rounded ${filterType === 'Time-In' ? 'bg-blue-500 text-white' : ''}`}
                 >
-                    AM Arrival
+                    Time-In
                 </button>
                 <button
-                    onClick={() => setFilterType('AM Departure')}
-                    className={`p-2 border border-border text-primary rounded ${filterType === 'AM Departure' ? 'bg-blue-500 text-white' : ''}`}
+                    onClick={() => setFilterType('Break-In')}
+                    className={`p-2 border border-border text-primary rounded ${filterType === 'Break-In' ? 'bg-blue-500 text-white' : ''}`}
                 >
-                    AM Departure
+                    Break-In
                 </button>
                 <button
-                    onClick={() => setFilterType('PM Arrival')}
-                    className={`p-2 border border-border text-primary rounded ${filterType === 'PM Arrival' ? 'bg-blue-500 text-white' : ''}`}
+                    onClick={() => setFilterType('Break-Out')}
+                    className={`p-2 border border-border text-primary rounded ${filterType === 'Break-Out' ? 'bg-blue-500 text-white' : ''}`}
                 >
-                    PM Arrival
+                    Break-Out
                 </button>
                 <button
-                    onClick={() => setFilterType('PM Departure')}
-                    className={`p-2 border border-border text-primary rounded ${filterType === 'PM Departure' ? 'bg-blue-500 text-white' : ''}`}
+                    onClick={() => setFilterType('Time-Out')}
+                    className={`p-2 border border-border text-primary rounded ${filterType === 'Time-Out' ? 'bg-blue-500 text-white' : ''}`}
                 >
-                    PM Departure
+                    Time-Out
                 </button>
                 {/* Department Filter */}
                 <select

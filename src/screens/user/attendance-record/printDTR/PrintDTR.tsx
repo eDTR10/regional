@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Suspense, useRef, useState, useEffect } from 'react'
-import { FileCodeIcon,  FileSignature,  PrinterIcon } from 'lucide-react';
+import { FileCodeIcon,  PrinterIcon } from 'lucide-react';
 
 import {
   Drawer,
@@ -12,12 +12,7 @@ import {
 import MyDocument from './PDF';
 import { PDFViewer,pdf } from '@react-pdf/renderer';
 import { isMobile } from 'react-device-detect'; // To detect mobile devices
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+
 import { PDFDocument } from 'pdf-lib-with-encrypt';
 import {
   Select,
@@ -30,14 +25,27 @@ export default function PrintDTR({name = '', data, date, show, selectedYear, sel
   const [_image, setImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  
+  // Initialize SupervisorsName from localStorage
+  const [SupervisorsName, setSupervisorsName] = useState<string>(() => {
+    const savedSupervisor = localStorage.getItem('supervisorsName')
+    return savedSupervisor || ''
+  });
+  
   const [selectedSchedule, setSelectedSchedule] = useState(() => {
     const savedSchedule = localStorage.getItem('selectedSchedule')
     return savedSchedule || "7"
   });
 
+  // Save selectedSchedule to localStorage
   useEffect(() => {
     localStorage.setItem('selectedSchedule', selectedSchedule)
   }, [selectedSchedule])
+
+  // Save SupervisorsName to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('supervisorsName', SupervisorsName)
+  }, [SupervisorsName])
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -47,9 +55,7 @@ export default function PrintDTR({name = '', data, date, show, selectedYear, sel
     }
   };
 
-  const openFileExplorer = () => {
-    fileInputRef.current?.click();
-  };
+
 
   const  handleDownload = async () => {
     // Generate the PDF using @react-pdf/renderer
@@ -58,9 +64,11 @@ export default function PrintDTR({name = '', data, date, show, selectedYear, sel
       previewUrl={previewUrl} 
       date={date} 
       data={data} 
+
       selectedSchedule={selectedSchedule}
       selectedYear={selectedYear} 
       selectedMonth={selectedMonth} 
+      SupervisorsName={SupervisorsName}
     />;
     const asPdf = pdf();
     asPdf.updateContainer(doc);
@@ -154,17 +162,9 @@ export default function PrintDTR({name = '', data, date, show, selectedYear, sel
 
       {/* Button to trigger file input */}
 
-      <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-        <Button onClick={openFileExplorer} variant="outline">Add Signature <FileSignature  className=' h-4 w-4 ml-2'/> </Button>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>image size 789x579</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-      
+      <input type="text"  className='border border-gray-300 rounded-md p-2 outline-none'
+      value={SupervisorsName} onChange={(e) => setSupervisorsName(e.target.value)}
+      placeholder="Supervisors Name Here " />
    
            
           </div>
@@ -178,6 +178,7 @@ export default function PrintDTR({name = '', data, date, show, selectedYear, sel
       data={data} 
       selectedYear={selectedYear} 
       selectedMonth={selectedMonth} 
+      SupervisorsName={SupervisorsName}
     />
         </PDFViewer>
         </Suspense>
