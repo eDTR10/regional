@@ -10,8 +10,7 @@ const DashboardTableBirthday = ({ data }: { data?: any }) => {
 
   // Sample data for demo purposes
 
-
-  const birthdayCelebrants = data?.birthday_celebrants ||[];
+  const birthdayCelebrants = data?.birthday_celebrants || [];
 
   const filteredCheckData = birthdayCelebrants.filter((celebrant: any) => {
     const matchesSearchTerm =
@@ -39,7 +38,7 @@ const DashboardTableBirthday = ({ data }: { data?: any }) => {
   const confettiElements = Array.from({ length: 50 }, (_, i) => i);
 
   return (
-    <div className="w-full max-w-3xl mx-auto p-0 bg-gray-50 border border-gray-300 relative overflow-hidden" style={{ height: '500px' }}>
+    <div className="w-full max-w-3xl mx-auto p-0 bg-card border border-border relative overflow-hidden" style={{ height: '500px' }}>
       {confettiElements.map((i) => (
         <div
           key={i}
@@ -123,7 +122,7 @@ const DashboardTableBirthday = ({ data }: { data?: any }) => {
 
     
 
-      <div className="overflow-auto bg-white relative z-10" style={{ height: 'calc(100% - 140px)' }}>
+      <div className="overflow-auto  relative z-10" style={{ height: 'calc(100% - 140px)' }}>
         <table className="w-full border-collapse">
           <thead>
             <tr>
@@ -134,16 +133,15 @@ const DashboardTableBirthday = ({ data }: { data?: any }) => {
             {filteredCheckData.map((celebrant: any, index: number) => (
               <tr
                 key={index}
-                className="border border-gray-300 cursor-pointer transition-all duration-300 animate-slide-in group relative"
+                className="border border-border cursor-pointer transition-all bg-background/30 backdrop-blur-sm  duration-300 animate-slide-in group relative"
                 onClick={() => handleCelebrantClick(celebrant)}
                 onMouseEnter={() => setHoveredRow(index)}
                 onMouseLeave={() => setHoveredRow(null)}
                 style={{ 
-                  animationDelay: `${index * 0.1}s`,
-                  backgroundColor: hoveredRow === index ? '#EBF4FF' : 'white'
+                  animationDelay: `${index * 0.1}s`
                 }}
               >
-                <td className="font-normal text-gray-800 p-3 relative text-sm">
+                <td className="font-normal text-primary p-3 relative text-sm">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-3">
                       <div className="flex items-center gap-1">
