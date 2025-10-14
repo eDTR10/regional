@@ -13,6 +13,7 @@ Font.register({
 });
 
 const MyDocument = ({ name, date, data,selectedYear, selectedMonth,previewUrl,selectedSchedule,SupervisorsName }: any) => {
+  console.log(date)
   const getDateFromChecktime = (checktime: any) => new Date(checktime).getUTCDate();
 
 
@@ -235,20 +236,31 @@ const parseTimeToMinutes = (time: string): number => {
 };
 
 const undertimeCalc = (timeIn: string, timeOut: string, day: number): { hours: number | string, minutes: number | string } => {
+  // Parse the date string to get the actual date range
+  const dateRangeParts = date.split('-');
+  let startDay = 1;
+  let endDay = new Date(selectedYear, selectedMonth, 0).getDate();
+  
+  if (dateRangeParts.length > 1) {
+    // If date format is "October 1-15, 2025"
+    const firstPart = dateRangeParts[0].trim().split(' ');
+    const secondPart = dateRangeParts[1].trim().split(',')[0];
+    
+    startDay = parseInt(firstPart[firstPart.length - 1]);
+    endDay = parseInt(secondPart);
+  }
+  
   // Check if the current day is within the selected date range
+  if (day < startDay || day > endDay) {
+    return { hours: 0, minutes: 0 };
+  }
+  
   const currentDate = new Date(selectedYear, selectedMonth - 1, day);
-  const startDate = new Date(selectedYear, selectedMonth - 1, 1);
-  const endDate = new Date(selectedYear, selectedMonth, 0);
   
   // Check day of week
   const dayOfWeek = currentDate.getDay();
   const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
   
-  // If date is outside the selected range, return blank
-  if (currentDate < startDate || currentDate > endDate) {
-    return { hours: '', minutes: '' };
-  }
-
   // Get the last day of the selected month
   const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
   
