@@ -9,15 +9,9 @@ const DashboardTableBirthday = ({ data }: { data?: any }) => {
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
 
   // Sample data for demo purposes
-  const sampleData = [
-    { full_name: "Jaymark D. Dumio", birthday: "2024-10-13" },
-    { full_name: "Maria Santos", birthday: "2024-10-15" },
-    { full_name: "Juan Dela Cruz", birthday: "2024-10-20" },
-    { full_name: "Ana Reyes", birthday: "2024-10-25" },
-    { full_name: "Pedro Garcia", birthday: "2024-10-28" },
-  ];
 
-  const birthdayCelebrants = data?.birthday_celebrants || sampleData;
+
+  const birthdayCelebrants = data?.birthday_celebrants ||[];
 
   const filteredCheckData = birthdayCelebrants.filter((celebrant: any) => {
     const matchesSearchTerm =
