@@ -853,6 +853,8 @@
           headers: { Authorization: `Token ${localStorage.getItem("accessToken")}` },
         });
         const data = response.data;
+
+        localStorage.setItem("user", JSON.stringify(data))
         
         // Store user data in memory instead of localStorage for better performance
         if (!data?.description) throw new Error("No face description data in API response");
