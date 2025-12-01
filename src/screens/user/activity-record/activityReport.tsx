@@ -31,9 +31,47 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     backgroundColor: '#fff',
     padding: '0.5in',
+    paddingBottom: '1.3in', // <--- IMPORTANT CHANGE: Increased bottom padding to make space for the fixed footer
     fontFamily: 'Palatino',
     fontSize: 10
   },
+  // *** STYLES FOR FIXED WATERMARK FOOTER ***
+  watermarkFooter: {
+    position: 'absolute', // Fixed position relative to the page
+    bottom: '0.5in', // Positioned from the bottom
+    left: '0.5in',
+    right: '0.5in',
+    borderTopWidth: 1, // The line shown in the image is now on top
+    borderTopColor: '#00008b',
+    paddingTop: 5,
+    flexDirection: 'row',
+    justifyContent: 'space-between', // Distribute items horizontally
+    color: '#00008b', // Dark blue text color
+    fontSize: 9,
+  },
+  footerLeft: {
+    textAlign: 'left',
+    width: '40%',
+  },
+  footerRight: {
+    textAlign: 'right',
+    width: '60%',
+  },
+  footerLink: {
+    // Styling for the DICT link/contact part
+    marginBottom: 2,
+    fontSize: 10,
+    fontWeight: 'normal',
+    color: '#00008b',
+  },
+  footerPageInfo: {
+    // Styling for the "Accomplishment Report | Page 1 of 1" part
+    marginTop: 15, // Push it down slightly
+    fontStyle: 'italic',
+    fontSize: 9,
+    color: '#00008b',
+  },
+  // *** END NEW STYLES ***
   headerSection: {
     alignItems: 'center'
   },
@@ -45,15 +83,17 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    marginTop: 8,
-    marginBottom: 5,
+    marginTop: 10,
+    marginBottom: 4,
     textAlign: 'center',
     fontWeight: 'bold'
   },
   dateRange: {
     fontSize: 10,
     textAlign: 'center',
-    marginBottom: 15
+    fontWeight: "bold",
+    marginBottom: 15,
+    transform: 'translate(0, -5)'
   },
   infoSection: {
     marginBottom: 15
@@ -66,13 +106,13 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 10,
     marginRight: 10,
-    fontStyle:'bold',
+    fontStyle: 'bold',
     minWidth: 60
   },
   infoValue: {
     borderBottomWidth: 1,
     borderBottomColor: '#000',
-    fontStyle:'bold',
+    fontStyle: 'bold',
     borderStyle: 'dotted',
     flex: 1,
     fontSize: 10
@@ -99,6 +139,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     fontWeight: 'bold'
   },
+  dutiesCells: {
+    width: '50%',
+    padding: 8,
+    fontSize: 10,
+    borderRightWidth: 1,
+    borderRightColor: '#000',
+    borderStyle: 'dashed',
+    transform: 'translate(0, 3)',
+    textAlign: 'center'
+  },
   dutiesCell: {
     width: '50%',
     padding: 8,
@@ -108,9 +158,18 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     textAlign: 'left'
   },
-  activityCell: {
+  activityCells: {
     width: '50%',
     padding: 2,
+    fontSize: 10,
+    transform: 'translate(0, 3)',
+    paddingLeft: 10,
+    textAlign: 'center'
+  },
+
+  activityCell: {
+    width: '50%',
+    padding: 8,
     fontSize: 8,
     paddingLeft: 10
   },
@@ -142,10 +201,12 @@ const styles = StyleSheet.create({
   },
   afpCode: {
     position: 'absolute',
+    transform: 'translate(0, -13)',
     top: 30,
     right: 30,
     fontSize: 8,
-    fontStyle: 'italic'
+    fontStyle: 'italic',
+    color: '#000',
   },
   pageNumber: {
     position: 'absolute',
@@ -168,13 +229,13 @@ const styles = StyleSheet.create({
 // PDF Document Component with pagination
 const DARDocument = ({ activities, dateRange, name, position, project, verifiedBy, duties }: any) => {
   const allActivities = activities.flatMap((day: any) => day.activities);
-  const ITEMS_PER_PAGE = 35;
-  
+  const ITEMS_PER_PAGE = 28;
+
   const activityPages: string[][] = [];
   for (let i = 0; i < allActivities.length; i += ITEMS_PER_PAGE) {
     activityPages.push(allActivities.slice(i, i + ITEMS_PER_PAGE));
   }
-  
+
   if (activityPages.length === 0) {
     activityPages.push([]);
   }
@@ -185,12 +246,15 @@ const DARDocument = ({ activities, dateRange, name, position, project, verifiedB
     <Document>
       {activityPages.map((pageActivities, pageIndex) => (
         <Page key={pageIndex} size="A4" style={styles.page}>
+
           <Text style={styles.afpCode}>AFD-HRM-AHR-009/r0/24Nov2025</Text>
-          
-          {pageIndex === 0 ? (
+
+          {/* Page Content */}
+          {true ? (
             <>
+              {/* ... First Page Header Content ... */}
               <View style={styles.headerSection}>
-                <Image src={DICT} style={{ width: 290, objectFit: 'contain', alignSelf: 'center', marginBottom: 5 }} />
+                <Image src={DICT} style={{ width: "100%", transform: 'translate(0, -13)', marginTop: 10, objectFit: 'contain', alignSelf: 'center', marginBottom: 5 }} />
                 <Text style={styles.title}>Accomplishment Report</Text>
                 <Text style={styles.dateRange}>{dateRange}</Text>
               </View>
@@ -200,7 +264,7 @@ const DARDocument = ({ activities, dateRange, name, position, project, verifiedB
                   <Text style={styles.label}>Name</Text>
                   <Text style={styles.infoValue}>{name || '[Surname, First Name, MI]'}</Text>
                   <Text style={[styles.label, { marginLeft: 20 }]}>Office</Text>
-                  <Text style={styles.infoValue}>{getDepartmentName(JSON.parse(localStorage.getItem('user')||"{}").deptid)}</Text>
+                  <Text style={styles.infoValue}>{getDepartmentName(JSON.parse(localStorage.getItem('user') || "{}").deptid)}</Text>
                 </View>
                 <View style={styles.infoRow}>
                   <Text style={styles.label}>Position</Text>
@@ -212,10 +276,10 @@ const DARDocument = ({ activities, dateRange, name, position, project, verifiedB
 
               <View style={styles.table}>
                 <View style={[styles.tableRow, styles.tableHeader]}>
-                  <Text style={styles.dutiesCell}>Duties and Responsibilities</Text>
-                  <Text style={styles.activityCell}>Actual Deliverables</Text>
+                  <Text style={styles.dutiesCells}>Duties and Responsibilities</Text>
+                  <Text style={styles.activityCells}>Actual Deliverables</Text>
                 </View>
-                
+
                 <View style={styles.tableRow}>
                   <Text style={styles.dutiesCell}>{duties || '(Consistent with the approved and submitted Terms of Reference)'}</Text>
                   <View style={styles.activityCell}>
@@ -228,6 +292,7 @@ const DARDocument = ({ activities, dateRange, name, position, project, verifiedB
             </>
           ) : (
             <>
+              {/* ... Subsequent Page Header Content ... */}
               <View style={styles.headerSection}>
                 <Text style={styles.title}>Accomplishment Report (Continued)</Text>
                 <Text style={styles.dateRange}>{dateRange}</Text>
@@ -235,10 +300,10 @@ const DARDocument = ({ activities, dateRange, name, position, project, verifiedB
 
               <View style={styles.table}>
                 <View style={[styles.tableRow, styles.tableHeader]}>
-                  <Text style={styles.dutiesCell}>Duties and Responsibilities</Text>
-                  <Text style={styles.activityCell}>Actual Deliverables</Text>
+                  <Text style={styles.dutiesCells}>Duties and Responsibilities</Text>
+                  <Text style={styles.activityCells}>Actual Deliverables</Text>
                 </View>
-                
+
                 <View style={styles.tableRow}>
                   <Text style={styles.dutiesCell}>{duties || '(Consistent with the approved and submitted Terms of Reference)'}</Text>
                   <View style={styles.activityCell}>
@@ -251,6 +316,7 @@ const DARDocument = ({ activities, dateRange, name, position, project, verifiedB
             </>
           )}
 
+          {/* --- Footer Content that should ONLY be on the LAST page --- */}
           {pageIndex === totalPages - 1 && (
             <>
               <View style={styles.signatureSection}>
@@ -272,15 +338,29 @@ const DARDocument = ({ activities, dateRange, name, position, project, verifiedB
             </>
           )}
 
-          <Text style={styles.pageNumber} render={({ pageNumber, totalPages }) => (
-            `Page ${pageNumber} of ${totalPages}`
-          )} fixed />
+          {/* --- FIXED WATERMARK FOOTER IMPLEMENTATION (on every page) --- */}
+          <View style={styles.watermarkFooter} fixed>
+            <View style={styles.footerLeft}>
+              <Text>DICT Regional Office X,</Text>
+              <Text>Carmen, Cagayan de Oro City 9000</Text>
+              <Text>Philippines</Text>
+            </View>
+            <View style={styles.footerRight}>
+              <Text style={styles.footerLink}>https://www.dict.gov.ph</Text>
+              <Text style={styles.footerLink}>+63 (088) 567-1769</Text>
+              {/* Page Numbering integrated into the fixed footer */}
+              <Text style={styles.footerPageInfo} render={({ pageNumber, totalPages }) => (
+                `Accomplishment Report | Page ${pageNumber} of ${totalPages}`
+              )} />
+            </View>
+          </View>
+          {/* --- END FIXED WATERMARK FOOTER --- */}
+
         </Page>
       ))}
     </Document>
   );
 };
-
 function ActivityReport() {
   const [selectedPeriod, setSelectedPeriod] = useState<string>('');
   const [selectedMonth, setSelectedMonth] = useState<string>('');
@@ -681,7 +761,7 @@ function ActivityReport() {
                 {pageIndex === 0 ? (
                   <>
                     <div className="text-center flex justify-center flex-col mb-6 border-b pb-4">
-                      <img src={DICT} className='h-[120px] object-contain justify-center self-center' alt="" />
+                      <img src={DICT} className='h-[120px] mt-5 object-contain justify-center self-center' alt="" />
                       <h1 className="text-xl font-bold mt-2">Accomplishment Report</h1>
                       <p className="text-sm mt-1">{getDateRange()}</p>
                     </div>
