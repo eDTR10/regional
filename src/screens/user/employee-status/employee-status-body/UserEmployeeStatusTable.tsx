@@ -197,6 +197,18 @@ const UserEmployeeStatusTable = () => {
                 >
                     Off Set
                 </button>
+                <button
+                    onClick={() => setFilterType('Work Suspension')}
+                    className={`p-2 border border-border text-primary rounded ${filterType === 'Work Suspension' ? 'bg-blue-500 text-white' : ''}`}
+                >
+                    Work Suspension
+                </button>
+                <button
+                    onClick={() => setFilterType('Halfday')}
+                    className={`p-2 border border-border text-primary rounded ${filterType === 'Halfday' ? 'bg-blue-500 text-white' : ''}`}
+                >
+                    Halfday
+                </button>
             </div>
 
             <div className="overflow-auto bg-primary-foreground max-h-full">

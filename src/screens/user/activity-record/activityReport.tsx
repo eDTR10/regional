@@ -185,7 +185,7 @@ const DARDocument = ({ activities, dateRange, name, position, project, verifiedB
     <Document>
       {activityPages.map((pageActivities, pageIndex) => (
         <Page key={pageIndex} size="A4" style={styles.page}>
-          <Text style={styles.afpCode}>AFD-HR-T-004/r0/26Sep2025</Text>
+          <Text style={styles.afpCode}>AFD-HRM-AHR-009/r0/24Nov2025</Text>
           
           {pageIndex === 0 ? (
             <>
@@ -675,7 +675,7 @@ function ActivityReport() {
             {paginatedActivities.map((pageActivities, pageIndex) => (
               <div key={pageIndex} className="mb-8 border-2 border-gray-300 bg-white p-8 relative" style={{ minHeight: '11in', width: '8.5in', margin: '0 auto' }}>
                 <div className="absolute top-8 right-8 text-xs italic text-gray-600">
-                  AFD-HR-T-004/r0/26Sep2025
+                  AFD-HRM-AHR-009/r0/24Nov2025
                 </div>
 
                 {pageIndex === 0 ? (
