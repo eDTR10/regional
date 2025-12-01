@@ -251,6 +251,14 @@ const UserEmployeeStatusTable = () => {
                                     <SelectItem value="5">Work from Home</SelectItem>
                                     <SelectItem value="6">Holiday</SelectItem>
                                     <SelectItem value="7">Off Set</SelectItem>
+                                    <SelectItem value="8">Work Suspension</SelectItem>
+                                    <SelectItem value="9">Halfday</SelectItem>
+
+
+
+
+
+
                                 </SelectContent>
                             </Select>
 

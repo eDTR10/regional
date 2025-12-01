@@ -210,7 +210,8 @@ const convertScheduleToTimeRange = (scheduleValue: string): string => {
     "8": "8:30-5:30",
     "9": "9:00-6:00",
     "10": "9:30-6:30",
-    "11": "10:00-7:00"
+    "11": "10:00-7:00",
+    "12": "6:00-6:00 NS"
   };
   
   return scheduleRanges[scheduleValue] || "8:00-5:00"; // Default to 8:00-5:00 if invalid
@@ -282,6 +283,12 @@ const undertimeCalc = (timeIn: string, timeOut: string, day: number): { hours: n
 
   // Get selected schedule from localStorage
   const selectedSched = selectedSchedule || "7";
+  
+  // If schedule is 12 (5:00-6:00), always return 0 undertime
+  if (selectedSched === "12") {
+    return { hours: 0, minutes: 0 };
+  }
+  
   const schedule = getScheduleTime(selectedSched);
 
   // Use schedule times instead of hardcoded values
@@ -592,6 +599,9 @@ const activities = activitiesByDate[day] || [];
     }
 
     // Handle AM or PM activities with attendance
+    const hasAMActivity = activities.some((activity: any) => activity.period === 2);
+    const hasPMActivity = activities.some((activity: any) => activity.period === 3);
+
     return (
       <View key={index} style={{ flexDirection: 'row', borderBottom: 0.5, alignItems: 'center', height: 12, fontSize: 7, textAlign: 'center', borderBottomStyle: 'dashed' }}>
         <View style={{ width: '8%', borderRight: 0.5, height: '100%', alignItems: 'center', justifyContent: 'center', textAlign: 'center', borderRightStyle: 'solid' }}>
@@ -599,17 +609,18 @@ const activities = activitiesByDate[day] || [];
         </View>
 
         <View style={{ width: '34.5%', borderRight: 0.5, alignItems: 'center', height: '100%', justifyContent: 'center', textAlign: 'center', borderRightStyle: 'solid' }}>
-          {checkinTimes.length === 0 ? activities.map((activity: any, idx: number) => (
-            activity.period === 2 ? (
-              <Text key={idx} style={{ textAlign: 'center', marginTop: 1, fontSize: 6 }}>{activity.description}</Text>
-            ) : null
-          )) : null}
-          {checkinTimes.length > 0 && (
+          {checkinTimes.length === 0 && hasAMActivity ? (
+            activities.map((activity: any, idx: number) => (
+              activity.period === 2 ? (
+                <Text key={idx} style={{ textAlign: 'center', marginTop: 1, fontSize: 6 }}>{activity.description}</Text>
+              ) : null
+            ))
+          ) : (
             <View style={{ flexDirection: 'row', width: '100%'}}>
-              <View style={{ width: '50%', alignItems: 'center', paddingLeft: 2, justifyContent: 'center',height:'100%', backgroundColor: (hasAttendanceData && renderCheckinText(checkinTimes) && activities.some((a: { period: number }) => a.period === 2)) ? "#bff6bf" : "transparent", borderRight: 0.5, borderRightStyle: 'solid' }}>
+              <View style={{ width: '50%', alignItems: 'center', paddingLeft: 2, justifyContent: 'center',height:'100%', backgroundColor: (hasAttendanceData && renderCheckinText(checkinTimes) && hasAMActivity) ? "#bff6bf" : "transparent", borderRight: 0.5, borderRightStyle: 'solid' }}>
                 <Text style={{ textAlign: 'center', marginTop: 1 }}>{renderCheckinText(checkinTimes)}</Text>
               </View>
-              <View style={{ width: '50%', alignItems: 'center', paddingLeft: 2, justifyContent: 'center', backgroundColor: (hasAttendanceData && renderAmDepartureText(checkoinTimes2,checkinTimes) && activities.some((a: { period: number }) => a.period === 2)) ? "#bff6bf" : "transparent" }}>
+              <View style={{ width: '50%', alignItems: 'center', paddingLeft: 2, justifyContent: 'center', backgroundColor: (hasAttendanceData && renderAmDepartureText(checkoinTimes2,checkinTimes) && hasAMActivity) ? "#bff6bf" : "transparent" }}>
                 <Text style={{ textAlign: 'center', marginTop: 1 }}>{renderAmDepartureText(checkoinTimes2,checkinTimes)}</Text>
               </View>
             </View>
@@ -617,17 +628,18 @@ const activities = activitiesByDate[day] || [];
         </View>
 
         <View style={{ width: '34.5%', borderRight: 0.5, alignItems: 'center', height: '100%', justifyContent: 'center', textAlign: 'center', borderRightStyle: 'solid' }}>
-          {checkoutTimes.length === 0 ? activities.map((activity: any, idx: number) => (
-            activity.period === 3 ? (
-              <Text key={idx} style={{ textAlign: 'center', marginTop: 1, fontSize: 6 }}>{activity.description}</Text>
-            ) : null
-          )) : null}
-          {checkoutTimes.length > 0 && (
+          {checkoutTimes.length === 0 && hasPMActivity ? (
+            activities.map((activity: any, idx: number) => (
+              activity.period === 3 ? (
+                <Text key={idx} style={{ textAlign: 'center', marginTop: 1, fontSize: 6 }}>{activity.description}</Text>
+              ) : null
+            ))
+          ) : (
             <View style={{ flexDirection: 'row', width: '100%' }}>
-              <View style={{ width: '50%', alignItems: 'center', justifyContent: 'center', backgroundColor: (hasAttendanceData && renderPMArivalText(checkoutTimes2,checkoutTimes) && activities.some((a: { period: number }) => a.period === 3)) ? "#bff6bf" : "transparent", borderRight: 0.5, borderRightStyle: 'solid' }}>
+              <View style={{ width: '50%', alignItems: 'center', justifyContent: 'center', backgroundColor: (hasAttendanceData && renderPMArivalText(checkoutTimes2,checkoutTimes) && hasPMActivity) ? "#bff6bf" : "transparent", borderRight: 0.5, borderRightStyle: 'solid' }}>
                 <Text style={{ textAlign: 'center', marginTop: 1 }}>{renderPMArivalText(checkoutTimes2,checkoutTimes)}</Text>
               </View>
-              <View style={{ width: '50%', alignItems: 'center', paddingLeft: 2, justifyContent: 'center', backgroundColor: (hasAttendanceData && renderCheckOutText(checkoutTimes) && activities.some((a: { period: number }) => a.period === 3)) ? "#bff6bf" : "transparent" }}>
+              <View style={{ width: '50%', alignItems: 'center', paddingLeft: 2, justifyContent: 'center', backgroundColor: (hasAttendanceData && renderCheckOutText(checkoutTimes) && hasPMActivity) ? "#bff6bf" : "transparent" }}>
                 <Text style={{ textAlign: 'center', marginTop: 1 }}>{renderCheckOutText(checkoutTimes)}</Text>
               </View>
             </View>

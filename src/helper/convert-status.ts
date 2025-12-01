@@ -14,6 +14,11 @@ export function convertStatus(status: number): string {
             return 'Holiday';
         case 7:
             return 'Off Set';
+        case 8:
+            return 'Work Suspension';
+        case 9:
+            return 'Halfday';
+        
         default:
             return 'Unknown';
     }

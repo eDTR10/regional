@@ -119,6 +119,7 @@ export default function PrintDTR({name = '', data, date, show, selectedYear, sel
                   <SelectItem value="9">9:00-6:00</SelectItem>
                   <SelectItem value="10">9:30-6:30</SelectItem>
                   <SelectItem value="11">10:00-7:00</SelectItem>
+                  <SelectItem value="12">6:00-6:00 Night Shift</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -149,6 +150,10 @@ export default function PrintDTR({name = '', data, date, show, selectedYear, sel
                   <SelectItem value="9">9:00-6:00</SelectItem>
                   <SelectItem value="10">9:30-6:30</SelectItem>
                   <SelectItem value="11">10:00-7:00</SelectItem>
+                  <SelectItem value="12">6:00-6:00 Night Shift</SelectItem>
+
+
+                  
                 </SelectContent>
               </Select>
               <Button onClick={handleDownload} value=''>Save DTR  <FileCodeIcon  className=' h-4 w-4 ml-2 animate-bounce'/> </Button>

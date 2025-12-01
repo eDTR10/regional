@@ -211,12 +211,7 @@ function Records() {
           text: 'The attendance records have been added successfully.',
         });
 
-        setSelectedOptions([]);
-        setSelectedDate('');
-        setTimeIn('');
-        setTimeOut('');
-        setIsTimeInEnabled(false);
-        setIsTimeOutEnabled(false);
+     
         console.log("Response:", response.data);
       }).catch((error) => {
         Swal.fire({
