@@ -1,6 +1,6 @@
 import { Page, Text, View, Document, Image, Font } from '@react-pdf/renderer';
 import { convertDate } from '@/helper/date-time';
-import DICT from './../../../../assets/dict.png';
+import DICT from './../../../../assets/dict2.png';
 import { convertStatus } from '@/helper/convert-status';
 
 Font.register({

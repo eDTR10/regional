@@ -61,7 +61,7 @@
     currentLat: number,
     currentLon: number,
     targetLocations: string[],
-    radiusKm: number = 0.30
+    radiusKm: number = 0.10
   ): { isNearby: boolean; distance: number; nearestLocation: string } {
     let minDistance = Infinity;
     let isNearAny = false;
