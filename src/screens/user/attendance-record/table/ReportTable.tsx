@@ -69,7 +69,12 @@ function ReportTable() {
           'The record has been deleted.',
           'success'
         );
-        getAttendace(); // Refresh the table
+        // If filter is active, refresh with filter; otherwise get all data
+        if (inputData.fromDate && inputData.toDate) {
+          getAttendaceCon();
+        } else {
+          getAttendace();
+        }
       }
     } catch (error) {
       setDeleteLoading(false);
