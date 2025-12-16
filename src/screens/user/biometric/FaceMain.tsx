@@ -684,25 +684,11 @@
       locationIntervalRef.current = setInterval(checkLocation, 45000);
     }, 15000), []); // Increased throttle to 15 seconds
 
-    // Optimized model loading with progressive loading and caching
+    // Optimized model loading with lazy loading
     const loadModels = useCallback(async () => {
       if (isModelsLoaded) return;
-      
-      const CACHE_KEY = 'faceapi_models_cached';
-      const CACHE_TIMESTAMP_KEY = 'faceapi_cache_timestamp';
-      const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days
-      
       try {
         setStatus("Loading models...");
-
-        // Check if models are cached and valid
-        const cachedTimestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
-        const isCacheValid = cachedTimestamp && (Date.now() - parseInt(cachedTimestamp)) < CACHE_DURATION;
-        
-        if (!isCacheValid) {
-          localStorage.removeItem(CACHE_KEY);
-          localStorage.removeItem(CACHE_TIMESTAMP_KEY);
-        }
 
         // Prefer WebGL backend when available for faster inference
         try {
@@ -713,51 +699,20 @@
           }
         } catch {}
 
-        // Load models with retry logic and progress tracking
-        const loadModelWithRetry = async (modelLoader: any, modelName: string, maxRetries = 2): Promise<boolean> => {
-          for (let attempt = 0; attempt < maxRetries; attempt++) {
-            try {
-              setStatus(`Loading ${modelName}... (${attempt + 1}/${maxRetries})`);
-              await modelLoader();
-              return true;
-            } catch (error) {
-              console.error(`Failed to load ${modelName}, attempt ${attempt + 1}:`, error);
-              if (attempt < maxRetries - 1) {
-                // Exponential backoff
-                await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
-              }
-            }
-          }
-          return false;
-        };
-
-        // Load models progressively - critical models first
-        const criticalModelsLoaded = await Promise.all([
-          loadModelWithRetry(() => faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL), 'Face Detector'),
-          loadModelWithRetry(() => faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL), 'Face Recognition'),
-        ]);
-
-        // Load secondary models in parallel
+        // Load only essential models for better performance
         await Promise.all([
-          loadModelWithRetry(() => faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL), 'Landmarks'),
-          loadModelWithRetry(() => faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL), 'Expressions'),
+          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+          faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL),
+          faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+          faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
         ]);
-
-        // Check if critical models loaded successfully
-        if (!criticalModelsLoaded.every(Boolean)) {
-          throw new Error('Failed to load critical models');
-        }
 
         // Warm-up pass to compile kernels and avoid first-frame jank
-        setStatus("Optimizing models...");
         try {
           const warmupCanvas = document.createElement('canvas');
-          warmupCanvas.width = 128;
-          warmupCanvas.height = 128;
+          warmupCanvas.width = 128; warmupCanvas.height = 128;
           const ctx = warmupCanvas.getContext('2d');
           ctx?.fillRect(0, 0, 1, 1);
-          
-          // Run quick detection to warm up
           await faceapi
             .detectAllFaces(
               warmupCanvas,
@@ -766,19 +721,10 @@
             .withFaceLandmarks(true)
             .withFaceDescriptors()
             .withFaceExpressions();
-        } catch (warmupError) {
-          console.warn('Warm-up pass failed (non-critical):', warmupError);
-        }
-
-        // Cache the fact that models were loaded
-        localStorage.setItem(CACHE_KEY, 'true');
-        localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
-        
+        } catch {}
         setIsModelsLoaded(true);
-        setStatus("AI is going to be ready soon...");
       } catch (error) {
-        console.error("Model loading error:", error);
-        setStatus("Error loading models - Please refresh");
+        setStatus("Error loading models");
       }
     }, [isModelsLoaded]);
 

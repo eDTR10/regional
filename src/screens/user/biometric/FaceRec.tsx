@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import FaceRecWarning from "./FaceRecWarning";
 import FaceRecMain from "./FaceMain";
@@ -62,7 +62,9 @@ function FaceRec() {
        <span className=" md:hidden">Session Timer:</span>   {formatTimer(timer)}
       </div>
       <DashboardAnalogClock />
-      <FaceRecMain userObject={userData} />
+      <Suspense fallback={<div>Loading...</div>}>
+  <FaceRecMain userObject={userData} />
+</Suspense>
     </div>
   );
 }

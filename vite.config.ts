@@ -15,4 +15,37 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    // Optimize chunk size warnings
+    chunkSizeWarningLimit: 1000, // Increase warning limit to 1MB (optional)
+    rollupOptions: {
+      output: {
+        // Manual chunk configuration for better code splitting
+        manualChunks: {
+          // Vendor chunks
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-ui': ['@react-pdf/renderer'],
+          'vendor-utils': ['sweetalert2', 'axios'],
+          'vendor-face-api': ['face-api.js'],
+          
+          // Feature-specific chunks
+          'biometric': [
+            './src/screens/user/biometric/FaceMain.tsx',
+          ],
+          'admin-dashboard': [
+            './src/screens/admin/dashboard/dashboard-body/DashboardAnalogClock.tsx',
+            './src/screens/admin/dashboard/dashboard-body/DashboardBody.tsx',
+          ],
+          'attendance-reports': [
+            './src/screens/admin/attendanceReport/table/ReportTable.tsx',
+            './src/screens/user/attendance-record/table/ReportTable.tsx',
+          ],
+          'activity-reports': [
+            './src/screens/user/activity-record/activityReport.tsx',
+          ],
+        },
+      },
+    },
+  },
 })
+
