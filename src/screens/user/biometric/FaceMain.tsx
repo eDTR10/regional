@@ -1,7 +1,7 @@
-  import Swal from "sweetalert2";
+import Swal from "sweetalert2";
   import * as faceapi from "face-api.js";
   import { useCallback, useEffect, useRef, useState } from "react";
-  import { RotateCcwIcon } from "lucide-react";
+  import { RotateCcwIcon, Camera, MapPin } from "lucide-react";
   import axios from "./../../../plugin/axios";
   import { useNavigate } from "react-router-dom";
 
@@ -181,7 +181,7 @@
     const [isDataLoaded, setIsDataLoaded] = useState(false);
     const [isModelsLoaded, setIsModelsLoaded] = useState(false);
     const [faces, setFaces] = useState<any[]>([]);
-    const [persons, setPersons] = useState<any[]>([]);
+    const [_persons, setPersons] = useState<any[]>([]);
     const [locationStatus, setLocationStatus] = useState<LocationStatus>(null);
     const [cameraStatus, setCameraStatus] = useState<CameraStatus>(null);
     const [proximityStatus, setProximityStatus] = useState<string | null>(null);
@@ -189,7 +189,7 @@
     const [livelinessMessage, setLivelinessMessage] = useState<string>("Checking permissions...");
     const [status, setStatus] = useState("Loading...");
     const [camera, setCamera] = useState("user");
-    const [name, setName] = useState<any[]>([]);
+    const [_name, setName] = useState<any[]>([]);
     const [permissionsInitialized, setPermissionsInitialized] = useState(false);
     const [floatingMenuShown, setFloatingMenuShown] = useState(false);
 
@@ -896,7 +896,7 @@
             CHECKTIME: currentTime,
             CHECKTYPE: action,
             VERIFYCODE: userObject.deptid,
-            SENSORID: userObject.deptid,
+            SENSORID: 0,
           },
           { headers: { Authorization: `Token ${localStorage.getItem("accessToken")}` } }
         )
@@ -1053,104 +1053,225 @@
     }, [handleGetLocation]);
 
     return (
-      <div className="flex-1 h-full overflow-auto">
-        <div className="flex-1 items-center mt-20 justify-between">
-          <div>
-            <p className="animate-pulse ml-4 text-2xl text-primary">
-              Hello, {userObject.full_name}! 👋
+      <div className="flex-1 h-full overflow-auto bg-background">
+        <style>{`
+          @keyframes pulse-ring {
+            0% {
+              transform: scale(1);
+              opacity: 1;
+            }
+            100% {
+              transform: scale(1.4);
+              opacity: 0;
+            }
+          }
+          @keyframes pulse-ring-alt {
+            0% {
+              transform: scale(1);
+              opacity: 0.8;
+            }
+            100% {
+              transform: scale(1.5);
+              opacity: 0;
+            }
+          }
+          .pulse-ring {
+            animation: pulse-ring 2s ease-out infinite;
+          }
+          .pulse-ring-alt {
+            animation: pulse-ring-alt 2.5s ease-out infinite;
+            animation-delay: 0.3s;
+          }
+          .pulse-ring-slow {
+            animation: pulse-ring 3s ease-out infinite;
+            animation-delay: 0.6s;
+          }
+        `}</style>
+        <div className="flex-1 flex flex-col items-center justify-center min-h-screen p-6">
+          {/* Header Section */}
+          <div className="text-center mb-12">
+            <h1 className="text-4xl sm:text-3xl font-bold text-primary mb-2">
+              🔐 Digital Biometric
+            </h1>
+            <p className="text-secondary-foreground text-lg">
+              Welcome back, <span className="font-semibold text-primary">{userObject.full_name}</span>
             </p>
-            <p className="ml-4 text-sm italic text-foreground">
-              You are currently <span>{proximityStatus}</span>
+            <p className="text-sm text-secondary-foreground mt-2">
+              {proximityStatus}
             </p>
-            
-            {/* Permission status indicators */}
-            <div className="ml-4 mt-2 flex gap-4 text-xs">
-              <span className={`flex items-center gap-1 ${cameraStatus === "ok" ? "text-green-600" : cameraStatus === "permission_denied" ? "text-red-600" : "text-yellow-600"}`}>
-                📷 Camera: {cameraStatus === "ok" ? "✅ Active" : cameraStatus === "permission_denied" ? "❌ Denied" : cameraStatus === "checking" ? "⏳ Checking..." : "⚠️ Error"}
-              </span>
-              <span className={`flex items-center gap-1 ${locationStatus === "ok" ? "text-green-600" : locationStatus === "permission_denied" ? "text-red-600" : "text-yellow-600"}`}>
-                📍 Location: {locationStatus === "ok" ? "✅ Active" : locationStatus === "permission_denied" ? "❌ Denied" : locationStatus === "checking" ? "⏳ Checking..." : "⚠️ Error"}
-              </span>
-            </div>
           </div>
-          
-          <div className="flex flex-col items-center justify-center mt-2">
-            <p className="text-2xl font-bold sm:text-base text-primary">Digital Biometric</p>
-            <p className="text-secondary-foreground text-sm mt-2">
-              Please Smile🙂 To enable the Clock In/Out Button
-            </p>
-            
-            <div className="flex w-full justify-center mt-2">
-              <div
-                className={
-                  canPerformActions
-                    ? "flex self-center w-[80%] sm:w-[90%] sm:h-[40vh] h-[50vh] bg-border border border-5 border-green-500 rounded-md"
-                    : "flex self-center w-[80%] sm:w-[90%] sm:h-[40vh] h-[50vh] bg-border border rounded-md"
-                }
-              >
-                <div className={lastLocationStatusRef.current?"flex flex-col gap-5 items-center justify-center h-full w-full relative border border-green-500 rounded-sm ":"flex flex-col gap-5 items-center justify-center h-full w-full relative border border-red-500 rounded-sm "}>
-                  <div className="overflow-hidden w-full max-w-[500px] h-[500px] relative flex">
-                    <div className="ml-2 mt-5 absolute gap-2 text-primary col-span-1 flex flex-col">
-                      {name &&
-                        name.map((response: any, key: any) => {
-                          const matchedData = persons.find((item) => item.id === response._label);
-                          return (
-                            <div key={key} className="text-sm bg-card/50 backdrop-blur-md p-2 rounded-md">
-                              <h3>{matchedData ? matchedData.name : "Unknown"}</h3>
-                              <p>{matchedData ? matchedData.position : "Unrecognized Person"}</p>
-                            </div>
-                          );
-                        })}
-                    </div>
-                    <video
-                      crossOrigin="anonymous"
-                      ref={videoRef}
-                      className="w-full h-full rounded-md"
-                      autoPlay
-                      muted
-                      playsInline
-                    ></video>
-                    <canvas ref={canvasRef} className="w-full h-full absolute" />
-                  </div>
+
+          {/* Main Content */}
+          <div className="flex w-full justify-center px-4">
+            <div className="flex flex-col items-center gap-6">
+              {/* Circular face detection area */}
+              <div className="relative flex items-center justify-center">
+                {/* Animated rings wrapper */}
+                <div className="absolute w-[350px] h-[350px] sm:w-[240px] sm:h-[240px] pointer-events-none rounded-full ">
+                  {/* Ring 1 */}
+                  <div
+                    className={`absolute inset-0 rounded-full pulse-ring ${
+                      livelinessMessage === "Nice Smile!😉"
+                        ? "ring-2 ring-blue-400"
+                        : livelinessMessage === "Please smile."
+                        ? "ring-2 ring-green-500"
+                        : livelinessMessage === "Face not recognized."
+                        ? "ring-2 ring-red-500"
+                        : livelinessMessage === "No face detected"
+                        ? "ring-2 ring-red-500/80"
+                        : "ring-2 ring-gray-400/30"
+                    }`}
+                  ></div>
+                  
+                  {/* Ring 2 */}
+                  <div
+                    className={`absolute inset-0 rounded-full pulse-ring-alt ${
+                      livelinessMessage === "Nice Smile!😉"
+                        ? "ring-2 ring-blue-400"
+                        : livelinessMessage === "Please smile."
+                        ? "ring-2 ring-green-300/70"
+                        : livelinessMessage === "Face not recognized."
+                        ? "ring-2 ring-yellow-400/70"
+                        : livelinessMessage === "No face detected"
+                        ? "ring-2 ring-red-400/30"
+                        : "ring-2 ring-gray-300/20"
+                    }`}
+                  ></div>
+                  
+                  {/* Ring 3 */}
+                  <div
+                    className={`absolute inset-0 rounded-full pulse-ring-slow ${
+                      livelinessMessage === "Nice Smile!😉"
+                        ? "ring-2 ring-blue-300"
+                        : livelinessMessage === "Please smile."
+                        ? "ring-2 ring-green-300/40"
+                        : livelinessMessage === "Face not recognized."
+                        ? "ring-2 ring-yellow-300/40"
+                        : livelinessMessage === "No face detected"
+                        ? "ring-2 ring-red-400/20"
+                        : "ring-2 ring-gray-300/10"
+                    }`}
+                  ></div>
+                </div>
+
+                {/* Main face circle */}
+                <div
+                  className={`flex items-center justify-center w-[400px] h-[400px] sm:w-80 sm:h-80 rounded-full overflow-hidden transition-all duration-300 ${
+                    livelinessMessage === "Nice Smile!😉"
+                      ? "ring-4 ring-blue-500 ring-offset-2 shadow-lg shadow-blue-500/50"
+                      : livelinessMessage === "Please smile."
+                      ? "ring-4 ring-green-400 ring-offset-2 shadow-lg shadow-green-500/50"
+                      : livelinessMessage === "Face not recognized."
+                      ? "ring-4 ring-yellow-500 ring-offset-2 shadow-lg shadow-yellow-500/50"
+                      : livelinessMessage === "No face detected"
+                      ? "ring-4 ring-red-400 ring-offset-2 shadow-lg shadow-red-500/40"
+                      : "ring-4 ring-gray-400 ring-offset-2"
+                  } bg-gradient-to-br from-slate-900 to-slate-800`}
+                >
+                  {/* Face name/position overlay */}
+                  {/* <div className="absolute top-4 left-4 right-4 z-10 gap-2 text-primary flex flex-col pointer-events-none">
+                    {name &&
+                      name.map((response: any, key: any) => {
+                        const matchedData = persons.find((item) => item.id === response._label);
+                        return (
+                          <div key={key} className="text-sm bg-slate-900 p-2 rounded-lg border border-slate-700">
+                            <h3 className="font-semibold">{matchedData ? matchedData.name : "Unknown"}</h3>
+                            <p className="text-xs text-gray-300">{matchedData ? matchedData.position : "Unrecognized"}</p>
+                          </div>
+                        );
+                      })}
+                  </div> */}
+
+                  {/* Video and canvas */}
+                  <video
+                    crossOrigin="anonymous"
+                    ref={videoRef}
+                    className="w-full h-full object-cover"
+                    autoPlay
+                    muted
+                    playsInline
+                  ></video>
+                  <canvas ref={canvasRef} className="w-full h-full absolute inset-0" />
+                </div>
+
+                {/* Status badge */}
+                <div className="absolute flex justify-center translate-y-[190px] sm:translate-y-[140px] w-full ">
+                  <span
+                    className={`px-4 py-2 backdrop-blur-sm rounded-full text-sm sm:text-xs font-medium transition-all ${
+                      livelinessStatus === "passed"
+                        ? "bg-blue-500/60 text-green-50 border "
+                        : "bg-green-500/60  text-yellow-50 border "
+                    }`}
+                  >
+                    {livelinessMessage}
+                  </span>
                 </div>
               </div>
             </div>
-            
-            <div className="relative grid grid-cols-3 justify-center w-[80%] items-center h-full">
-              <p className="relative bottom-0 left-0 p-4 z-[999] justify-start justify-self-start sm:text-sm text-secondary-foreground">
-                Status: &nbsp;
-                <span
-                  className={
-                    status === "Running"
-                      ? "justify-end justify-self-end z-[999] text-green-600"
-                      : "text-red-500 justify-end z-[999] justify-self-end"
-                  }
-                >
-                  {status}
-                </span>
-              </p>
+          </div>
 
-              
-              <RotateCcwIcon
-                className={
-                  camera === "user"
-                    ? "cursor-pointer m-5 text-foreground justify-center self-center justify-self-center rotate-180 transition-all duration-700 col-span-1"
-                    : "justify-center self-center justify-self-center cursor-pointer m-5 text-foreground col-span-1 rotate-0 transition-all duration-700"
-                }
-                onClick={() => setCamera((prev) => (prev === "user" ? "environment" : "user"))}
-              />
-              
+          {/* Controls Section */}
+          <div className="relative grid grid-cols-3 justify-center w-full mt-20 px-4 gap-4">
+            <div className="flex flex-col gap-2 justify-start max-w-60">
+              <p className="text-xs font-semibold text-secondary-foreground uppercase tracking-wide">Status</p>
               <span
-                className={
-                  livelinessStatus === "passed"
-                    ? "text-green-600 sm:text-sm justify-self-end"
-                    : "text-yellow-600 sm:text-sm justify-self-end"
-                }
+                className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${
+                  status === "Running"
+                    ? "bg-green-600 text-green-50 border border-green-500"
+                    : "bg-red-600 text-red-50 border border-red-500"
+                }`}
               >
-                {livelinessMessage}
+                <span className="w-2 h-2 rounded-full bg-current animate-pulse"></span>
+                {status}
               </span>
             </div>
-          
+
+            <div className="flex justify-center">
+              <button
+                onClick={() => setCamera((prev) => (prev === "user" ? "environment" : "user"))}
+                className="group relative p-3 rounded-full bg-primary hover:bg-primary/90 text-white border border-primary transition-all duration-300 hover:shadow-lg hover:shadow-primary/50"
+                title="Switch camera"
+              >
+                <RotateCcwIcon
+                  className={`w-5 h-5 text-white transition-transform duration-500 ${
+                    camera === "user" ? "rotate-180" : "rotate-0"
+                  }`}
+                />
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-2 justify-end text-right">
+              <p className="text-xs font-semibold text-secondary-foreground uppercase tracking-wide">Permissions</p>
+              <div className="flex gap-3 justify-end">
+                {/* Camera Permission */}
+                <button
+                  onClick={() => {
+                    if (cameraStatus !== "ok") {
+                      requestCameraPermission();
+                    }
+                  }}
+                  className="flex items-center gap-1 px-2 py-1 rounded transition-all hover:bg-white/10 cursor-pointer group"
+                  title={cameraStatus === "ok" ? "Camera enabled" : "Click to enable camera"}
+                >
+                  <Camera className={`w-4 h-4 transition-all ${cameraStatus === "ok" ? "text-green-500" : "text-red-500 group-hover:scale-110"}`} />
+                  <span className={`w-2 h-2 rounded-full transition-all ${cameraStatus === "ok" ? "bg-green-500" : "bg-red-500 group-hover:scale-125"}`}></span>
+                </button>
+                
+                {/* Location Permission */}
+                <button
+                  onClick={() => {
+                    if (locationStatus !== "ok") {
+                      requestLocationPermission();
+                    }
+                  }}
+                  className="flex items-center gap-1 px-2 py-1 rounded transition-all hover:bg-white/10 cursor-pointer group"
+                  title={locationStatus === "ok" ? "Location enabled" : "Click to enable location"}
+                >
+                  <MapPin className={`w-4 h-4 transition-all ${locationStatus === "ok" ? "text-green-500" : "text-red-500 group-hover:scale-110"}`} />
+                  <span className={`w-2 h-2 rounded-full transition-all ${locationStatus === "ok" ? "bg-green-500" : "bg-red-500 group-hover:scale-125"}`}></span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
