@@ -834,6 +834,7 @@ import Swal from "sweetalert2";
             setStatus("Running");
           } else {
             setLivelinessStatus("pending");
+            setStatus("Running");
             setLivelinessMessage("No face detected");
             setName([]);
           }

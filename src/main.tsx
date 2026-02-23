@@ -24,6 +24,7 @@ const ForgotPassword = lazy(() =>
   wait(1300).then(() => import("./screens/auth/forgotPass.tsx"))
 );
 
+
 const Dashboard = lazy(() =>
   wait(1300).then(() => import("./screens/admin/dashboard/DashboardMainContainer.tsx"))
 );

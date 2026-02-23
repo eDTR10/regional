@@ -1,6 +1,8 @@
 import { Button } from '@/components/ui/button';
 import { Suspense, useState, useEffect } from 'react'
-import { FileCodeIcon,  PrinterIcon } from 'lucide-react';
+import { FileCodeIcon,  KeyRoundIcon,  LoaderIcon,  PrinterIcon,  ShieldCheckIcon } from 'lucide-react';
+import PNPKISetup from './PNPKISetup';
+import { signPdfWithPNPKI, usePNPKI } from './usePNPKI'
 
 import {
   Drawer,
@@ -47,18 +49,49 @@ export default function PrintDTR({name = '', data, date, show, selectedYear, sel
     localStorage.setItem('supervisorsName', SupervisorsName)
   }, [SupervisorsName])
 
+  // ── PNPKI ──────────────────────────────────────────────────────────────────
+  const { config: pnpkiConfig, saveConfig: savePNPKI, clearConfig: clearPNPKI } = usePNPKI();
+  const [pnpkiOpen, setPnpkiOpen] = useState(false);
+  const [signing, setSigning] = useState(false);
+  const [previewPdfBlob, setPreviewPdfBlob] = useState<Blob | null>(null);
+  const pnpkiReady = pnpkiConfig.enabled && !!pnpkiConfig.p12Base64;
+
+  const openPNPKISetup = async () => {
+    // Generate a fresh PDF blob so the preview is always up to date
+    try {
+      const doc = <MyDocument
+        name={name?.toUpperCase() || ''}
+        previewUrl={null}
+        date={date}
+        data={data}
+        selectedSchedule={selectedSchedule}
+        selectedYear={selectedYear}
+        selectedMonth={selectedMonth}
+        SupervisorsName={SupervisorsName}
+      />;
+      const asPdf = pdf();
+      asPdf.updateContainer(doc);
+      const blob = await asPdf.toBlob();
+      setPreviewPdfBlob(blob);
+    } catch {
+      setPreviewPdfBlob(null);
+    }
+    setPnpkiOpen(true);
+  };
 
 
 
 
-  const  handleDownload = async () => {
+
+  const handleDownload = async () => {
+    if (signing) return;
+
     // Generate the PDF using @react-pdf/renderer
     const doc = <MyDocument 
       name={name?.toUpperCase() || ''} 
       previewUrl={null} 
       date={date} 
       data={data} 
-
       selectedSchedule={selectedSchedule}
       selectedYear={selectedYear} 
       selectedMonth={selectedMonth} 
@@ -68,25 +101,40 @@ export default function PrintDTR({name = '', data, date, show, selectedYear, sel
     asPdf.updateContainer(doc);
     const blob = await asPdf.toBlob();
 
-    // Load the generated PDF into pdf-lib and secure it
+    // Load the generated PDF into pdf-lib
     const pdfDoc = await PDFDocument.load(await blob.arrayBuffer());
-  
+    const pdfBytes: any = await pdfDoc.save();
+    let finalBlob: Blob = new Blob([pdfBytes], { type: 'application/pdf' });
 
-    const pdfBytes:any = await pdfDoc.save();
-    const protectedBlob = new Blob([pdfBytes], { type: 'application/pdf' });
+    const baseFileName = `${name.toUpperCase()}_DTR_${date}`;
+    let downloadName = `${baseFileName}.pdf`;
 
-    // Create a temporary download link and programmatically click it
+    // ── PNPKI signing ──────────────────────────────────────────────────────
+    if (pnpkiReady) {
+      setSigning(true);
+      try {
+        finalBlob = await signPdfWithPNPKI(finalBlob, pnpkiConfig, downloadName);
+        downloadName = `${baseFileName}_SIGNED.pdf`;
+      } catch (err) {
+        alert(`PNPKI signing failed:\n\n${(err as Error).message}\n\nMake sure the PNPKI server is running at ${pnpkiConfig.serverUrl}.`);
+        setSigning(false);
+        return;
+      } finally {
+        setSigning(false);
+      }
+    }
+
+    // Trigger download
     const downloadLink = document.createElement('a');
-    downloadLink.href = URL.createObjectURL(protectedBlob);
-    downloadLink.download = `${name.toUpperCase()}_DTR_${date}.pdf`;
+    downloadLink.href = URL.createObjectURL(finalBlob);
+    downloadLink.download = downloadName;
     downloadLink.click();
-
-    // Clean up the URL object after download
     URL.revokeObjectURL(downloadLink.href);
   };
   
   
   return (
+    <>
     <Drawer >
       <DrawerTrigger className={show?'  z-20 w-full flex gap-2 ':' flex gap-2 text-foreground z-20 w-full pointer-events-none  '}>
         <Button type='button' variant={show?"default":"outline"} className={show?'  z-20 w-full flex gap-2 ':' flex gap-2 text-foreground z-20 w-full pointer-events-none '} >Show PDF <PrinterIcon className={show?' w-4 h-4 animate-bounce':' w-4 h-4 '}/> </Button>
@@ -126,8 +174,23 @@ export default function PrintDTR({name = '', data, date, show, selectedYear, sel
               <input type="text"  className='border border-gray-300 rounded-md p-2 outline-none'
       value={SupervisorsName} onChange={(e) => setSupervisorsName(e.target.value)}
       placeholder="Supervisors Name Here " />
-         <Button onClick={handleDownload} value=''>Save DTR  <FileCodeIcon  className=' h-4 w-4 ml-2 animate-bounce'/> </Button>
-         
+         <Button onClick={handleDownload} value='' disabled={signing} className='gap-1'>
+           {signing
+             ? <><LoaderIcon className='h-4 w-4 animate-spin'/> Signing…</>
+             : <>{pnpkiReady ? <ShieldCheckIcon className='h-4 w-4'/> : <FileCodeIcon className='h-4 w-4'/>} Save DTR{pnpkiReady ? ' + PNPKI' : ''}</>}
+         </Button>
+
+         <Button
+           onClick={openPNPKISetup}
+           value=''
+           variant={pnpkiReady ? 'default' : 'outline'}
+           className='gap-1'
+           title={pnpkiReady ? `PNPKI configured — ${pnpkiConfig.fileName}` : 'Set up PNPKI digital signature'}
+         >
+           {pnpkiReady
+             ? <><ShieldCheckIcon className='h-4 w-4 text-green-300'/> PNPKI ✓</>
+             : <><KeyRoundIcon className='h-4 w-4 animate-bounce'/> PNPKI</>}
+         </Button>
        </div>
       
      
@@ -156,7 +219,23 @@ export default function PrintDTR({name = '', data, date, show, selectedYear, sel
                   
                 </SelectContent>
               </Select>
-              <Button onClick={handleDownload} value=''>Save DTR  <FileCodeIcon  className=' h-4 w-4 ml-2 animate-bounce'/> </Button>
+              <Button onClick={handleDownload} value='' disabled={signing} className='gap-1'>
+                {signing
+                  ? <><LoaderIcon className='h-4 w-4 animate-spin'/> Signing…</>
+                  : <>{pnpkiReady ? <ShieldCheckIcon className='h-4 w-4'/> : <FileCodeIcon className='h-4 w-4'/>} Save DTR{pnpkiReady ? ' + PNPKI' : ''}</>}
+              </Button>
+
+              <Button
+                onClick={openPNPKISetup}
+                value=''
+                variant={pnpkiReady ? 'default' : 'outline'}
+                className='gap-1'
+                title={pnpkiReady ? `PNPKI configured — ${pnpkiConfig.fileName}` : 'Set up PNPKI digital signature'}
+              >
+                {pnpkiReady
+                  ? <><ShieldCheckIcon className='h-4 w-4 text-green-300'/> PNPKI ✓</>
+                  : <><KeyRoundIcon className='h-4 w-4 animate-bounce'/> PNPKI</>}
+              </Button>
 
               
 
@@ -204,5 +283,15 @@ export default function PrintDTR({name = '', data, date, show, selectedYear, sel
       {/* Button to trigger the print action */}
 
     </Drawer>
+
+    <PNPKISetup
+      open={pnpkiOpen}
+      onClose={() => setPnpkiOpen(false)}
+      config={pnpkiConfig}
+      onSave={savePNPKI}
+      onClear={clearPNPKI}
+      pdfBlob={previewPdfBlob}
+    />
+  </>
   )
 }
