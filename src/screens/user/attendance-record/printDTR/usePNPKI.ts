@@ -36,32 +36,34 @@ export const DEFAULT_PNPKI_CONFIG: PNPKIConfig = {
 
 const STORAGE_KEY = 'pnpki_config';
 
-export function usePNPKI() {
+export function usePNPKI(storageKey: string = STORAGE_KEY, defaultOverrides: Partial<PNPKIConfig> = {}) {
+  const defaults: PNPKIConfig = { ...DEFAULT_PNPKI_CONFIG, ...defaultOverrides };
+
   const [config, setConfig] = useState<PNPKIConfig>(() => {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = localStorage.getItem(storageKey);
       if (raw) {
         const parsed = JSON.parse(raw);
-        return { ...DEFAULT_PNPKI_CONFIG, ...parsed };
+        return { ...defaults, ...parsed };
       }
     } catch {
       // ignore
     }
-    return DEFAULT_PNPKI_CONFIG;
+    return defaults;
   });
 
   const saveConfig = (next: PNPKIConfig) => {
     setConfig(next);
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      localStorage.setItem(storageKey, JSON.stringify(next));
     } catch {
       // storage quota exceeded — silently ignore
     }
   };
 
   const clearConfig = () => {
-    setConfig(DEFAULT_PNPKI_CONFIG);
-    localStorage.removeItem(STORAGE_KEY);
+    setConfig(defaults);
+    localStorage.removeItem(storageKey);
   };
 
   return { config, saveConfig, clearConfig };

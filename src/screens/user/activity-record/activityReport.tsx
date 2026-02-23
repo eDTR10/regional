@@ -9,11 +9,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Page, Text, View, Document, StyleSheet, Font, PDFDownloadLink, Image } from '@react-pdf/renderer';
-import { Plus, X, FileDown, ChevronDown } from 'lucide-react';
+import { Page, Text, View, Document, StyleSheet, Font, Image, pdf } from '@react-pdf/renderer';
+import { Plus, X, FileDown, ChevronDown, KeyRoundIcon, LoaderIcon, ShieldCheckIcon } from 'lucide-react';
 
 import DICT from './../../../assets/dict.png';
 import { getDepartmentName } from '@/helper/department';
+import { usePNPKI, signPdfWithPNPKI } from '../attendance-record/printDTR/usePNPKI';
+import PNPKISetup from '../attendance-record/printDTR/PNPKISetup';
 
 // Register Palatino font for PDF
 Font.register({
@@ -366,6 +368,54 @@ function ActivityReport() {
   const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
 
+  // ── PNPKI ─────────────────────────────────────────────────────────────────
+  // Credentials (P12, password, signer name, image) are shared with DTR via
+  // 'pnpki_config'.  Only placement coords are stored in 'pnpki_config_dar'.
+  const { config: pnpkiBaseConfig, saveConfig: saveBaseConfig, clearConfig: clearBaseConfig } = usePNPKI('pnpki_config');
+  const { config: pnpkiDarConfig, saveConfig: saveDarConfig, clearConfig: clearDarConfig } = usePNPKI(
+    'pnpki_config_dar',
+    { xRatio: 0.55, yRatio: 0.85, wRatio: 0.38, hRatio: 0.07 }
+  );
+
+  // Merged config used for signing and the setup dialog preview
+  const pnpkiMergedConfig = {
+    ...pnpkiBaseConfig,
+    xRatio: pnpkiDarConfig.xRatio,
+    yRatio: pnpkiDarConfig.yRatio,
+    wRatio: pnpkiDarConfig.wRatio,
+    hRatio: pnpkiDarConfig.hRatio,
+    page:   pnpkiDarConfig.page,
+  };
+
+  /** On save: push credentials back to shared store, coords to DAR store */
+  const handleSavePNPKIDar = (cfg: typeof pnpkiBaseConfig) => {
+    saveBaseConfig({
+      ...pnpkiBaseConfig,
+      p12Base64:         cfg.p12Base64,
+      fileName:          cfg.fileName,
+      password:          cfg.password,
+      signerName:        cfg.signerName,
+      signImageBase64:   cfg.signImageBase64,
+      signImageFileName: cfg.signImageFileName,
+      enabled:           cfg.enabled,
+    });
+    saveDarConfig({
+      ...pnpkiDarConfig,
+      xRatio: cfg.xRatio,
+      yRatio: cfg.yRatio,
+      wRatio: cfg.wRatio,
+      hRatio: cfg.hRatio,
+      page:   cfg.page,
+    });
+  };
+
+  const handleClearPNPKIDar = () => { clearBaseConfig(); clearDarConfig(); };
+
+  const [pnpkiOpen, setPnpkiOpen] = useState(false);
+  const [signing, setSigning] = useState(false);
+  const [previewPdfBlob, setPreviewPdfBlob] = useState<Blob | null>(null);
+  const pnpkiReady = pnpkiBaseConfig.enabled && !!pnpkiBaseConfig.p12Base64;
+
   const isPersonalInfoComplete = () => {
     return !!userData.name && !!userData.position && !!userData.duties;
   };
@@ -545,6 +595,63 @@ function ActivityReport() {
     return `${monthName} ${selectedPeriod},  ${selectedYear}`;
   };
 
+  const getDARDoc = () => (
+    <DARDocument
+      activities={activities}
+      dateRange={getDateRange()}
+      name={userData.name}
+      position={userData.position}
+      project={userData.project}
+      duties={userData.duties}
+      verifiedBy={verifiedBy}
+    />
+  );
+
+  const getDARFileName = () =>
+    `${userData.name.split(',')[0] || 'Report'}-AR_${
+      new Date(2000, parseInt(selectedMonth) - 1).toLocaleString('default', { month: 'long' })
+    }_${selectedPeriod}_${selectedYear}.pdf`;
+
+  const openPNPKISetup = async () => {
+    try {
+      const asPdf = pdf();
+      asPdf.updateContainer(getDARDoc());
+      setPreviewPdfBlob(await asPdf.toBlob());
+    } catch {
+      setPreviewPdfBlob(null);
+    }
+    setPnpkiOpen(true);
+  };
+
+  const handleDARDownload = async () => {
+    if (signing) return;
+    const asPdf = pdf();
+    asPdf.updateContainer(getDARDoc());
+    let finalBlob: Blob = await asPdf.toBlob();
+    const baseName = getDARFileName();
+    let downloadName = baseName;
+
+    if (pnpkiReady) {
+      setSigning(true);
+      try {
+        finalBlob = await signPdfWithPNPKI(finalBlob, pnpkiMergedConfig, baseName);
+        downloadName = baseName.replace('.pdf', '_SIGNED.pdf');
+      } catch (err) {
+        alert(`PNPKI signing failed:\n\n${(err as Error).message}\n\nMake sure the PNPKI server is running at ${pnpkiMergedConfig.serverUrl}.`);
+        setSigning(false);
+        return;
+      } finally {
+        setSigning(false);
+      }
+    }
+
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(finalBlob);
+    link.download = downloadName;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
+
   const getPaginatedActivities = () => {
     const allActivities = activities.flatMap(day => day.activities);
     const ITEMS_PER_PAGE = 30;
@@ -561,6 +668,7 @@ function ActivityReport() {
   const totalPages = paginatedActivities.length;
 
   return (
+    <>
     <div className="min-h-screen bg-gray-50 w-full overflow-y-auto">
       <div className="container mx-auto p-3 sm:p-6 max-w-[1200px]">
         <div className="bg-white rounded-xl shadow-lg p-4 sm:p-8 mb-6">
@@ -729,26 +837,23 @@ function ActivityReport() {
                 <p className="text-sm text-gray-500 mt-1">Live preview - {totalPages} page{totalPages > 1 ? 's' : ''}</p>
               </div>
               {activities.length > 0 && (
-                <PDFDownloadLink
-                  document={
-                    <DARDocument
-                      activities={activities}
-                      dateRange={getDateRange()}
-                      name={userData.name}
-                      position={userData.position}
-                      project={userData.project}
-                      duties={userData.duties}
-                      verifiedBy={verifiedBy}
-                    />
-                  }
-                  fileName={`${userData.name.split(',')[0] || 'Report'}-AR_${new Date(2000, parseInt(selectedMonth) - 1).toLocaleString('default', { month: 'long' })}_${selectedPeriod}_${selectedYear}.pdf`}
-                  className="no-underline"
-                >
-                  <Button>
-                    <FileDown className="w-4 h-4 mr-2" />
-                    Download PDF
+                <div className="flex gap-2">
+                  <Button onClick={handleDARDownload} disabled={signing} className="gap-1">
+                    {signing
+                      ? <><LoaderIcon className="w-4 h-4 animate-spin" /> Signing…</>
+                      : <><FileDown className="w-4 h-4" />{pnpkiReady ? ' Save + PNPKI' : ' Download PDF'}</>}
                   </Button>
-                </PDFDownloadLink>
+                  <Button
+                    onClick={openPNPKISetup}
+                    variant={pnpkiReady ? 'default' : 'outline'}
+                    className="gap-1"
+                    title={pnpkiReady ? `PNPKI configured — ${pnpkiBaseConfig.fileName}` : 'Set up PNPKI digital signature'}
+                  >
+                    {pnpkiReady
+                      ? <><ShieldCheckIcon className="h-4 w-4 text-green-300" /> PNPKI ✓</>
+                      : <><KeyRoundIcon className="h-4 w-4 animate-bounce" /> PNPKI</>}
+                  </Button>
+                </div>
               )}
             </div>
 
@@ -975,6 +1080,17 @@ function ActivityReport() {
         )}
       </div>
     </div>
+
+    <PNPKISetup
+      open={pnpkiOpen}
+      onClose={() => setPnpkiOpen(false)}
+      config={pnpkiMergedConfig}
+      onSave={handleSavePNPKIDar}
+      onClear={handleClearPNPKIDar}
+      pdfBlob={previewPdfBlob}
+      totalPages={totalPages}
+    />
+    </>
   );
 }
 
