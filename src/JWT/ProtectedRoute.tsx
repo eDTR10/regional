@@ -1,23 +1,17 @@
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import isTokenExpired from './authUtils'; // Assuming you have a separate authUtils file
+import { Navigate } from 'react-router-dom';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
 function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const navigate = useNavigate();
   const token = localStorage.getItem('accessToken');
 
-  useEffect(() => {
-    if (isTokenExpired(token)) {
-      localStorage.removeItem('accessToken')
-      navigate('/');
-    }
-  }, [token, navigate]);
+  if (!token) {
+    return <Navigate to="/regional/login" replace />;
+  }
 
-  return token ? <>{children}</> : null; 
+  return <>{children}</>;
 }
 
 export default ProtectedRoute;

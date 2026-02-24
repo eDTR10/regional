@@ -112,7 +112,9 @@ export async function signPdfWithPNPKI(
     );
   }
 
-  const res = await fetch(`${cfg.serverUrl}/sign-pdf`, { method: 'POST', body: form });
+  // Pin to the env-configured server — never use the mutable cfg.serverUrl from storage
+  const pinnedServer = (import.meta.env.VITE_PNPKI_SERVER as string).replace(/\/$/, '');
+  const res = await fetch(`${pinnedServer}/sign-pdf`, { method: 'POST', body: form });
 
   if (!res.ok) {
     const msg = await res.text().catch(() => res.statusText);

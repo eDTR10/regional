@@ -13,7 +13,7 @@ import UserProfile from './screens/user/profile/UserProfile.tsx';
 import UserEmployeeStatus from './screens/user/employee-status/UserEmployeeStatusContainer.tsx';
 import UserAttendanceRecord from './screens/user/attendance-record/UserAttendanceRecord.tsx';
 import AdminProfileMainContainer from './screens/admin/profile/AdminProfileMainContainer.tsx';
-// import ProtectedRoute from './JWT/ProtectedRoute.tsx';
+import ProtectedRoute from './JWT/ProtectedRoute.tsx';
 
 
 const Login = lazy(() =>
@@ -103,9 +103,9 @@ const router = createBrowserRouter([
   {
     path: `/regional/admin`,
     element:
-
-      <Admin />
-
+      <ProtectedRoute>
+        <Admin />
+      </ProtectedRoute>
     ,
 
 
@@ -181,7 +181,9 @@ const router = createBrowserRouter([
   {
     path: `/regional/user`,
     element:
-      <User />
+      <ProtectedRoute>
+        <User />
+      </ProtectedRoute>
     ,
     children: [
       {
