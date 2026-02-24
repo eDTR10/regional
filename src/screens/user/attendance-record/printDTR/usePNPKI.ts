@@ -7,7 +7,7 @@ export interface PNPKIConfig {
   fileName: string;        // original file name (display only)
   password: string;        // P12 passphrase
   signerName: string;
-  signNote: string;
+  signerPosition: string;    // shown below signer name (previously 'signNote')
   page: number;            // 1-based page index
   signAllPages: boolean;
   xRatio: number;          // 0-1 relative to page width
@@ -17,6 +17,15 @@ export interface PNPKIConfig {
   serverUrl: string;
   signImageBase64?: string;
   signImageFileName?: string;
+  signTextScale?: number;      // font scale multiplier within sig box (default 1)
+  signTextOffsetX?: number;    // text x-offset as fraction within box (default 0)
+  signTextOffsetY?: number;    // text y-offset as fraction within box (default 0)
+  signImageScale?: number;     // image scale within sig box (default 1)
+  signImageOffsetX?: number;   // image x-offset as fraction within box (default 0)
+  signImageOffsetY?: number;   // image y-offset as fraction within box (default 0)
+  sigFontSize?: number;        // font size in px at 190px editor reference height (default 24)
+  sigFontFamily?: string;      // CSS font-family (default 'Arial, sans-serif')
+  sigTextColor?: string;       // CSS color string (default '#1e3a5f')
 }
 
 export const DEFAULT_PNPKI_CONFIG: PNPKIConfig = {
@@ -25,7 +34,7 @@ export const DEFAULT_PNPKI_CONFIG: PNPKIConfig = {
   fileName: '',
   password: '',
   signerName: '',
-  signNote: '',
+  signerPosition: '',
   page: 1,
   signAllPages: false,
   xRatio: 0.363,
@@ -33,6 +42,15 @@ export const DEFAULT_PNPKI_CONFIG: PNPKIConfig = {
   wRatio: 0.262,
   hRatio: 0.087,
   serverUrl: import.meta.env.VITE_PNPKI_SERVER,
+  signTextScale: 1,
+  signTextOffsetX: 0,
+  signTextOffsetY: 0,
+  signImageScale: 1,
+  signImageOffsetX: 0,
+  signImageOffsetY: 0,
+  sigFontSize: 10,      // % of sig-box height (1-30)
+  sigFontFamily: 'Arial, sans-serif',
+  sigTextColor: '#1e3a5f',
 };
 
 const STORAGE_KEY = 'pnpki_config';
@@ -48,6 +66,11 @@ export function usePNPKI(storageKey: string = STORAGE_KEY, defaultOverrides: Par
         const raw = localStorage.getItem(storageKey);
         if (raw) {
           const parsed = JSON.parse(raw);
+          // Backwards-compat: migrate old 'signNote' key to 'signerPosition'
+          if (parsed.signNote !== undefined && parsed.signerPosition === undefined) {
+            parsed.signerPosition = parsed.signNote;
+            delete parsed.signNote;
+          }
           if (parsed.p12Base64) parsed.p12Base64 = await decryptString(parsed.p12Base64);
           if (parsed.password)  parsed.password  = await decryptString(parsed.password);
           setConfig({ ...defaults, ...parsed });
@@ -96,7 +119,7 @@ export async function signPdfWithPNPKI(
 
   form.append('password', cfg.password);
   form.append('signer_name', cfg.signerName);
-  form.append('sign_note', cfg.signNote);
+  form.append('sign_note', cfg.signerPosition);
   form.append('page', String(cfg.page));
   form.append('sign_all_pages', cfg.signAllPages ? 'true' : 'false');
   form.append('x_ratio', String(cfg.xRatio));
@@ -104,12 +127,17 @@ export async function signPdfWithPNPKI(
   form.append('w_ratio', String(cfg.wRatio));
   form.append('h_ratio', String(cfg.hRatio));
 
-  if (cfg.signImageBase64) {
+  // Build composite design canvas (image + styled text) and send as sign_design.
+  // The Flask server uses this as the stamp background — gives full appearance control.
+  const designBlob = await buildSignDesignBlob(cfg);
+  if (designBlob) {
+    form.append('sign_design', new File([designBlob], 'sign-design.png', { type: 'image/png' }));
+  }
+
+  // Keep sign_image as fallback for older servers that don't support sign_design
+  if (cfg.signImageBase64 && !designBlob) {
     const imgBytes = Uint8Array.from(atob(cfg.signImageBase64), (c) => c.charCodeAt(0));
-    form.append(
-      'sign_image',
-      new File([imgBytes], cfg.signImageFileName || 'sig.png', { type: 'image/png' })
-    );
+    form.append('sign_image', new File([imgBytes], cfg.signImageFileName || 'sig.png', { type: 'image/png' }));
   }
 
   // Pin to the env-configured server — never use the mutable cfg.serverUrl from storage
@@ -122,4 +150,80 @@ export async function signPdfWithPNPKI(
   }
 
   return res.blob();
+}
+
+/**
+ * Render the signature appearance (image + styled text) to an offscreen canvas
+ * and return it as a PNG Blob.  The Flask server accepts this as `sign_design`
+ * and uses it directly as the stamp background.
+ */
+export async function buildSignDesignBlob(cfg: PNPKIConfig): Promise<Blob | null> {
+  // Canvas dimensions based on sig box aspect ratio
+  const W = 1000;
+  const H = Math.max(160, Math.round(W * (cfg.hRatio / cfg.wRatio)));
+
+  const canvas = document.createElement('canvas');
+  canvas.width  = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d')!;
+
+  // Draw image layer — mirrors CSS objectFit:contain inside a (scale*W) × (scale*H) box
+  if (cfg.signImageBase64) {
+    await new Promise<void>((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const scale      = cfg.signImageScale ?? 1;
+        const contW      = scale * W;                          // container width
+        const contH      = scale * H;                          // container height
+        const imgAspect  = img.naturalWidth / Math.max(1, img.naturalHeight);
+        const contAspect = contW / contH;                      // = W/H (scale cancels)
+
+        // objectFit: contain — fit inside container preserving aspect ratio
+        let drawW: number, drawH: number;
+        if (imgAspect >= contAspect) {
+          drawW = contW;
+          drawH = contW / imgAspect;
+        } else {
+          drawH = contH;
+          drawW = contH * imgAspect;
+        }
+
+        // Center within container (same centering CSS objectFit: contain applies)
+        const contX = (cfg.signImageOffsetX ?? 0) * W;
+        const contY = (cfg.signImageOffsetY ?? 0) * H;
+        const drawX = contX + (contW - drawW) / 2;
+        const drawY = contY + (contH - drawH) / 2;
+
+        ctx.drawImage(img, drawX, drawY, drawW, drawH);
+        resolve();
+      };
+      img.onerror = () => resolve();
+      img.src = `data:image/png;base64,${cfg.signImageBase64}`;
+    });
+  }
+
+  // Draw text layer
+  // sigFontSize is stored as % of box height (1-30), so both preview and canvas
+  // compute the same proportion → WYSIWYG match.
+  const fontSize    = (cfg.sigFontSize ?? 10) / 100 * H * (cfg.signTextScale ?? 1);
+  const fontFamily  = cfg.sigFontFamily ?? 'Arial, sans-serif';
+  const color       = cfg.sigTextColor  ?? '#1e3a5f';
+  const lines       = [
+    cfg.signerName || 'Signer',
+    ...(cfg.signerPosition ? [cfg.signerPosition] : []),
+  ];
+
+  ctx.fillStyle    = color;
+  ctx.font         = `bold ${fontSize}px ${fontFamily}`;
+  ctx.textBaseline = 'top';
+
+  const textX = (cfg.signTextOffsetX ?? 0) * W;
+  const textY = (cfg.signTextOffsetY ?? 0) * H;
+  const lineH = fontSize * 1.35;
+  lines.forEach((line, i) => {
+    if (i > 0) ctx.font = `${fontSize}px ${fontFamily}`; // signer name bold, rest normal
+    ctx.fillText(line, textX, textY + i * lineH);
+  });
+
+  return new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
 }

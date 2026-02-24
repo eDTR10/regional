@@ -387,26 +387,11 @@ function ActivityReport() {
     page:   pnpkiDarConfig.page,
   };
 
-  /** On save: push credentials back to shared store, coords to DAR store */
+  /** On save: push all non-position fields to shared store, coords to DAR store */
   const handleSavePNPKIDar = async (cfg: typeof pnpkiBaseConfig) => {
-    await saveBaseConfig({
-      ...pnpkiBaseConfig,
-      p12Base64:         cfg.p12Base64,
-      fileName:          cfg.fileName,
-      password:          cfg.password,
-      signerName:        cfg.signerName,
-      signImageBase64:   cfg.signImageBase64,
-      signImageFileName: cfg.signImageFileName,
-      enabled:           cfg.enabled,
-    });
-    await saveDarConfig({
-      ...pnpkiDarConfig,
-      xRatio: cfg.xRatio,
-      yRatio: cfg.yRatio,
-      wRatio: cfg.wRatio,
-      hRatio: cfg.hRatio,
-      page:   cfg.page,
-    });
+    const { xRatio, yRatio, wRatio, hRatio, page, ...rest } = cfg;
+    await saveBaseConfig({ ...pnpkiBaseConfig, ...rest });
+    await saveDarConfig({ ...pnpkiDarConfig, xRatio, yRatio, wRatio, hRatio, page });
   };
 
   const handleClearPNPKIDar = () => { clearBaseConfig(); clearDarConfig(); };

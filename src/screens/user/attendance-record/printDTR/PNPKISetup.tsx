@@ -11,6 +11,7 @@ import {
   CheckCircle2Icon,
   EyeIcon,
   EyeOffIcon,
+  GripVertical,
   KeyRoundIcon,
   LoaderIcon,
   Trash2Icon,
@@ -75,21 +76,47 @@ interface CanvasProps {
   pdfBlob?: Blob | null;
   /** Signature appearance fields */
   signerName?: string;
-  signNote?: string;
+  signNote?: string;   // kept for internal prop name; maps to signerPosition
   signImageBase64?: string;
+  /** Content position & scale within the sig box */
+  signTextScale?: number;
+  signTextOffsetX?: number;
+  signTextOffsetY?: number;
+  signImageScale?: number;
+  signImageOffsetX?: number;
+  signImageOffsetY?: number;
+  onContentChange?: (offsetX: number, offsetY: number, scale: number, type: 'text' | 'image') => void;
+  /** Text appearance */
+  sigFontSize?: number;
+  sigFontFamily?: string;
+  sigTextColor?: string;
 }
 
 function SigCanvas({
   xRatio, yRatio, wRatio, hRatio, onChange,
   pageNum = 1, pdfBlob, signerName, signNote, signImageBase64,
+  signTextScale = 1, signTextOffsetX = 0, signTextOffsetY = 0,
+  signImageScale = 1, signImageOffsetX = 0, signImageOffsetY = 0,
+  onContentChange,
+  sigFontSize = 10, sigFontFamily = 'Arial, sans-serif', sigTextColor = '#1e3a5f',
 }: CanvasProps) {
   const containerRef  = useRef<HTMLDivElement>(null);
   const bgCanvasRef   = useRef<HTMLCanvasElement>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [pdfReady,   setPdfReady]   = useState(false);
+  // Track container height so font scales proportionally to the sig box
+  const [containerH, setContainerH] = useState(0);
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => setContainerH(entries[0].contentRect.height));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
-  const dragging = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
-  const resizing = useRef<{ startX: number; startY: number; origW: number; origH: number } | null>(null);
+  const dragging        = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
+  const resizing        = useRef<{ startX: number; startY: number; origW: number; origH: number } | null>(null);
+  const contentDragging = useRef<{ startX: number; startY: number; origOX: number; origOY: number; type: 'text' | 'image' } | null>(null);
 
   const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
@@ -151,6 +178,22 @@ function SigCanvas({
     [wRatio, hRatio]
   );
 
+  const onMouseDownTextContent = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault(); e.stopPropagation();
+      contentDragging.current = { startX: e.clientX, startY: e.clientY, origOX: signTextOffsetX, origOY: signTextOffsetY, type: 'text' };
+    },
+    [signTextOffsetX, signTextOffsetY]
+  );
+
+  const onMouseDownImageContent = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault(); e.stopPropagation();
+      contentDragging.current = { startX: e.clientX, startY: e.clientY, origOX: signImageOffsetX, origOY: signImageOffsetY, type: 'image' };
+    },
+    [signImageOffsetX, signImageOffsetY]
+  );
+
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
       if (!containerRef.current) return;
@@ -172,20 +215,36 @@ function SigCanvas({
           clamp(resizing.current.origH + dh, 0.02, 1 - yRatio)
         );
       }
+      if (contentDragging.current && onContentChange) {
+        const boxW = rect.width  * wRatio;
+        const boxH = rect.height * hRatio;
+        const dx = (e.clientX - contentDragging.current.startX) / boxW;
+        const dy = (e.clientY - contentDragging.current.startY) / boxH;
+        const { type } = contentDragging.current;
+        const scale = type === 'image' ? signImageScale : signTextScale;
+        onContentChange(
+          clamp(contentDragging.current.origOX + dx, 0, 1),
+          clamp(contentDragging.current.origOY + dy, 0, 1),
+          scale,
+          type
+        );
+      }
     };
-    const onUp = () => { dragging.current = null; resizing.current = null; };
+    const onUp = () => { dragging.current = null; resizing.current = null; contentDragging.current = null; };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
-  }, [xRatio, yRatio, wRatio, hRatio, onChange]);
+  }, [xRatio, yRatio, wRatio, hRatio, onChange, onContentChange, signImageBase64, signImageScale, signTextScale]);
 
   const pct = (v: number) => `${(v * 100).toFixed(2)}%`;
-  const today = new Date().toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: '2-digit' });
+  // sigFontSize is % of sig-box height — compute actual px for preview
+  const sigBoxH   = (containerH || 200) * hRatio;
+  const fontPx    = Math.max(4, sigFontSize / 100 * sigBoxH) * signTextScale;
 
   return (
     <div className="flex flex-col gap-1 flex-1 min-h-0">
       <p className="text-xs text-muted-foreground text-center select-none">
-        Drag box to reposition · drag <span className="font-bold">⌟</span> corner to resize
+        Drag box to reposition · <span className="font-bold">⌟</span> corner to resize · drag <span className="font-bold">content inside</span> to move text/image
       </p>
 
       {/* ── Canvas container ── */}
@@ -232,28 +291,61 @@ function SigCanvas({
               left: pct(xRatio), top: pct(yRatio),
               width: pct(wRatio), height: pct(hRatio),
               pointerEvents: 'all',
-              background: signImageBase64 ? 'transparent' : 'rgba(255,255,255,0.88)',
+              background: 'rgba(255,255,255,0.5)',
             }}
           >
+            {/* ── Drag handle bar ── */}
+            <div
+              onMouseDown={onMouseDownBox}
+              className="absolute top-0 left-0 right-0 flex items-center justify-center z-20"
+              style={{
+                height: 14,
+                background: 'rgba(59,130,246,0.75)',
+                cursor: 'move',
+                pointerEvents: 'all',
+              }}
+            >
+              <GripVertical className="rotate-90" style={{ width: 12, height: 12, color: 'white', opacity: 0.9 }} />
+            </div>
             {/* ── Signature appearance preview ── */}
-            {signImageBase64 ? (
-              <img
-                src={`data:image/png;base64,${signImageBase64}`}
-                className="w-full h-full object-contain"
-                draggable={false}
-              />
-            ) : (
+            <div className="w-full h-full relative overflow-hidden" style={{ paddingTop: 14 }}>
+              {signImageBase64 && (
+                <img
+                  src={`data:image/png;base64,${signImageBase64}`}
+                  draggable={false}
+                  onMouseDown={onMouseDownImageContent}
+                  style={{
+                    position: 'absolute',
+                    left: `${signImageOffsetX * 100}%`,
+                    top:  `${signImageOffsetY * 100}%`,
+                    width:  `${signImageScale * 100}%`,
+                    height: `${signImageScale * 100}%`,
+                    objectFit: 'contain',
+                    cursor: 'grab',
+                    pointerEvents: 'all',
+                  }}
+                />
+              )}
               <div
-                className="w-full h-full flex flex-col justify-center px-1"
-                style={{ fontSize: 'clamp(4px, 0.9cqw, 8px)', lineHeight: 1.3, color: '#1e3a5f' }}
+                onMouseDown={onMouseDownTextContent}
+                className="absolute flex flex-col px-1"
+                style={{
+                  left: `${signTextOffsetX * 100}%`,
+                  top:  `${signTextOffsetY * 100}%`,
+                    fontSize: `${fontPx}px`,
+                  fontFamily: sigFontFamily,
+                  lineHeight: 1.35,
+                  color: sigTextColor,
+                  cursor: 'grab',
+                  pointerEvents: 'all',
+                  userSelect: 'none',
+                  whiteSpace: 'nowrap',
+                }}
               >
-                <span style={{ fontWeight: 700 }}>
-                  {signerName || 'Signer Name'}
-                </span>
+                <span style={{ fontWeight: 700 }}>{signerName || 'Signer Name'}</span>
                 {signNote && <span>{signNote}</span>}
-                <span style={{ color: '#555' }}>Date: {today}</span>
               </div>
-            )}
+            </div>
 
             {/* Resize handle */}
             <div
@@ -332,6 +424,16 @@ export default function PNPKISetup({ open, onClose, config, onSave, onClear, pdf
     []
   );
 
+  const handleContentChange = useCallback(
+    (offsetX: number, offsetY: number, scale: number, type: 'text' | 'image') =>
+      setDraft((d) =>
+        type === 'image'
+          ? { ...d, signImageOffsetX: offsetX, signImageOffsetY: offsetY, signImageScale: scale }
+          : { ...d, signTextOffsetX: offsetX, signTextOffsetY: offsetY, signTextScale: scale }
+      ),
+    []
+  );
+
   const handleSave = async () => {
     if (!draft.p12Base64) {
       setP12Error('Please upload a P12/PFX certificate first.');
@@ -367,10 +469,10 @@ export default function PNPKISetup({ open, onClose, config, onSave, onClear, pdf
         </DialogHeader>
 
         {/* ─ Two-column layout ─ */}
-        <div className="flex flex-row sm:flex-col gap-4 overflow-y-auto flex-1 min-h-0 pr-1">
+        <div className="flex flex-row md:flex-col gap-4 overflow-y-auto flex-1 min-h-0 pr-1">
 
-          {/* ── LEFT: placement canvas (hidden on mobile) ─────── */}
-          <div className="flex-1 flex flex-col gap-2 min-h-0 min-w-0 sm:hidden">
+          {/* ── LEFT: placement canvas (hidden on small screens) ─────── */}
+          <div className="flex md:hidden flex-1 flex-col gap-2 min-h-0 min-w-0">
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
               Signature Placement <span className="normal-case font-normal text-gray-400">(drag to move, corner to resize)</span>
             </label>
@@ -384,15 +486,25 @@ export default function PNPKISetup({ open, onClose, config, onSave, onClear, pdf
               pdfBlob={pdfBlob}
               pageNum={draft.page}
               signerName={draft.signerName}
-              signNote={draft.signNote}
+              signNote={draft.signerPosition}
               signImageBase64={draft.signImageBase64}
+              signTextScale={draft.signTextScale ?? 1}
+              signTextOffsetX={draft.signTextOffsetX ?? 0}
+              signTextOffsetY={draft.signTextOffsetY ?? 0}
+              signImageScale={draft.signImageScale ?? 1}
+              signImageOffsetX={draft.signImageOffsetX ?? 0}
+              signImageOffsetY={draft.signImageOffsetY ?? 0}
+              onContentChange={handleContentChange}
+              sigFontSize={draft.sigFontSize ?? 8}
+              sigFontFamily={draft.sigFontFamily ?? 'Arial, sans-serif'}
+              sigTextColor={draft.sigTextColor ?? '#1e3a5f'}
             />
 
 
           </div>
 
           {/* ── RIGHT: settings ─────────────────────────────────── */}
-          <div className="flex flex-col gap-3 w-64 sm:w-full shrink-0 overflow-y-auto">
+          <div className="flex flex-col gap-3 w-72 md:w-full shrink-0 overflow-y-auto">
 
             {/* P12 / PFX */}
             <div>
@@ -454,6 +566,68 @@ export default function PNPKISetup({ open, onClose, config, onSave, onClear, pdf
               />
             </div>
 
+            {/* Signer position */}
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                Signer Position
+              </label>
+              <input
+                type="text"
+                className="mt-1 w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm outline-none focus:border-blue-400"
+                placeholder="e.g. IT Officer"
+                value={draft.signerPosition}
+                onChange={(e) => set('signerPosition', e.target.value)}
+              />
+            </div>
+
+            {/* Text appearance */}
+            <div className="border border-gray-200 rounded-md p-2 flex flex-col gap-2">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Text Appearance</label>
+
+              {/* Font size */}
+              <div>
+                <div className="flex justify-between">
+                  <span className="text-xs text-muted-foreground">Font Size</span>
+                  <span className="text-xs font-mono text-muted-foreground">{draft.sigFontSize ?? 10}% of box</span>
+                </div>
+                <input
+                  type="range" min="2" max="30" step="1"
+                  className="w-full accent-blue-500"
+                  value={draft.sigFontSize ?? 10}
+                  onChange={(e) => set('sigFontSize', parseInt(e.target.value))}
+                />
+              </div>
+
+              {/* Font family */}
+              <div>
+                <span className="text-xs text-muted-foreground block mb-1">Font</span>
+                <select
+                  className="w-full border border-gray-300 rounded-md px-2 py-1 text-xs outline-none focus:border-blue-400 bg-background"
+                  value={draft.sigFontFamily ?? 'Arial, sans-serif'}
+                  onChange={(e) => set('sigFontFamily', e.target.value)}
+                >
+                  <option value="Arial, sans-serif">Arial</option>
+                  <option value="'Segoe UI', Arial, sans-serif">Segoe UI</option>
+                  <option value="'Times New Roman', Times, serif">Times New Roman</option>
+                  <option value="Georgia, serif">Georgia</option>
+                  <option value="'Courier New', Courier, monospace">Courier New</option>
+                  <option value="cursive">Cursive</option>
+                </select>
+              </div>
+
+              {/* Text color */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground flex-1">Color</span>
+                <input
+                  type="color"
+                  className="w-8 h-7 rounded cursor-pointer border border-gray-300"
+                  value={draft.sigTextColor ?? '#1e3a5f'}
+                  onChange={(e) => set('sigTextColor', e.target.value)}
+                />
+                <span className="text-xs font-mono text-muted-foreground">{draft.sigTextColor ?? '#1e3a5f'}</span>
+              </div>
+            </div>
+
             {/* Page to Sign (only shown when document has multiple pages) */}
             {totalPages > 1 && (
               <div>
@@ -506,7 +680,52 @@ export default function PNPKISetup({ open, onClose, config, onSave, onClear, pdf
                 </label>
               )}
             </div>
-
+            {/* Content scale & position reset */}
+            {draft.signImageBase64 ? (
+              <div>
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Image Scale ({((draft.signImageScale ?? 1) * 100).toFixed(0)}%)
+                  </label>
+                  <button
+                    type="button"
+                    className="text-[10px] text-blue-500 hover:underline"
+                    onClick={() => setDraft((d) => ({ ...d, signImageScale: 1, signImageOffsetX: 0, signImageOffsetY: 0 }))}
+                  >
+                    Reset
+                  </button>
+                </div>
+                <input
+                  type="range" min="0.3" max="2" step="0.05"
+                  className="w-full mt-1 accent-blue-500"
+                  value={draft.signImageScale ?? 1}
+                  onChange={(e) => set('signImageScale', parseFloat(e.target.value))}
+                />
+                <p className="text-[10px] text-muted-foreground mt-0.5">Drag image in preview to reposition</p>
+              </div>
+            ) : (
+              <div>
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Text Scale ({((draft.signTextScale ?? 1) * 100).toFixed(0)}%)
+                  </label>
+                  <button
+                    type="button"
+                    className="text-[10px] text-blue-500 hover:underline"
+                    onClick={() => setDraft((d) => ({ ...d, signTextScale: 1, signTextOffsetX: 0, signTextOffsetY: 0 }))}
+                  >
+                    Reset
+                  </button>
+                </div>
+                <input
+                  type="range" min="0.3" max="2.5" step="0.05"
+                  className="w-full mt-1 accent-blue-500"
+                  value={draft.signTextScale ?? 1}
+                  onChange={(e) => set('signTextScale', parseFloat(e.target.value))}
+                />
+                <p className="text-[10px] text-muted-foreground mt-0.5">Drag text in preview to reposition</p>
+              </div>
+            )}
           </div>
 
         </div>
