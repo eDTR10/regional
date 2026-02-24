@@ -16,6 +16,11 @@ import AdminProfileMainContainer from './screens/admin/profile/AdminProfileMainC
 import ProtectedRoute from './JWT/ProtectedRoute.tsx';
 
 
+
+const PNPKI = lazy(() =>
+  wait(1300).then(() => import("./screens/pnpki/pnpki.tsx"))
+);
+
 const Login = lazy(() =>
   wait(1300).then(() => import("./screens/auth/Login.tsx"))
 );
@@ -75,6 +80,14 @@ const router = createBrowserRouter([
 
     path: `/regional`,
     element: <Navigate to={`/regional/login`} />,
+  },
+  {
+    path: `/regional/pnpki`,
+    element: <>
+      <Suspense fallback={<Loader />}>
+        <PNPKI />
+      </Suspense>
+    </>,
   },
   {
     path: `/regional/login`,

@@ -656,39 +656,72 @@ function ActivityReport() {
   const paginatedActivities = getPaginatedActivities();
   const totalPages = paginatedActivities.length;
 
+  // helper: collapsible section header
+  const SectionHeader = ({
+    title, complete, expanded, onToggle, badge,
+  }: { title: string; complete: boolean; expanded: boolean; onToggle: () => void; badge?: string }) => (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={`w-full flex items-center justify-between px-4 py-3 rounded-lg border transition-colors text-left ${
+        complete
+          ? 'border-green-200 bg-green-50 hover:bg-green-100'
+          : 'border-red-200 bg-red-50 hover:bg-red-100'
+      }`}
+    >
+      <div className="flex items-center gap-2">
+        <span className={`w-2 h-2 rounded-full shrink-0 ${complete ? 'bg-green-500' : 'bg-red-400'}`} />
+        <span className={`font-semibold text-sm ${complete ? 'text-green-800' : 'text-red-800'}`}>{title}</span>
+        {badge && <span className="text-xs text-gray-400 font-normal">{badge}</span>}
+      </div>
+      <ChevronDown className={`w-4 h-4 shrink-0 transition-transform duration-200 ${expanded ? 'rotate-180' : ''} ${complete ? 'text-green-600' : 'text-red-400'}`} />
+    </button>
+  );
+
   return (
     <>
     <div className="min-h-screen bg-gray-50 w-full overflow-y-auto">
-      <div className="container mx-auto p-3 sm:p-6 max-w-[1200px]">
-        <div className="bg-white rounded-xl shadow-lg p-4 sm:p-8 mb-6">
-          <div className="flex items-center justify-between mb-6 border-b pb-4">
-            <h2 className="text-2xl font-bold text-gray-800">Accomplishment Report</h2>
-            <div className="text-sm text-gray-500">
-              {getDateRange() && `Current Period: ${getDateRange()}`}
-            </div>
-          </div>
-          
-          <div className="mb-8">
-            <h3 className="text-lg font-semibold text-gray-700 mb-4">Report Period</h3>
-            <div className="grid grid-cols-3 gap-6">
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-600">Period</label>
-                <Select value={selectedPeriod} onValueChange={handlePeriodChange}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select Period" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1-15">1-15</SelectItem>
-                    <SelectItem value="16-31">16-31</SelectItem>
-                  </SelectContent>
-                </Select>
+      <div className="mx-auto px-3 py-5 max-w-[1100px] md:px-2 md:py-3">
+
+        <div className="mb-4">
+          <h1 className="text-xl font-bold text-gray-800 leading-tight">Accomplishment Report</h1>
+        </div>
+
+        {/* ── Settings card ───────────────────────────────────────── */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-4">
+
+          {/* Period row */}
+          <div className="px-5 pt-5 pb-4 border-b border-gray-100">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Report Period</p>
+
+            <div className="grid grid-cols-3 gap-3 sm:grid-cols-1">
+              {/* Period toggle */}
+              <div className="space-y-1">
+                <label className="block text-xs font-medium text-gray-500">Period</label>
+                <div className="flex rounded-md border border-input overflow-hidden h-9 text-sm">
+                  {(['1-15', '16-31'] as const).map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => handlePeriodChange(p)}
+                      className={`flex-1 px-4 font-medium transition-colors ${
+                        selectedPeriod === p
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-background text-muted-foreground hover:bg-muted'
+                      } ${p === '1-15' ? 'border-r border-input' : ''}`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
               </div>
-              
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-600">Month</label>
+
+              {/* Month */}
+              <div className="space-y-1">
+                <label className="block text-xs font-medium text-gray-500">Month</label>
                 <Select value={selectedMonth} onValueChange={handleMonthChange}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select Month" />
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="Select month" />
                   </SelectTrigger>
                   <SelectContent>
                     {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
@@ -699,116 +732,110 @@ function ActivityReport() {
                   </SelectContent>
                 </Select>
               </div>
-              
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-600">Year</label>
+
+              {/* Year */}
+              <div className="space-y-1">
+                <label className="block text-xs font-medium text-gray-500">Year</label>
                 <Select value={selectedYear} onValueChange={handleYearChange}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select Year" />
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="Year" />
                   </SelectTrigger>
                   <SelectContent>
                     {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map((year) => (
-                      <SelectItem key={year} value={year.toString()}>
-                        {year}
-                      </SelectItem>
+                      <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
+
+            {/* Summary badge — shows once all three are selected */}
+            {selectedPeriod && selectedMonth && selectedYear && (
+              <div className="mt-3">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold">
+                  {getDateRange()}
+                </span>
+              </div>
+            )}
           </div>
 
-          <div className="mb-8">
-            <div className={`flex items-center justify-between border rounded-lg p-3 transition-colors cursor-pointer ${isPersonalInfoComplete() ? 'bg-green-50 hover:bg-green-100' : 'bg-red-50 hover:bg-red-100'}`}
-              onClick={() => setIsPersonalInfoExpanded(!isPersonalInfoExpanded)}
-            >
-              <div className="flex items-center gap-2">
-                <h3 className={`text-lg font-semibold ${isPersonalInfoComplete() ? 'text-green-700' : 'text-red-700'}`}>Personal Information</h3>
-                <span className="text-xs text-gray-500">{isPersonalInfoExpanded ? '(Click to collapse)' : '(Click to expand)'}</span>
-              </div>
-              <button 
-                className={`p-2 rounded-full bg-white border shadow-sm hover:bg-gray-50 transition-all transform ${isPersonalInfoExpanded ? 'rotate-180' : 'rotate-0'}`}
-                aria-label={isPersonalInfoExpanded ? 'Collapse section' : 'Expand section'}
-              >
-                <ChevronDown className="w-5 h-5 text-gray-600" />
-              </button>
-            </div>
-            <div className={`mt-4 transition-all duration-300 ease-in-out overflow-hidden ${isPersonalInfoExpanded ? 'opacity-100 max-h-[1000px]' : 'opacity-0 max-h-0'}`}>
-              <div className="grid grid-cols-4 sm:grid-cols-1 gap-6 mb-6">
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-600">Name</label>
-                  <Input 
-                    className="w-full"
-                    placeholder="[Surname, First Name, MI]"
+          {/* Personal Information */}
+          <div className="px-5 py-4 border-b border-gray-100">
+            <SectionHeader
+              title="Personal Information"
+              complete={isPersonalInfoComplete()}
+              expanded={isPersonalInfoExpanded}
+              onToggle={() => setIsPersonalInfoExpanded(!isPersonalInfoExpanded)}
+              badge={isPersonalInfoComplete() ? 'Complete' : 'Incomplete — required'}
+            />
+            <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isPersonalInfoExpanded ? 'max-h-[600px] opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
+              <div className="grid grid-cols-3 gap-3 mb-3 sm:grid-cols-1">
+                <div className="space-y-1">
+                  <label className="block text-xs font-medium text-gray-500">Name <span className="text-red-400">*</span></label>
+                  <Input
+                    className="h-9 text-sm"
+                    placeholder="Surname, First Name, MI"
                     value={userData.name}
                     onChange={(e) => setUserData({...userData, name: e.target.value})}
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-600">Position</label>
-                  <Input 
-                    className="w-full"
-                    placeholder="[Do not abbreviate position]"
+                <div className="space-y-1">
+                  <label className="block text-xs font-medium text-gray-500">Position <span className="text-red-400">*</span></label>
+                  <Input
+                    className="h-9 text-sm"
+                    placeholder="Do not abbreviate"
                     value={userData.position}
                     onChange={(e) => setUserData({...userData, position: e.target.value})}
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-600">Project</label>
-                  <Input 
-                    className="w-full"
-                    placeholder="Project (if applicable)"
+                <div className="space-y-1">
+                  <label className="block text-xs font-medium text-gray-500">Project</label>
+                  <Input
+                    className="h-9 text-sm"
+                    placeholder="If applicable"
                     value={userData.project}
                     onChange={(e) => setUserData({...userData, project: e.target.value})}
                   />
                 </div>
               </div>
-              
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-600 mb-2">Duties and Responsibilities</label>
-                <textarea 
-                  className="w-full p-4 border rounded-md text-sm text-left"
-                  placeholder="Enter your duties and responsibilities"
-                  rows={4}
+              <div className="space-y-1">
+                <label className="block text-xs font-medium text-gray-500">Duties and Responsibilities <span className="text-red-400">*</span></label>
+                <textarea
+                  className="w-full px-3 py-2 border border-input rounded-md text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-0 bg-background"
+                  placeholder="Enter your duties and responsibilities (consistent with approved Terms of Reference)"
+                  rows={3}
                   value={userData.duties}
                   onChange={(e) => setUserData({...userData, duties: e.target.value})}
-                  style={{ textAlign: 'left' }}
                 />
               </div>
             </div>
           </div>
 
-          <div className="mb-8">
-            <div className={`flex items-center justify-between border rounded-lg p-3 transition-colors cursor-pointer ${isAdditionalDetailsComplete() ? 'bg-green-50 hover:bg-green-100' : 'bg-red-50 hover:bg-red-100'}`}
-              onClick={() => setIsAdditionalDetailsExpanded(!isAdditionalDetailsExpanded)}
-            >
-              <div className="flex items-center gap-2">
-                <h3 className={`text-lg font-semibold ${isAdditionalDetailsComplete() ? 'text-green-700' : 'text-red-700'}`}>Additional Details</h3>
-                <span className="text-xs text-gray-500">{isAdditionalDetailsExpanded ? '(Click to collapse)' : '(Click to expand)'}</span>
-              </div>
-              <button 
-                className={`p-2 rounded-full bg-white border shadow-sm hover:bg-gray-50 transition-all transform ${isAdditionalDetailsExpanded ? 'rotate-180' : 'rotate-0'}`}
-                aria-label={isAdditionalDetailsExpanded ? 'Collapse section' : 'Expand section'}
-              >
-                <ChevronDown className="w-5 h-5 text-gray-600" />
-              </button>
-            </div>
-            <div className={`mt-4 transition-all duration-300 ease-in-out overflow-hidden ${isAdditionalDetailsExpanded ? 'opacity-100 max-h-[1000px]' : 'opacity-0 max-h-0'}`}>
-              <div className="grid grid-cols-3 sm:grid-cols-1 gap-6">
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-600">Verified by (Name)</label>
-                  <Input 
-                    className="w-full"
-                    placeholder="[Name of Immediate Supervisor]"
+          {/* Additional Details */}
+          <div className="px-5 py-4">
+            <SectionHeader
+              title="Verifier Details"
+              complete={isAdditionalDetailsComplete()}
+              expanded={isAdditionalDetailsExpanded}
+              onToggle={() => setIsAdditionalDetailsExpanded(!isAdditionalDetailsExpanded)}
+              badge={isAdditionalDetailsComplete() ? 'Complete' : 'Incomplete — required'}
+            />
+            <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isAdditionalDetailsExpanded ? 'max-h-[300px] opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-1">
+                <div className="space-y-1">
+                  <label className="block text-xs font-medium text-gray-500">Verified by — Name <span className="text-red-400">*</span></label>
+                  <Input
+                    className="h-9 text-sm"
+                    placeholder="Name of Immediate Supervisor"
                     value={verifiedBy.name}
                     onChange={(e) => setVerifiedBy({...verifiedBy, name: e.target.value})}
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-600">Verified by (Designation)</label>
-                  <Input 
-                    className="w-full"
-                    placeholder="Designation"
+                <div className="space-y-1">
+                  <label className="block text-xs font-medium text-gray-500">Verified by — Designation <span className="text-red-400">*</span></label>
+                  <Input
+                    className="h-9 text-sm"
+                    placeholder="e.g. Regional Director"
                     value={verifiedBy.designation}
                     onChange={(e) => setVerifiedBy({...verifiedBy, designation: e.target.value})}
                   />
@@ -818,253 +845,230 @@ function ActivityReport() {
           </div>
         </div>
 
+        {/* ── Report Preview ───────────────────────────────────────── */}
         {selectedPeriod && selectedMonth && selectedYear && (
-          <div className="bg-white rounded-xl shadow-lg p-8">
-            <div className="flex justify-between items-center mb-6 border-b pb-4">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+            {/* Preview header */}
+            <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-gray-100 sm:flex-col sm:items-start">
               <div>
-                <h2 className="text-2xl font-bold text-gray-800">Report Preview</h2>
-                <p className="text-sm text-gray-500 mt-1">Live preview - {totalPages} page{totalPages > 1 ? 's' : ''}</p>
+                <h2 className="font-semibold text-gray-800 text-sm">Report Preview</h2>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {totalPages} page{totalPages > 1 ? 's' : ''} · live
+                </p>
               </div>
               {activities.length > 0 && (
-                <div className="flex gap-2">
-                  <Button onClick={handleDARDownload} disabled={signing} className="gap-1">
-                    {signing
-                      ? <><LoaderIcon className="w-4 h-4 animate-spin" /> Signing…</>
-                      : <><FileDown className="w-4 h-4" />{pnpkiReady ? ' Save + PNPKI' : ' Download PDF'}</>}
-                  </Button>
+                <div className="flex gap-2 sm:w-full">
                   <Button
                     onClick={openPNPKISetup}
                     variant={pnpkiReady ? 'default' : 'outline'}
-                    className="gap-1"
+                    size="sm"
+                    className="gap-1.5 sm:flex-1"
                     title={pnpkiReady ? `PNPKI configured — ${pnpkiBaseConfig.fileName}` : 'Set up PNPKI digital signature'}
                   >
                     {pnpkiReady
-                      ? <><ShieldCheckIcon className="h-4 w-4 text-green-300" /> PNPKI ✓</>
-                      : <><KeyRoundIcon className="h-4 w-4 animate-bounce" /> PNPKI</>}
+                      ? <><ShieldCheckIcon className="h-3.5 w-3.5 text-green-300" /> PNPKI ✓</>
+                      : <><KeyRoundIcon className="h-3.5 w-3.5 animate-bounce" /> PNPKI</>}
+                  </Button>
+                  <Button
+                    onClick={handleDARDownload}
+                    disabled={signing}
+                    size="sm"
+                    className="gap-1.5 sm:flex-1"
+                  >
+                    {signing
+                      ? <><LoaderIcon className="w-3.5 h-3.5 animate-spin" /> Signing…</>
+                      : <><FileDown className="w-3.5 h-3.5" />{pnpkiReady ? 'Save + Sign' : 'Download PDF'}</>}
                   </Button>
                 </div>
               )}
             </div>
 
-            {paginatedActivities.map((pageActivities, pageIndex) => (
-              <div key={pageIndex} className="mb-8 border-2 border-gray-300 bg-white p-8 relative" style={{ minHeight: '11in', width: '8.5in', margin: '0 auto' }}>
-                <div className="absolute top-8 right-8 text-xs italic text-gray-600">
-                  AFD-HRM-AHR-009/r0/24Nov2025
-                </div>
+            {/* Paper pages */}
+            <div className="p-4 bg-gray-100 overflow-x-auto">
+              {paginatedActivities.map((pageActivities, pageIndex) => (
+                <div
+                  key={pageIndex}
+                  className="mb-6 bg-white shadow-md relative"
+                  style={{ width: '8.5in', minHeight: '11in', margin: '0 auto', padding: '0.75in 0.75in 1.2in' }}
+                >
+                  {/* AFP code */}
+                  <div className="absolute top-6 right-6 text-[10px] italic text-gray-400">
+                    AFD-HRM-AHR-009/r0/24Nov2025
+                  </div>
 
-                {pageIndex === 0 ? (
-                  <>
-                    <div className="text-center flex justify-center flex-col mb-6 border-b pb-4">
-                      <img src={DICT} className='h-[120px] mt-5 object-contain justify-center self-center' alt="" />
-                      <h1 className="text-xl font-bold mt-2">Accomplishment Report</h1>
-                      <p className="text-sm mt-1">{getDateRange()}</p>
-                    </div>
-
-                    <div className="mb-6 text-sm">
-                      <div className="grid grid-cols-2 gap-4 mb-2">
-                        <div className='  w-full flex gap-4  justify-start'>
-                          <span className="font-bold  ">Name</span>
-                        <span className=" w-full border-b font-bold border-dotted border-black pb-1">
-                          {userData.name || ''}
-                        </span>
-                        </div>
-
-                        <div className='  w-full flex gap-4  justify-start'>
-                          <span className="font-bold  ">Office</span>
-                        <span className=" w-full border-b font-bold border-dotted border-black pb-1">
-                          {getDepartmentName((() => { try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; } })().deptid)}
-                        </span>
-                        </div>
-                        
-                        <div className='  w-full flex gap-4  justify-start'>
-                          <span className="font-bold  ">Position</span>
-                        <span className=" w-full border-b font-bold border-dotted border-black pb-1">
-                          {userData.position || ''}
-                        </span>
-                        </div>
-                        
-                        
-                        <div className='  w-full flex gap-4  justify-start'>
-                          <span className="font-bold  ">Project</span>
-                        <span className=" w-full border-b font-bold border-dotted border-black pb-1">
-                          {userData.project || ''}
-                        </span>
-
-
-                        </div>
-                        
-                       
+                  {pageIndex === 0 ? (
+                    <>
+                      <div className="text-center flex flex-col items-center mb-5 pb-4 border-b border-gray-300">
+                        <img src={DICT} className="h-[110px] object-contain" alt="DICT" />
+                        <h1 className="text-lg font-bold mt-2">Accomplishment Report</h1>
+                        <p className="text-sm text-gray-600 mt-0.5">{getDateRange()}</p>
                       </div>
-                    </div>
 
-                    <div className="border border-black">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-black">
-                            <th className="border-r border-black px-2 py-2 text-left w-1/2">Duties and Responsibilities</th>
-                            <th className="px-2 py-2 text-left w-1/2">Actual Deliverables</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr className="border-b border-dotted border-gray-400">
-                            <td className="border-r border-dotted border-gray-400 px-4 py-4 whitespace-pre-wrap text-sm text-left align-top">
-                              {userData.duties || '(Consistent with the approved and submitted Terms of Reference)'}
-                            </td>   
-                            <td className="px-2 py-2">
-                              <div className="min-h-[30px]">
-                                {pageActivities.map((activity, actIndex) => (
-                                  <div key={actIndex} className="flex items-start gap-2 group mb-1">
-                                    <span>• {activity}</span>
-                                    <button
-                                      onClick={() => {
-                                        
-                                        const globalIndex = actIndex;
-                                        let currentCount = 0;
-                                        for (let i = 0; i < activities.length; i++) {
-                                          for (let j = 0; j < activities[i].activities.length; j++) {
-                                            if (currentCount === globalIndex) {
-                                              removeActivity(i, j);
-                                              return;
+                      <div className="mb-5 text-sm">
+                        <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+                          {[
+                            ['Name', userData.name],
+                            ['Office', getDepartmentName((() => { try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; } })().deptid)],
+                            ['Position', userData.position],
+                            ['Project', userData.project],
+                          ].map(([label, value]) => (
+                            <div key={label} className="flex gap-3 items-end">
+                              <span className="font-bold shrink-0 w-16">{label}</span>
+                              <span className="flex-1 border-b border-dotted border-black pb-0.5 font-semibold min-w-0 truncate">{value || ''}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="border border-black">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-black bg-gray-50">
+                              <th className="border-r border-black px-3 py-2 text-left w-1/2 font-semibold">Duties and Responsibilities</th>
+                              <th className="px-3 py-2 text-left w-1/2 font-semibold">Actual Deliverables</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td className="border-r border-dashed border-gray-400 px-3 py-3 whitespace-pre-wrap text-sm align-top">
+                                {userData.duties || '(Consistent with the approved and submitted Terms of Reference)'}
+                              </td>
+                              <td className="px-3 py-3 align-top">
+                                <div className="min-h-[40px]">
+                                  {pageActivities.map((activity, actIndex) => (
+                                    <div key={actIndex} className="flex items-start gap-1.5 group mb-1">
+                                      <span className="flex-1 text-sm">• {activity}</span>
+                                      <button
+                                        onClick={() => {
+                                          const globalIndex = actIndex;
+                                          let currentCount = 0;
+                                          for (let i = 0; i < activities.length; i++) {
+                                            for (let j = 0; j < activities[i].activities.length; j++) {
+                                              if (currentCount === globalIndex) { removeActivity(i, j); return; }
+                                              currentCount++;
                                             }
-                                            currentCount++;
                                           }
-                                        }
-                                      }}
-                                      className="text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        }}
+                                        className="text-red-400 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5"
+                                      >
+                                        <X className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                  {pageIndex === 0 && currentEditingDay !== 0 && (
+                                    <button
+                                      onClick={() => setCurrentEditingDay(0)}
+                                      className="flex items-center gap-1 text-blue-500 hover:text-blue-700 text-xs mt-2"
                                     >
-                                      <X className="w-3 h-3" />
+                                      <Plus className="w-3 h-3" /> Add activity
                                     </button>
-                                  </div>
-                                ))}
-                                {pageIndex === 0 && (
-                                  <button
-                                    onClick={() => setCurrentEditingDay(0)}
-                                    className="flex items-center gap-1 text-blue-600 hover:text-blue-700 text-xs mt-1"
-                                  >
-                                    <Plus className="w-3 h-3" />
-                                    Add activity
-                                  </button>
-                                )}
-                                {currentEditingDay === 0 && (
-                                  <div className="flex gap-1 mt-1">
-                                    <textarea
-                                      value={newActivity}
-                                      onChange={(e) => setNewActivity(e.target.value)}
-                                      placeholder="Type or paste multiple activities (each line will be a separate bullet point)"
-                                      className="flex-1 text-xs px-2 py-1 border rounded min-h-[100px]"
-                                      onKeyDown={(e) => {
-                                        if (e.key === 'Enter' && e.ctrlKey) {
-                                          e.preventDefault();
-                                          addActivity(0);
-                                        }
-                                      }}
-                                    />
-                                    <button 
-                                      onClick={() => addActivity(0)}
-                                      className="px-2 py-1 bg-blue-500 text-white rounded text-xs"
-                                    >
-                                      Add
-                                    </button>
-                                    <button 
-                                      onClick={() => {
-                                        setCurrentEditingDay(null);
-                                        setNewActivity('');
-                                      }}
-                                      className="px-2 py-1 border rounded text-xs"
-                                    >
-                                      Cancel
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="text-center mb-6 border-b pb-4">
-                      <h1 className="text-xl font-bold">Accomplishment Report (Continued)</h1>
-                      <p className="text-sm mt-1">{getDateRange()}</p>
-                    </div>
-
-                    <div className="border border-black">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-black">
-                            <th className="border-r border-black px-2 py-2 text-left w-1/2">Duties and Responsibilities</th>
-                            <th className="px-2 py-2 text-left w-1/2">Actual Deliverables</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr className="border-b border-dotted border-gray-400">
-                            <td className="border-r border-dotted border-gray-400 px-4 py-4 whitespace-pre-wrap text-sm text-left align-top">
-                              {userData.duties || '(Consistent with the approved and submitted Terms of Reference)'}
-                            </td>   
-                            <td className="px-2 py-2">
-                              <div className="min-h-[30px]">
+                                  )}
+                                  {currentEditingDay === 0 && (
+                                    <div className="mt-2 space-y-1.5">
+                                      <textarea
+                                        value={newActivity}
+                                        onChange={(e) => setNewActivity(e.target.value)}
+                                        placeholder="Type activities — each line becomes a bullet point. Ctrl+Enter to add."
+                                        className="w-full text-xs px-2 py-1.5 border border-gray-300 rounded min-h-[80px] focus:outline-none focus:border-blue-400"
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); addActivity(0); }
+                                        }}
+                                      />
+                                      <div className="flex gap-1">
+                                        <button onClick={() => addActivity(0)} className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs transition-colors">
+                                          Add
+                                        </button>
+                                        <button onClick={() => { setCurrentEditingDay(null); setNewActivity(''); }} className="px-3 py-1 border border-gray-300 hover:bg-gray-50 rounded text-xs transition-colors">
+                                          Cancel
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-center mb-5 pb-4 border-b border-gray-300">
+                        <h1 className="text-lg font-bold">Accomplishment Report (Continued)</h1>
+                        <p className="text-sm text-gray-600 mt-0.5">{getDateRange()}</p>
+                      </div>
+                      <div className="border border-black">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-black bg-gray-50">
+                              <th className="border-r border-black px-3 py-2 text-left w-1/2 font-semibold">Duties and Responsibilities</th>
+                              <th className="px-3 py-2 text-left w-1/2 font-semibold">Actual Deliverables</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td className="border-r border-dashed border-gray-400 px-3 py-3 whitespace-pre-wrap text-sm align-top">
+                                {userData.duties || '(Consistent with the approved and submitted Terms of Reference)'}
+                              </td>
+                              <td className="px-3 py-3 align-top">
                                 {pageActivities.map((activity, actIndex) => (
-                                  <div key={actIndex} className="flex items-start gap-2 group mb-1">
-                                    <span>• {activity}</span>
+                                  <div key={actIndex} className="flex items-start gap-1.5 group mb-1">
+                                    <span className="flex-1 text-sm">• {activity}</span>
                                     <button
                                       onClick={() => {
                                         const globalIndex = (pageIndex * 30) + actIndex;
                                         let currentCount = 0;
                                         for (let i = 0; i < activities.length; i++) {
                                           for (let j = 0; j < activities[i].activities.length; j++) {
-                                            if (currentCount === globalIndex) {
-                                              removeActivity(i, j);
-                                              return;
-                                            }
+                                            if (currentCount === globalIndex) { removeActivity(i, j); return; }
                                             currentCount++;
                                           }
                                         }
                                       }}
-                                      className="text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                      className="text-red-400 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5"
                                     >
                                       <X className="w-3 h-3" />
                                     </button>
                                   </div>
                                 ))}
-                              </div>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </>
-                )}
-
-                {pageIndex === totalPages - 1 && (
-                  <>
-                    <div className="mt-12 flex justify-between text-sm">
-                      <div>
-                        <p className="mb-8">Prepared by:</p>
-                        <div className="border-b border-black w-64 mb-1"></div>
-                        <p className="font-bold">{userData.name || '[Surname, First Name, MI]'}</p>
-                        <p className="italic text-xs">{userData.position || '[Do not abbreviate position]'}</p>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
-                      <div>
-                        <p className="mb-8">Verified by:</p>
-                        <div className="border-b border-black w-64 mb-1"></div>
-                        <p className="font-bold">{verifiedBy.name || '[Name of Immediate Supervisor]'}</p>
-                        <p className="italic text-xs">{verifiedBy.designation || 'Designation'}</p>
+                    </>
+                  )}
+
+                  {/* Signatures — last page only */}
+                  {pageIndex === totalPages - 1 && (
+                    <>
+                      <div className="mt-10 flex justify-between text-sm gap-4">
+                        <div>
+                          <p className="mb-8 text-gray-600">Prepared by:</p>
+                          <div className="border-b border-black w-56 mb-1" />
+                          <p className="font-bold">{userData.name || '[Surname, First Name, MI]'}</p>
+                          <p className="italic text-xs text-gray-600">{userData.position || '[Position]'}</p>
+                        </div>
+                        <div>
+                          <p className="mb-8 text-gray-600">Verified by:</p>
+                          <div className="border-b border-black w-56 mb-1" />
+                          <p className="font-bold">{verifiedBy.name || '[Supervisor Name]'}</p>
+                          <p className="italic text-xs text-gray-600">{verifiedBy.designation || 'Designation'}</p>
+                        </div>
                       </div>
-                    </div>
+                      <div className="mt-8 text-center">
+                        <p className="italic text-xs text-gray-400">— This is a system-generated file. —</p>
+                      </div>
+                    </>
+                  )}
 
-                    <div className="mt-10 text-center">
-                      <p className="italic text-xs">--- This is a system-generated file.---</p>
-                    </div>
-                  </>
-                )}
-
-                <div className="absolute bottom-8 right-8 text-xs text-gray-600">
-                  Page {pageIndex + 1} of {totalPages}
+                  {/* Page number */}
+                  <div className="absolute bottom-6 right-6 text-xs text-gray-400">
+                    Page {pageIndex + 1} of {totalPages}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
       </div>
