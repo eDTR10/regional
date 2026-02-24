@@ -266,7 +266,7 @@ const DARDocument = ({ activities, dateRange, name, position, project, verifiedB
                   <Text style={styles.label}>Name</Text>
                   <Text style={styles.infoValue}>{name || '[Surname, First Name, MI]'}</Text>
                   <Text style={[styles.label, { marginLeft: 20 }]}>Office</Text>
-                  <Text style={styles.infoValue}>{getDepartmentName(JSON.parse(localStorage.getItem('user') || "{}").deptid)}</Text>
+                  <Text style={styles.infoValue}>{getDepartmentName((() => { try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; } })().deptid)}</Text>
                 </View>
                 <View style={styles.infoRow}>
                   <Text style={styles.label}>Position</Text>
@@ -388,8 +388,8 @@ function ActivityReport() {
   };
 
   /** On save: push credentials back to shared store, coords to DAR store */
-  const handleSavePNPKIDar = (cfg: typeof pnpkiBaseConfig) => {
-    saveBaseConfig({
+  const handleSavePNPKIDar = async (cfg: typeof pnpkiBaseConfig) => {
+    await saveBaseConfig({
       ...pnpkiBaseConfig,
       p12Base64:         cfg.p12Base64,
       fileName:          cfg.fileName,
@@ -399,7 +399,7 @@ function ActivityReport() {
       signImageFileName: cfg.signImageFileName,
       enabled:           cfg.enabled,
     });
-    saveDarConfig({
+    await saveDarConfig({
       ...pnpkiDarConfig,
       xRatio: cfg.xRatio,
       yRatio: cfg.yRatio,
@@ -645,11 +645,15 @@ function ActivityReport() {
       }
     }
 
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(finalBlob);
-    link.download = downloadName;
-    link.click();
-    URL.revokeObjectURL(link.href);
+    const objectUrl = URL.createObjectURL(finalBlob);
+    try {
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = downloadName;
+      link.click();
+    } finally {
+      URL.revokeObjectURL(objectUrl);
+    }
   };
 
   const getPaginatedActivities = () => {
@@ -883,7 +887,7 @@ function ActivityReport() {
                         <div className='  w-full flex gap-4  justify-start'>
                           <span className="font-bold  ">Office</span>
                         <span className=" w-full border-b font-bold border-dotted border-black pb-1">
-                          {getDepartmentName(JSON.parse(localStorage.getItem('user')||"{}").deptid)}
+                          {getDepartmentName((() => { try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; } })().deptid)}
                         </span>
                         </div>
                         

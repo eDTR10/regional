@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { encryptString, decryptString } from './cryptoUtils';
 
 export interface PNPKIConfig {
   enabled: boolean;
@@ -39,23 +40,32 @@ const STORAGE_KEY = 'pnpki_config';
 export function usePNPKI(storageKey: string = STORAGE_KEY, defaultOverrides: Partial<PNPKIConfig> = {}) {
   const defaults: PNPKIConfig = { ...DEFAULT_PNPKI_CONFIG, ...defaultOverrides };
 
-  const [config, setConfig] = useState<PNPKIConfig>(() => {
-    try {
-      const raw = localStorage.getItem(storageKey);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        return { ...defaults, ...parsed };
-      }
-    } catch {
-      // ignore
-    }
-    return defaults;
-  });
+  const [config, setConfig] = useState<PNPKIConfig>(defaults);
 
-  const saveConfig = (next: PNPKIConfig) => {
+  useEffect(() => {
+    (async () => {
+      try {
+        const raw = localStorage.getItem(storageKey);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed.p12Base64) parsed.p12Base64 = await decryptString(parsed.p12Base64);
+          if (parsed.password)  parsed.password  = await decryptString(parsed.password);
+          setConfig({ ...defaults, ...parsed });
+        }
+      } catch {
+        // ignore
+      }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storageKey]);
+
+  const saveConfig = async (next: PNPKIConfig): Promise<void> => {
     setConfig(next);
     try {
-      localStorage.setItem(storageKey, JSON.stringify(next));
+      const toStore = { ...next };
+      if (toStore.p12Base64) toStore.p12Base64 = await encryptString(toStore.p12Base64);
+      if (toStore.password)  toStore.password  = await encryptString(toStore.password);
+      localStorage.setItem(storageKey, JSON.stringify(toStore));
     } catch {
       // storage quota exceeded — silently ignore
     }

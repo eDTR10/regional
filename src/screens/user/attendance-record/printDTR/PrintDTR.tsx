@@ -125,11 +125,15 @@ export default function PrintDTR({name = '', data, date, show, selectedYear, sel
     }
 
     // Trigger download
-    const downloadLink = document.createElement('a');
-    downloadLink.href = URL.createObjectURL(finalBlob);
-    downloadLink.download = downloadName;
-    downloadLink.click();
-    URL.revokeObjectURL(downloadLink.href);
+    const objectUrl = URL.createObjectURL(finalBlob);
+    try {
+      const downloadLink = document.createElement('a');
+      downloadLink.href = objectUrl;
+      downloadLink.download = downloadName;
+      downloadLink.click();
+    } finally {
+      URL.revokeObjectURL(objectUrl);
+    }
   };
   
   
