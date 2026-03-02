@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from './../../../plugin/axios';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Page, Text, View, Document, StyleSheet, Font, Image, pdf } from '@react-pdf/renderer';
-import { Plus, X, FileDown, ChevronDown, KeyRoundIcon, LoaderIcon, ShieldCheckIcon } from 'lucide-react';
+import { FileDown, ChevronDown, KeyRoundIcon, LoaderIcon, ShieldCheckIcon, List, ListOrdered, Type, Minus } from 'lucide-react';
 
 import DICT from './../../../assets/dict.png';
 import { getDepartmentName } from '@/helper/department';
@@ -52,12 +52,20 @@ const styles = StyleSheet.create({
     fontSize: 9,
   },
   footerLeft: {
-    textAlign: 'left',
+    textAlign: 'left' as const,
     width: '40%',
   },
+  footerCenter: {
+    textAlign: 'center' as const,
+    alignSelf: 'flex-end' as const,
+    flex: 1,
+    fontSize: 7,
+    fontStyle: 'italic' as const,
+    color: '#00008b',
+  },
   footerRight: {
-    textAlign: 'right',
-    width: '60%',
+    textAlign: 'right' as const,
+    width: '40%',
   },
   footerLink: {
     // Styling for the DICT link/contact part
@@ -286,7 +294,7 @@ const DARDocument = ({ activities, dateRange, name, position, project, verifiedB
                   <Text style={styles.dutiesCell}>{duties || '(Consistent with the approved and submitted Terms of Reference)'}</Text>
                   <View style={styles.activityCell}>
                     {pageActivities.map((act: string, i: number) => (
-                      <Text key={i} style={styles.activityItem}>• {act}</Text>
+                      <Text key={i} style={styles.activityItem}>{act}</Text>
                     ))}
                   </View>
                 </View>
@@ -310,7 +318,7 @@ const DARDocument = ({ activities, dateRange, name, position, project, verifiedB
                   <Text style={styles.dutiesCell}>{duties || '(Consistent with the approved and submitted Terms of Reference)'}</Text>
                   <View style={styles.activityCell}>
                     {pageActivities.map((act: string, i: number) => (
-                      <Text key={i} style={styles.activityItem}>• {act}</Text>
+                      <Text key={i} style={styles.activityItem}>{act}</Text>
                     ))}
                   </View>
                 </View>
@@ -333,10 +341,6 @@ const DARDocument = ({ activities, dateRange, name, position, project, verifiedB
                   <Text style={styles.signatureTitle}>{verifiedBy.designation || 'Designation'}</Text>
                 </View>
               </View>
-
-              <View style={styles.footer}>
-                <Text style={styles.footerText}>--- This is a system-generated file.---</Text>
-              </View>
             </>
           )}
 
@@ -346,6 +350,9 @@ const DARDocument = ({ activities, dateRange, name, position, project, verifiedB
               <Text>DICT Regional Office X,</Text>
               <Text>Carmen, Cagayan de Oro City 9000</Text>
               <Text>Philippines</Text>
+            </View>
+            <View style={styles.footerCenter}>
+              <Text>--- This is a system-generated file. ---</Text>
             </View>
             <View style={styles.footerRight}>
               <Text style={styles.footerLink}>https://www.dict.gov.ph</Text>
@@ -396,6 +403,77 @@ function ActivityReport() {
 
   const handleClearPNPKIDar = () => { clearBaseConfig(); clearDarConfig(); };
 
+  // ── Textarea helpers ──────────────────────────────────────────────
+  const dutiesRef = useRef<HTMLTextAreaElement>(null);
+  const [dutiesFontSize, setDutiesFontSize] = useState(13);
+  const deliverableRef = useRef<HTMLTextAreaElement>(null);
+  const [deliverablesFontSize, setDeliverablesFontSize] = useState(13);
+
+  const autoGrowDeliverable = () => {
+    const ta = deliverableRef.current;
+    if (!ta) return;
+    ta.style.height = 'auto';
+    ta.style.height = ta.scrollHeight + 'px';
+  };
+
+  const insertAtDeliverableLines = (prefix: (i: number, line: string) => string) => {
+    const ta = deliverableRef.current;
+    if (!ta) return;
+    const { selectionStart: s, selectionEnd: e, value: text } = ta;
+    if (s === e) {
+      const lineStart = text.lastIndexOf('\n', s - 1) + 1;
+      const lineText = text.slice(lineStart);
+      const applied = prefix(0, '');
+      if (lineText.startsWith(applied)) {
+        setUserData((d: typeof userData) => ({ ...d, deliverables: text.slice(0, lineStart) + lineText.slice(applied.length) }));
+      } else {
+        setUserData((d: typeof userData) => ({ ...d, deliverables: text.slice(0, lineStart) + applied + lineText }));
+      }
+    } else {
+      const selected = text.slice(s, e);
+      const lines = selected.split('\n');
+      const allHavePrefix = lines.every((line, i) => line.startsWith(prefix(i, '')));
+      const replaced = allHavePrefix
+        ? lines.map((line, i) => line.slice(prefix(i, '').length)).join('\n')
+        : lines.map((line, i) => line.startsWith(prefix(i, '')) ? line : prefix(i, '') + line).join('\n');
+      setUserData((d: typeof userData) => ({ ...d, deliverables: text.slice(0, s) + replaced + text.slice(e) }));
+    }
+    setTimeout(() => ta.focus(), 0);
+  };
+
+  const insertAtLines = (prefix: (i: number, line: string) => string) => {
+    const ta = dutiesRef.current;
+    if (!ta) return;
+    const { selectionStart: s, selectionEnd: e, value: text } = ta;
+
+    if (s === e) {
+      // Single line — toggle
+      const lineStart = text.lastIndexOf('\n', s - 1) + 1;
+      const lineText = text.slice(lineStart);
+      const applied = prefix(0, '');
+      if (lineText.startsWith(applied)) {
+        // Remove prefix
+        const newText = text.slice(0, lineStart) + lineText.slice(applied.length);
+        setUserData((d: typeof userData) => ({ ...d, duties: newText }));
+      } else {
+        // Add prefix
+        const newText = text.slice(0, lineStart) + applied + lineText;
+        setUserData((d: typeof userData) => ({ ...d, duties: newText }));
+      }
+    } else {
+      const selected = text.slice(s, e);
+      const lines = selected.split('\n');
+      // If ALL lines already have the prefix → remove; otherwise add
+      const allHavePrefix = lines.every((line, i) => line.startsWith(prefix(i, '')));
+      const replaced = allHavePrefix
+        ? lines.map((line, i) => line.slice(prefix(i, '').length)).join('\n')
+        : lines.map((line, i) => line.startsWith(prefix(i, '')) ? line : prefix(i, '') + line).join('\n');
+      const newText = text.slice(0, s) + replaced + text.slice(e);
+      setUserData((d: typeof userData) => ({ ...d, duties: newText }));
+    }
+    setTimeout(() => ta.focus(), 0);
+  };
+
   const [pnpkiOpen, setPnpkiOpen] = useState(false);
   const [signing, setSigning] = useState(false);
   const [previewPdfBlob, setPreviewPdfBlob] = useState<Blob | null>(null);
@@ -405,28 +483,35 @@ function ActivityReport() {
     return !!userData.name && !!userData.position && !!userData.duties;
   };
 
+  const isDeliverablesComplete = () => !!userData.deliverables;
+
   const isAdditionalDetailsComplete = () => {
     return !!verifiedBy.name && !!verifiedBy.designation;
   };
   
-  const [_attendanceData, setAttendanceData] = useState<any>(null);
-  const [activities, setActivities] = useState<Array<{
-    date: string;
-    day: string;
-    activities: string[];
-    remarks: string;
-  }>>([]);
-  const [newActivity, setNewActivity] = useState('');
-  const [currentEditingDay, setCurrentEditingDay] = useState<number | null>(null);
   const [userData, setUserData] = useState(() => {
     const saved = localStorage.getItem('userDAR');
     return saved ? JSON.parse(saved) : {
       name: '',
       position: '',
       project: '',
-      duties: ''
+      duties: '',
+      deliverables: ''
     };
   });
+
+  const autoGrowDuties = () => {
+    const ta = dutiesRef.current;
+    if (!ta) return;
+    ta.style.height = 'auto';
+    ta.style.height = ta.scrollHeight + 'px';
+  };
+
+  // Auto-grow textareas whenever content or font size changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { autoGrowDuties(); }, [userData.duties, dutiesFontSize]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { autoGrowDeliverable(); }, [userData.deliverables, deliverablesFontSize]);
   const [verifiedBy, setVerifiedBy] = useState(() => {
     const saved = localStorage.getItem('verifierDAR');
     return saved ? JSON.parse(saved) : {
@@ -437,6 +522,11 @@ function ActivityReport() {
 
   const [isPersonalInfoExpanded, setIsPersonalInfoExpanded] = useState(() => {
     const saved = localStorage.getItem('personalInfoExpanded');
+    return saved ? JSON.parse(saved) : true;
+  });
+
+  const [isDeliverablesExpanded, setIsDeliverablesExpanded] = useState(() => {
+    const saved = localStorage.getItem('deliverablesExpanded');
     return saved ? JSON.parse(saved) : true;
   });
 
@@ -458,120 +548,60 @@ function ActivityReport() {
   }, [isPersonalInfoExpanded]);
 
   useEffect(() => {
+    localStorage.setItem('deliverablesExpanded', JSON.stringify(isDeliverablesExpanded));
+  }, [isDeliverablesExpanded]);
+
+  useEffect(() => {
     localStorage.setItem('additionalDetailsExpanded', JSON.stringify(isAdditionalDetailsExpanded));
   }, [isAdditionalDetailsExpanded]);
 
-  const fetchAttendanceData = async (fromDate: string, toDate: string) => {
-    try {
-      console.log('Fetching attendance data for:', { fromDate, toDate });
-      const response = await axios.post(
-        `checkinoutregion/user_filter_by_user_date/`,
-        { fromDate, toDate },
-        {
-          headers: {
-            Authorization: `Token ${localStorage.getItem('accessToken')}`,
-          },
-        }
-      );
-      console.log('Attendance API response:', response.data);
-      setAttendanceData(response.data);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching attendance data:', error);
-      return null;
-    }
-  };
-
-  const initializePeriodActivities = async (period: string, month: string, year: string) => {
+  const fetchAndPopulateDeliverables = async (period: string, month: string, year: string) => {
     if (!period || !month || !year) return;
-    
-    console.log('Initializing activities for:', { period, month, year });
-    
     const monthIndex = parseInt(month) - 1;
     const yearInt = parseInt(year);
-    const newActivities = [];
-    
     let startDay = 1;
     let endDay = 15;
-    
     if (period === '16-31') {
       startDay = 16;
       endDay = new Date(yearInt, monthIndex + 1, 0).getDate();
     }
-
-    const fromDate = `${yearInt}-${(monthIndex + 1).toString().padStart(2, '0')}-${startDay.toString().padStart(2, '0')}`;
-    const toDate = `${yearInt}-${(monthIndex + 1).toString().padStart(2, '0')}-${endDay.toString().padStart(2, '0')}`;
-    
-    const data = await fetchAttendanceData(fromDate, toDate);
-    
-    for (let i = startDay; i <= endDay; i++) {
-      const date = new Date(yearInt, monthIndex, i);
-      const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
-      const currentDate = `${yearInt}-${(monthIndex + 1).toString().padStart(2, '0')}-${i.toString().padStart(2, '0')}`;
-      
-      const activities = [];
-      
-      const holiday = data?.holidays?.find((h:any) => h.fromDate === currentDate);
-      if (holiday) {
-        activities.push(`Holiday: ${holiday.description}`);
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const fromDate = `${yearInt}-${pad(monthIndex + 1)}-${pad(startDay)}`;
+    const toDate = `${yearInt}-${pad(monthIndex + 1)}-${pad(endDay)}`;
+    try {
+      const response = await axios.post(
+        `checkinoutregion/user_filter_by_user_date/`,
+        { fromDate, toDate },
+        { headers: { Authorization: `Token ${localStorage.getItem('accessToken')}` } }
+      );
+      const data = response.data;
+      const lines: string[] = [];
+      for (let i = startDay; i <= endDay; i++) {
+        const currentDate = `${yearInt}-${pad(monthIndex + 1)}-${pad(i)}`;
+        const holiday = data?.holidays?.find((h: any) => h.fromDate === currentDate);
+        if (holiday) { lines.push(`• Holiday: ${holiday.description}`); continue; }
+        const activity = data?.activities?.find((a: any) => a.fromDate === currentDate);
+        if (activity) { lines.push(`• ${activity.description}`); }
       }
-      
-      const activity = data?.activities?.find((a:any) => a.fromDate === currentDate);
-      if (activity && !holiday) {
-        activities.push(`${activity.description}`);
+      if (lines.length > 0) {
+        setUserData((d: typeof userData) => ({ ...d, deliverables: lines.join('\n') }));
       }
-      
-      newActivities.push({
-        date: i.toString(),
-        day: dayName,
-        activities: activities,
-        remarks: holiday || activity ? 'Official Holiday/Activity' : ''
-      });
+    } catch (error) {
+      console.error('Error fetching activities:', error);
     }
-    
-    console.log('Setting activities:', newActivities);
-    setActivities(newActivities);
   };
 
   const handlePeriodChange = (value: string) => {
     setSelectedPeriod(value);
-    if (selectedMonth && selectedYear) {
-      initializePeriodActivities(value, selectedMonth, selectedYear);
-    }
+    if (selectedMonth && selectedYear) fetchAndPopulateDeliverables(value, selectedMonth, selectedYear);
   };
-
   const handleMonthChange = (value: string) => {
     setSelectedMonth(value);
-    if (selectedPeriod && selectedYear) {
-      initializePeriodActivities(selectedPeriod, value, selectedYear);
-    }
+    if (selectedPeriod && selectedYear) fetchAndPopulateDeliverables(selectedPeriod, value, selectedYear);
   };
-
   const handleYearChange = (value: string) => {
     setSelectedYear(value);
-    if (selectedPeriod && selectedMonth) {
-      initializePeriodActivities(selectedPeriod, selectedMonth, value);
-    }
-  };
-
-  const addActivity = (dayIndex: number) => {
-    if (!newActivity.trim()) return;
-
-    const updatedActivities = [...activities];
-    const activityLines = newActivity
-      .split('\n')
-      .map(line => line.trim())
-      .filter(line => line.length > 0);
-    
-    updatedActivities[dayIndex].activities.push(...activityLines);
-    setActivities(updatedActivities);
-    setNewActivity('');
-  };
-
-  const removeActivity = (dayIndex: number, activityIndex: number) => {
-    const updatedActivities = [...activities];
-    updatedActivities[dayIndex].activities.splice(activityIndex, 1);
-    setActivities(updatedActivities);
+    if (selectedPeriod && selectedMonth) fetchAndPopulateDeliverables(selectedPeriod, selectedMonth, value);
   };
 
   const getDateRange = () => {
@@ -580,9 +610,11 @@ function ActivityReport() {
     return `${monthName} ${selectedPeriod},  ${selectedYear}`;
   };
 
+  const deliverableLines = (userData.deliverables || '').split('\n').filter((l: string) => l.trim());
+
   const getDARDoc = () => (
     <DARDocument
-      activities={activities}
+      activities={[{ date: '1', day: 'Mon', activities: deliverableLines, remarks: '' }]}
       dateRange={getDateRange()}
       name={userData.name}
       position={userData.position}
@@ -642,14 +674,11 @@ function ActivityReport() {
   };
 
   const getPaginatedActivities = () => {
-    const allActivities = activities.flatMap(day => day.activities);
     const ITEMS_PER_PAGE = 30;
     const pages: string[][] = [];
-    
-    for (let i = 0; i < allActivities.length; i += ITEMS_PER_PAGE) {
-      pages.push(allActivities.slice(i, i + ITEMS_PER_PAGE));
+    for (let i = 0; i < deliverableLines.length; i += ITEMS_PER_PAGE) {
+      pages.push(deliverableLines.slice(i, i + ITEMS_PER_PAGE));
     }
-    
     return pages.length > 0 ? pages : [[]];
   };
 
@@ -768,7 +797,7 @@ function ActivityReport() {
               onToggle={() => setIsPersonalInfoExpanded(!isPersonalInfoExpanded)}
               badge={isPersonalInfoComplete() ? 'Complete' : 'Incomplete — required'}
             />
-            <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isPersonalInfoExpanded ? 'max-h-[600px] opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
+            <div className={`transition-all duration-300 ease-in-out ${isPersonalInfoExpanded ? 'max-h-[2000px] opacity-100 mt-4 overflow-visible' : 'max-h-0 opacity-0 overflow-hidden'}`}>
               <div className="grid grid-cols-3 gap-3 mb-3 sm:grid-cols-1">
                 <div className="space-y-1">
                   <label className="block text-xs font-medium text-gray-500">Name <span className="text-red-400">*</span></label>
@@ -800,18 +829,105 @@ function ActivityReport() {
               </div>
               <div className="space-y-1">
                 <label className="block text-xs font-medium text-gray-500">Duties and Responsibilities <span className="text-red-400">*</span></label>
-                <textarea
-                  className="w-full px-3 py-2 border border-input rounded-md text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-0 bg-background"
-                  placeholder="Enter your duties and responsibilities (consistent with approved Terms of Reference)"
-                  rows={3}
-                  value={userData.duties}
-                  onChange={(e) => setUserData({...userData, duties: e.target.value})}
-                />
+                <div className="border border-input rounded-md overflow-hidden focus-within:ring-2 focus-within:ring-ring bg-background">
+                  {/* Toolbar */}
+                  <div className="flex items-center gap-0.5 px-2 py-1 bg-gray-50 border-b border-input">
+                    <button type="button" title="Bullet list (• )" onClick={() => insertAtLines(() => '• ')}
+                      className="p-1 rounded hover:bg-gray-200 text-gray-600 transition-colors">
+                      <List className="w-3.5 h-3.5" />
+                    </button>
+                    <button type="button" title="Numbered list" onClick={() => insertAtLines((i) => `${i + 1}. `)}
+                      className="p-1 rounded hover:bg-gray-200 text-gray-600 transition-colors">
+                      <ListOrdered className="w-3.5 h-3.5" />
+                    </button>
+                    <button type="button" title="Dash list" onClick={() => insertAtLines(() => '- ')}
+                      className="p-1 rounded hover:bg-gray-200 text-gray-600 transition-colors">
+                      <Minus className="w-3.5 h-3.5" />
+                    </button>
+                    <div className="w-px h-4 bg-gray-300 mx-1" />
+                    <Type className="w-3 h-3 text-gray-400" />
+                    <button type="button" title="Decrease font size"
+                      onClick={() => setDutiesFontSize(s => Math.max(10, s - 1))}
+                      className="px-1.5 py-0.5 rounded hover:bg-gray-200 text-gray-600 text-xs font-mono leading-none transition-colors">
+                      A−
+                    </button>
+                    <span className="text-[10px] text-gray-400 font-mono w-5 text-center select-none">{dutiesFontSize}</span>
+                    <button type="button" title="Increase font size"
+                      onClick={() => setDutiesFontSize(s => Math.min(20, s + 1))}
+                      className="px-1.5 py-0.5 rounded hover:bg-gray-200 text-gray-600 text-xs font-mono leading-none transition-colors">
+                      A+
+                    </button>
+                  </div>
+                  <textarea
+                    ref={dutiesRef}
+                    className="w-full px-3 py-2 focus:outline-none bg-background overflow-hidden resize-none"
+                    style={{ fontSize: dutiesFontSize, minHeight: 80 }}
+                    placeholder="Enter your duties and responsibilities (consistent with approved Terms of Reference)"
+                    rows={4}
+                    value={userData.duties}
+                    onChange={(e) => setUserData({...userData, duties: e.target.value})}
+                  />
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Additional Details */}
+          {/* Actual Deliverables */}
+          <div className="px-5 py-4 border-b border-gray-100">
+            <SectionHeader
+              title="Actual Deliverables"
+              complete={isDeliverablesComplete()}
+              expanded={isDeliverablesExpanded}
+              onToggle={() => setIsDeliverablesExpanded(!isDeliverablesExpanded)}
+              badge={isDeliverablesComplete() ? 'Complete' : 'Incomplete — required'}
+            />
+            <div className={`transition-all duration-300 ease-in-out ${isDeliverablesExpanded ? 'max-h-[2000px] opacity-100 mt-4 overflow-visible' : 'max-h-0 opacity-0 overflow-hidden'}`}>
+              <div className="space-y-1">
+                <label className="block text-xs font-medium text-gray-500">Actual Deliverables <span className="text-red-400">*</span></label>
+                <div className="border border-input rounded-md overflow-hidden focus-within:ring-2 focus-within:ring-ring bg-background">
+                  {/* Toolbar */}
+                  <div className="flex items-center gap-0.5 px-2 py-1 bg-gray-50 border-b border-input">
+                    <button type="button" title="Bullet list (• )" onClick={() => insertAtDeliverableLines(() => '• ')}
+                      className="p-1 rounded hover:bg-gray-200 text-gray-600 transition-colors">
+                      <List className="w-3.5 h-3.5" />
+                    </button>
+                    <button type="button" title="Numbered list" onClick={() => insertAtDeliverableLines((i) => `${i + 1}. `)}
+                      className="p-1 rounded hover:bg-gray-200 text-gray-600 transition-colors">
+                      <ListOrdered className="w-3.5 h-3.5" />
+                    </button>
+                    <button type="button" title="Dash list" onClick={() => insertAtDeliverableLines(() => '- ')}
+                      className="p-1 rounded hover:bg-gray-200 text-gray-600 transition-colors">
+                      <Minus className="w-3.5 h-3.5" />
+                    </button>
+                    <div className="w-px h-4 bg-gray-300 mx-1" />
+                    <Type className="w-3 h-3 text-gray-400" />
+                    <button type="button" title="Decrease font size"
+                      onClick={() => setDeliverablesFontSize(s => Math.max(10, s - 1))}
+                      className="px-1.5 py-0.5 rounded hover:bg-gray-200 text-gray-600 text-xs font-mono leading-none transition-colors">
+                      A−
+                    </button>
+                    <span className="text-[10px] text-gray-400 font-mono w-5 text-center select-none">{deliverablesFontSize}</span>
+                    <button type="button" title="Increase font size"
+                      onClick={() => setDeliverablesFontSize(s => Math.min(20, s + 1))}
+                      className="px-1.5 py-0.5 rounded hover:bg-gray-200 text-gray-600 text-xs font-mono leading-none transition-colors">
+                      A+
+                    </button>
+                  </div>
+                  <textarea
+                    ref={deliverableRef}
+                    className="w-full px-3 py-2 focus:outline-none bg-background overflow-hidden resize-none"
+                    style={{ fontSize: deliverablesFontSize, minHeight: 80 }}
+                    placeholder="Enter your actual deliverables — each line becomes a separate item in the report"
+                    rows={4}
+                    value={userData.deliverables || ''}
+                    onChange={(e) => setUserData({...userData, deliverables: e.target.value})}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Verifier Details */}
           <div className="px-5 py-4">
             <SectionHeader
               title="Verifier Details"
@@ -856,7 +972,7 @@ function ActivityReport() {
                   {totalPages} page{totalPages > 1 ? 's' : ''} · live
                 </p>
               </div>
-              {activities.length > 0 && (
+              {true && (
                 <div className="flex gap-2 sm:w-full">
                   <Button
                     onClick={openPNPKISetup}
@@ -930,60 +1046,16 @@ function ActivityReport() {
                           </thead>
                           <tbody>
                             <tr>
-                              <td className="border-r border-dashed border-gray-400 px-3 py-3 whitespace-pre-wrap text-sm align-top">
+                              <td className="border-r border-dashed border-gray-400 px-3 py-3 whitespace-pre-wrap align-top" style={{ fontSize: dutiesFontSize }}>
                                 {userData.duties || '(Consistent with the approved and submitted Terms of Reference)'}
                               </td>
                               <td className="px-3 py-3 align-top">
                                 <div className="min-h-[40px]">
                                   {pageActivities.map((activity, actIndex) => (
-                                    <div key={actIndex} className="flex items-start gap-1.5 group mb-1">
-                                      <span className="flex-1 text-sm">• {activity}</span>
-                                      <button
-                                        onClick={() => {
-                                          const globalIndex = actIndex;
-                                          let currentCount = 0;
-                                          for (let i = 0; i < activities.length; i++) {
-                                            for (let j = 0; j < activities[i].activities.length; j++) {
-                                              if (currentCount === globalIndex) { removeActivity(i, j); return; }
-                                              currentCount++;
-                                            }
-                                          }
-                                        }}
-                                        className="text-red-400 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5"
-                                      >
-                                        <X className="w-3 h-3" />
-                                      </button>
+                                    <div key={actIndex} className="mb-1">
+                                      <span style={{ fontSize: deliverablesFontSize }}>{activity}</span>
                                     </div>
                                   ))}
-                                  {pageIndex === 0 && currentEditingDay !== 0 && (
-                                    <button
-                                      onClick={() => setCurrentEditingDay(0)}
-                                      className="flex items-center gap-1 text-blue-500 hover:text-blue-700 text-xs mt-2"
-                                    >
-                                      <Plus className="w-3 h-3" /> Add activity
-                                    </button>
-                                  )}
-                                  {currentEditingDay === 0 && (
-                                    <div className="mt-2 space-y-1.5">
-                                      <textarea
-                                        value={newActivity}
-                                        onChange={(e) => setNewActivity(e.target.value)}
-                                        placeholder="Type activities — each line becomes a bullet point. Ctrl+Enter to add."
-                                        className="w-full text-xs px-2 py-1.5 border border-gray-300 rounded min-h-[80px] focus:outline-none focus:border-blue-400"
-                                        onKeyDown={(e) => {
-                                          if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); addActivity(0); }
-                                        }}
-                                      />
-                                      <div className="flex gap-1">
-                                        <button onClick={() => addActivity(0)} className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs transition-colors">
-                                          Add
-                                        </button>
-                                        <button onClick={() => { setCurrentEditingDay(null); setNewActivity(''); }} className="px-3 py-1 border border-gray-300 hover:bg-gray-50 rounded text-xs transition-colors">
-                                          Cancel
-                                        </button>
-                                      </div>
-                                    </div>
-                                  )}
                                 </div>
                               </td>
                             </tr>
@@ -1007,28 +1079,13 @@ function ActivityReport() {
                           </thead>
                           <tbody>
                             <tr>
-                              <td className="border-r border-dashed border-gray-400 px-3 py-3 whitespace-pre-wrap text-sm align-top">
+                              <td className="border-r border-dashed border-gray-400 px-3 py-3 whitespace-pre-wrap align-top" style={{ fontSize: dutiesFontSize }}>
                                 {userData.duties || '(Consistent with the approved and submitted Terms of Reference)'}
                               </td>
                               <td className="px-3 py-3 align-top">
                                 {pageActivities.map((activity, actIndex) => (
-                                  <div key={actIndex} className="flex items-start gap-1.5 group mb-1">
-                                    <span className="flex-1 text-sm">• {activity}</span>
-                                    <button
-                                      onClick={() => {
-                                        const globalIndex = (pageIndex * 30) + actIndex;
-                                        let currentCount = 0;
-                                        for (let i = 0; i < activities.length; i++) {
-                                          for (let j = 0; j < activities[i].activities.length; j++) {
-                                            if (currentCount === globalIndex) { removeActivity(i, j); return; }
-                                            currentCount++;
-                                          }
-                                        }
-                                      }}
-                                      className="text-red-400 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5"
-                                    >
-                                      <X className="w-3 h-3" />
-                                    </button>
+                                  <div key={actIndex} className="mb-1">
+                                    <span style={{ fontSize: deliverablesFontSize }}>{activity}</span>
                                   </div>
                                 ))}
                               </td>
@@ -1056,15 +1113,13 @@ function ActivityReport() {
                           <p className="italic text-xs text-gray-600">{verifiedBy.designation || 'Designation'}</p>
                         </div>
                       </div>
-                      <div className="mt-8 text-center">
-                        <p className="italic text-xs text-gray-400">— This is a system-generated file. —</p>
-                      </div>
                     </>
                   )}
 
-                  {/* Page number */}
-                  <div className="absolute bottom-6 right-6 text-xs text-gray-400">
-                    Page {pageIndex + 1} of {totalPages}
+                  {/* Page footer — always visible */}
+                  <div className="absolute bottom-6 left-0 right-0 px-6 flex items-end justify-between text-[10px] text-gray-400">
+                    <span className="italic">— This is a system-generated file. —</span>
+                    <span>Page {pageIndex + 1} of {totalPages}</span>
                   </div>
                 </div>
               ))}
