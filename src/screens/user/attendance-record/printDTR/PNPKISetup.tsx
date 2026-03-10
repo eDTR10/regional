@@ -101,15 +101,19 @@ function SigCanvas({
   sigFontSize = 10, sigFontFamily = 'Arial, sans-serif', sigTextColor = '#1e3a5f',
 }: CanvasProps) {
   const containerRef  = useRef<HTMLDivElement>(null);
+  const stageRef      = useRef<HTMLDivElement>(null);
   const bgCanvasRef   = useRef<HTMLCanvasElement>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [pdfReady,   setPdfReady]   = useState(false);
-  // Track container height so font scales proportionally to the sig box
-  const [containerH, setContainerH] = useState(0);
+
+  // Keep stage size in sync with responsive layout so preview math always matches output.
+  const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
   useEffect(() => {
-    const el = containerRef.current;
+    const el = stageRef.current;
     if (!el) return;
-    const ro = new ResizeObserver((entries) => setContainerH(entries[0].contentRect.height));
+    const update = () => setStageSize({ width: el.clientWidth, height: el.clientHeight });
+    update();
+    const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
@@ -123,6 +127,7 @@ function SigCanvas({
   // ── render PDF page onto background canvas ────────────────────────────────
   useEffect(() => {
     if (!pdfBlob) { setPdfReady(false); return; }
+    if (!stageSize.width) return;
     let cancelled = false;
     setPdfLoading(true);
     setPdfReady(false);
@@ -140,7 +145,7 @@ function SigCanvas({
         const canvas = bgCanvasRef.current;
         if (!canvas) return;
 
-        const containerW = containerRef.current?.clientWidth || 420;
+        const containerW = stageSize.width || stageRef.current?.clientWidth || 420;
         const raw        = pg.getViewport({ scale: 1 });
         const scale      = containerW / raw.width;
         const vp         = pg.getViewport({ scale });
@@ -159,7 +164,7 @@ function SigCanvas({
     })();
 
     return () => { cancelled = true; };
-  }, [pdfBlob, pageNum]);
+  }, [pdfBlob, pageNum, stageSize.width]);
 
   // ── drag / resize ─────────────────────────────────────────────────────────
   const onMouseDownBox = useCallback(
@@ -196,11 +201,16 @@ function SigCanvas({
 
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
-      if (!containerRef.current) return;
-      const rect = containerRef.current.getBoundingClientRect();
+      const stageEl = stageRef.current;
+      if (!stageEl) return;
+      const rect = stageEl.getBoundingClientRect();
+      const stageW = stageEl.clientWidth || rect.width;
+      const stageH = stageEl.clientHeight || rect.height;
+      if (!stageW || !stageH) return;
+
       if (dragging.current) {
-        const dx = (e.clientX - dragging.current.startX) / rect.width;
-        const dy = (e.clientY - dragging.current.startY) / rect.height;
+        const dx = (e.clientX - dragging.current.startX) / stageW;
+        const dy = (e.clientY - dragging.current.startY) / stageH;
         onChange(
           clamp(dragging.current.origX + dx, 0, 1 - wRatio),
           clamp(dragging.current.origY + dy, 0, 1 - hRatio),
@@ -208,23 +218,27 @@ function SigCanvas({
         );
       }
       if (resizing.current) {
-        const dw = (e.clientX - resizing.current.startX) / rect.width;
-        const dh = (e.clientY - resizing.current.startY) / rect.height;
+        const dw = (e.clientX - resizing.current.startX) / stageW;
+        const dh = (e.clientY - resizing.current.startY) / stageH;
         onChange(xRatio, yRatio,
           clamp(resizing.current.origW + dw, 0.05, 1 - xRatio),
           clamp(resizing.current.origH + dh, 0.02, 1 - yRatio)
         );
       }
       if (contentDragging.current && onContentChange) {
-        const boxW = rect.width  * wRatio;
-        const boxH = rect.height * hRatio;
+        const boxW = stageW * wRatio;
+        const boxH = stageH * hRatio;
+        if (!boxW || !boxH) return;
         const dx = (e.clientX - contentDragging.current.startX) / boxW;
         const dy = (e.clientY - contentDragging.current.startY) / boxH;
         const { type } = contentDragging.current;
         const scale = type === 'image' ? signImageScale : signTextScale;
+        const bounds = type === 'image'
+          ? { min: -1, max: 1 }
+          : { min: 0, max: 1 };
         onContentChange(
-          clamp(contentDragging.current.origOX + dx, 0, 1),
-          clamp(contentDragging.current.origOY + dy, 0, 1),
+          clamp(contentDragging.current.origOX + dx, bounds.min, bounds.max),
+          clamp(contentDragging.current.origOY + dy, bounds.min, bounds.max),
           scale,
           type
         );
@@ -234,126 +248,133 @@ function SigCanvas({
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
-  }, [xRatio, yRatio, wRatio, hRatio, onChange, onContentChange, signImageBase64, signImageScale, signTextScale]);
+  }, [xRatio, yRatio, wRatio, hRatio, onChange, onContentChange, signImageScale, signTextScale]);
 
   const pct = (v: number) => `${(v * 100).toFixed(2)}%`;
   // sigFontSize is % of sig-box height — compute actual px for preview
-  const sigBoxH   = (containerH || 200) * hRatio;
+  const sigBoxH   = (stageSize.height || 200) * hRatio;
   const fontPx    = Math.max(4, sigFontSize / 100 * sigBoxH) * signTextScale;
+  const interactionsLocked = !!pdfBlob && !pdfReady;
 
   return (
     <div className="flex flex-col gap-1 flex-1 min-h-0">
       <p className="text-xs text-muted-foreground text-center select-none">
-        Drag box to reposition · <span className="font-bold">⌟</span> corner to resize · drag <span className="font-bold">content inside</span> to move text/image
+        Drag the top grip to move · <span className="font-bold">⌟</span> grip to resize · drag <span className="font-bold">content inside</span> to move text/image
       </p>
 
       {/* ── Canvas container ── */}
       <div
         ref={containerRef}
         className="relative w-full border border-gray-300 shadow-inner select-none overflow-hidden bg-white"
-        style={pdfReady ? {} : { aspectRatio: '1 / 1.414' }}
       >
-        {/* PDF background */}
-        <canvas
-          ref={bgCanvasRef}
-          className="block w-full"
-          style={{ display: pdfReady ? 'block' : 'none' }}
-        />
+        <div
+          ref={stageRef}
+          className="relative w-full"
+          style={pdfReady ? {} : { aspectRatio: '1 / 1.414' }}
+        >
+          {/* PDF background */}
+          <canvas
+            ref={bgCanvasRef}
+            className="block w-full h-auto"
+            style={{ display: pdfReady ? 'block' : 'none' }}
+          />
 
-        {/* Fallback blank page (shown before PDF loads) */}
-        {!pdfReady && (
-          <div className="absolute inset-0 bg-white">
-            {[0.25, 0.5, 0.75].map((v) => (
-              <div key={`h${v}`} className="absolute w-full border-t border-dashed border-gray-100"
-                style={{ top: pct(v) }} />
-            ))}
-            {[0.25, 0.5, 0.75].map((v) => (
-              <div key={`v${v}`} className="absolute h-full border-l border-dashed border-gray-100"
-                style={{ left: pct(v) }} />
-            ))}
-          </div>
-        )}
+          {/* Fallback blank page (shown before PDF loads) */}
+          {!pdfReady && (
+            <div className="absolute inset-0 bg-white">
+              {[0.25, 0.5, 0.75].map((v) => (
+                <div key={`h${v}`} className="absolute w-full border-t border-dashed border-gray-100"
+                  style={{ top: pct(v) }} />
+              ))}
+              {[0.25, 0.5, 0.75].map((v) => (
+                <div key={`v${v}`} className="absolute h-full border-l border-dashed border-gray-100"
+                  style={{ left: pct(v) }} />
+              ))}
+            </div>
+          )}
 
-        {/* Loading spinner */}
-        {pdfLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white/70 z-10">
-            <LoaderIcon className="w-5 h-5 animate-spin text-blue-500" />
-            <span className="ml-2 text-xs text-muted-foreground">Loading PDF…</span>
-          </div>
-        )}
+          {/* Loading spinner */}
+          {pdfLoading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-white/70 z-10">
+              <LoaderIcon className="w-5 h-5 animate-spin text-blue-500" />
+              <span className="ml-2 text-xs text-muted-foreground">Loading PDF…</span>
+            </div>
+          )}
 
-        {/* ── Overlay: signature box ── */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div
-            onMouseDown={onMouseDownBox}
-            className="absolute border-2 border-blue-400 border-dashed rounded cursor-move overflow-hidden"
-            style={{
-              left: pct(xRatio), top: pct(yRatio),
-              width: pct(wRatio), height: pct(hRatio),
-              pointerEvents: 'all',
-              background: 'rgba(255,255,255,0.5)',
-            }}
-          >
-            {/* ── Drag handle bar ── */}
+          {/* ── Overlay: signature box ── */}
+          <div className="absolute inset-0 pointer-events-none">
             <div
-              onMouseDown={onMouseDownBox}
-              className="absolute top-0 left-0 right-0 flex items-center justify-center z-20"
+              className="absolute border-2 border-blue-400 border-dashed rounded"
               style={{
-                height: 14,
-                background: 'rgba(59,130,246,0.75)',
-                cursor: 'move',
-                pointerEvents: 'all',
+                left: pct(xRatio), top: pct(yRatio),
+                width: pct(wRatio), height: pct(hRatio),
+                pointerEvents: interactionsLocked ? 'none' : 'all',
+                background: 'rgba(255,255,255,0.5)',
               }}
             >
-              <GripVertical className="rotate-90" style={{ width: 12, height: 12, color: 'white', opacity: 0.9 }} />
-            </div>
-            {/* ── Signature appearance preview ── */}
-            <div className="w-full h-full relative overflow-hidden" style={{ paddingTop: 14 }}>
-              {signImageBase64 && (
-                <img
-                  src={`data:image/png;base64,${signImageBase64}`}
-                  draggable={false}
-                  onMouseDown={onMouseDownImageContent}
-                  style={{
-                    position: 'absolute',
-                    left: `${signImageOffsetX * 100}%`,
-                    top:  `${signImageOffsetY * 100}%`,
-                    width:  `${signImageScale * 100}%`,
-                    height: `${signImageScale * 100}%`,
-                    objectFit: 'contain',
-                    cursor: 'grab',
-                    pointerEvents: 'all',
-                  }}
-                />
-              )}
+              {/* Floating drag grip kept outside the content so text/image never gets covered */}
               <div
-                onMouseDown={onMouseDownTextContent}
-                className="absolute flex flex-col px-1"
+                onMouseDown={onMouseDownBox}
+                className="absolute left-1/2 -translate-x-1/2 -top-5 h-4 px-2 rounded-full flex items-center justify-center z-30 border border-white/80 shadow-sm"
                 style={{
-                  left: `${signTextOffsetX * 100}%`,
-                  top:  `${signTextOffsetY * 100}%`,
-                    fontSize: `${fontPx}px`,
-                  fontFamily: sigFontFamily,
-                  lineHeight: 1.35,
-                  color: sigTextColor,
-                  cursor: 'grab',
+                  background: 'rgba(37,99,235,0.92)',
+                  cursor: interactionsLocked ? 'not-allowed' : 'move',
                   pointerEvents: 'all',
-                  userSelect: 'none',
-                  whiteSpace: 'nowrap',
                 }}
+                title="Drag stamp"
               >
-                <span style={{ fontWeight: 700 }}>{signerName || 'Signer Name'}</span>
-                {signNote && <span>{signNote}</span>}
+                <GripVertical className="rotate-90" style={{ width: 12, height: 12, color: 'white', opacity: 0.9 }} />
               </div>
-            </div>
 
-            {/* Resize handle */}
-            <div
-              onMouseDown={onMouseDownResize}
-              className="absolute bottom-0 right-0 w-3 h-3 bg-blue-600 cursor-se-resize rounded-tl z-10"
-              style={{ lineHeight: '12px', textAlign: 'center', fontSize: 8, color: 'white' }}
-            >
-              ⌟
+              {/* ── Signature appearance preview ── */}
+              <div className="w-full h-full relative overflow-hidden rounded-[2px]">
+                {signImageBase64 && (
+                  <img
+                    src={`data:image/png;base64,${signImageBase64}`}
+                    draggable={false}
+                    onMouseDown={onMouseDownImageContent}
+                    style={{
+                      position: 'absolute',
+                      left: `${signImageOffsetX * 100}%`,
+                      top:  `${signImageOffsetY * 100}%`,
+                      width:  `${signImageScale * 100}%`,
+                      height: `${signImageScale * 100}%`,
+                      objectFit: 'contain',
+                      cursor: interactionsLocked ? 'not-allowed' : 'grab',
+                      pointerEvents: 'all',
+                    }}
+                  />
+                )}
+                <div
+                  onMouseDown={onMouseDownTextContent}
+                  className="absolute flex flex-col px-1"
+                  style={{
+                    left: `${signTextOffsetX * 100}%`,
+                    top:  `${signTextOffsetY * 100}%`,
+                    fontSize: `${fontPx}px`,
+                    fontFamily: sigFontFamily,
+                    lineHeight: 1.35,
+                    color: sigTextColor,
+                    cursor: interactionsLocked ? 'not-allowed' : 'grab',
+                    pointerEvents: 'all',
+                    userSelect: 'none',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  <span style={{ fontWeight: 700 }}>{signerName || 'Signer Name'}</span>
+                  {signNote && <span>{signNote}</span>}
+                </div>
+              </div>
+
+              {/* Floating resize grip kept outside content area */}
+              <div
+                onMouseDown={onMouseDownResize}
+                className="absolute -bottom-2 -right-2 w-4 h-4 bg-blue-600 cursor-se-resize rounded-full z-30 border border-white shadow-sm"
+                style={{ lineHeight: '14px', textAlign: 'center', fontSize: 9, color: 'white', pointerEvents: 'all' }}
+                title="Resize stamp"
+              >
+                ⌟
+              </div>
             </div>
           </div>
         </div>
@@ -390,6 +411,21 @@ export default function PNPKISetup({ open, onClose, config, onSave, onClear, pdf
 
   const set = <K extends keyof PNPKIConfig>(key: K, value: PNPKIConfig[K]) =>
     setDraft((d) => ({ ...d, [key]: value }));
+
+  const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+  const updateStampSize = (nextW: number, nextH: number) => {
+    setDraft((d) => {
+      const wRatio = clamp(nextW, 0.05, 0.95);
+      const hRatio = clamp(nextH, 0.02, 0.4);
+      return {
+        ...d,
+        wRatio,
+        hRatio,
+        xRatio: clamp(d.xRatio, 0, 1 - wRatio),
+        yRatio: clamp(d.yRatio, 0, 1 - hRatio),
+      };
+    });
+  };
 
   // ── P12 file ──
   const handleP12 = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -469,10 +505,10 @@ export default function PNPKISetup({ open, onClose, config, onSave, onClear, pdf
         </DialogHeader>
 
         {/* ─ Two-column layout ─ */}
-        <div className="flex flex-row md:flex-col gap-4 overflow-y-auto flex-1 min-h-0 pr-1">
+        <div className="flex flex-row lg:flex-col gap-4 overflow-y-auto flex-1 min-h-0 pr-1">
 
-          {/* ── LEFT: placement canvas (hidden on small screens) ─────── */}
-          <div className="flex md:hidden flex-1 flex-col gap-2 min-h-0 min-w-0">
+          {/* ── LEFT: placement canvas ─────── */}
+          <div className="flex flex-1 flex-col gap-2 min-h-0 min-w-0">
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
               Signature Placement <span className="normal-case font-normal text-gray-400">(drag to move, corner to resize)</span>
             </label>
@@ -504,7 +540,7 @@ export default function PNPKISetup({ open, onClose, config, onSave, onClear, pdf
           </div>
 
           {/* ── RIGHT: settings ─────────────────────────────────── */}
-          <div className="flex flex-col gap-3 w-72 md:w-full shrink-0 overflow-y-auto">
+          <div className="flex flex-col gap-3 w-72 lg:w-full shrink-0 overflow-y-auto">
 
             {/* P12 / PFX */}
             <div>
@@ -578,6 +614,52 @@ export default function PNPKISetup({ open, onClose, config, onSave, onClear, pdf
                 value={draft.signerPosition}
                 onChange={(e) => set('signerPosition', e.target.value)}
               />
+            </div>
+
+            {/* Stamp designer */}
+            <div className="border border-gray-200 rounded-md p-2 flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Stamp Designer</label>
+                <button
+                  type="button"
+                  className="text-[10px] text-blue-500 hover:underline"
+                  onClick={() => updateStampSize(DEFAULT_PNPKI_CONFIG.wRatio, DEFAULT_PNPKI_CONFIG.hRatio)}
+                >
+                  Reset Box
+                </button>
+              </div>
+
+              <div>
+                <div className="flex justify-between">
+                  <span className="text-xs text-muted-foreground">Width</span>
+                  <span className="text-xs font-mono text-muted-foreground">{(draft.wRatio * 100).toFixed(1)}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="5"
+                  max="95"
+                  step="0.5"
+                  className="w-full accent-blue-500"
+                  value={draft.wRatio * 100}
+                  onChange={(e) => updateStampSize(parseFloat(e.target.value) / 100, draft.hRatio)}
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between">
+                  <span className="text-xs text-muted-foreground">Height</span>
+                  <span className="text-xs font-mono text-muted-foreground">{(draft.hRatio * 100).toFixed(1)}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="2"
+                  max="40"
+                  step="0.5"
+                  className="w-full accent-blue-500"
+                  value={draft.hRatio * 100}
+                  onChange={(e) => updateStampSize(draft.wRatio, parseFloat(e.target.value) / 100)}
+                />
+              </div>
             </div>
 
             {/* Text appearance */}

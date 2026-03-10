@@ -146,7 +146,7 @@ export default function PrintDTR({name = '', data, date, show, selectedYear, sel
 
       <DrawerContent  title="DTR" 
   description="Optional Description">
-    <div className='h-[70vh] sm:h-[50vh]   w-full overflow-y-scroll sm:overflow-hidden  bg-white '>
+    <div className='h-[55vh] sm:h-[92vh] w-full bg-white flex flex-col overflow-hidden'>
 
     
     {isMobile ? (
@@ -154,7 +154,7 @@ export default function PrintDTR({name = '', data, date, show, selectedYear, sel
      
 
      
-      <div className=' flex w-full items-center md:flex-col justify-center  sm:h-48 gap-5'>
+      <div className='flex w-full items-center md:flex-col justify-center gap-5 p-3 overflow-y-auto'>
         <Select value={selectedSchedule} onValueChange={(value) => {
     setSelectedSchedule(value)
   }}>
@@ -200,7 +200,7 @@ export default function PrintDTR({name = '', data, date, show, selectedYear, sel
      
         ) : (
         <Suspense fallback={<div></div>}>
-          <div className=' flex w-full items-center justify-center h-20 gap-5'>
+          <div className='flex w-full items-center justify-center h-20 gap-5 shrink-0'>
             <Select value={selectedSchedule} onValueChange={(value) => {
     setSelectedSchedule(value)
   }}>
@@ -260,18 +260,20 @@ export default function PrintDTR({name = '', data, date, show, selectedYear, sel
            
           </div>
           
-          <PDFViewer className="w-full h-full" >
-          <MyDocument 
-      name={name?.toUpperCase() || ''} 
-      previewUrl={null} 
-      selectedSchedule={selectedSchedule}
-      date={date} 
-      data={data} 
-      selectedYear={selectedYear} 
-      selectedMonth={selectedMonth} 
-      SupervisorsName={SupervisorsName}
-    />
-        </PDFViewer>
+          <div className='flex-1 min-h-0 w-full'>
+            <PDFViewer className="w-full h-full" >
+              <MyDocument 
+                name={name?.toUpperCase() || ''} 
+                previewUrl={null} 
+                selectedSchedule={selectedSchedule}
+                date={date} 
+                data={data} 
+                selectedYear={selectedYear} 
+                selectedMonth={selectedMonth} 
+                SupervisorsName={SupervisorsName}
+              />
+            </PDFViewer>
+          </div>
         </Suspense>
         
       )}
