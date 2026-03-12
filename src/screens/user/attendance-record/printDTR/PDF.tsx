@@ -42,13 +42,13 @@ const MyDocument = ({ name, date, data,selectedYear, selectedMonth,previewUrl,se
   
     // Check the time conditions
     if (item.CHECKTYPE === 'I') {
-      groupedData[date].I.push(timeString.replace(/ AM| PM/, ''));
+      groupedData[date].I.push(timeString);
     } else if (item.CHECKTYPE === 'o') {
-      groupedData[date].O.push(timeString.replace(/ AM| PM/, ''));
+      groupedData[date].O.push(timeString);
     } else if (item.CHECKTYPE === '0') {
-      groupedData[date].i.push(timeString.replace(/ AM| PM/, '') || '12:00');
+      groupedData[date].i.push(timeString || '12:00 PM');
     } else if (item.CHECKTYPE === 'i') {
-      groupedData[date].o.push(timeString.replace(/ AM| PM/, ''));
+      groupedData[date].o.push(timeString);
     }
   });
   
@@ -77,125 +77,66 @@ const MyDocument = ({ name, date, data,selectedYear, selectedMonth,previewUrl,se
 });
 
 
-const renderCheckinText = (data:any) => {
-
+const getCheckinRaw = (data:any) => {
   let lenghtData = data.length;
   switch (lenghtData) {
-    case 6:
-      return data[lenghtData -1];
-    case 5:
-      return data[lenghtData -1];
-    case 4:
-      return data[lenghtData -1];
-    case 3:
-      return data[lenghtData -1];
-    case 2:
-      return data[lenghtData -1];
-    case 1:
-      return data[lenghtData -1];
-    default:
-      return '';
+    case 6: return data[lenghtData -1];
+    case 5: return data[lenghtData -1];
+    case 4: return data[lenghtData -1];
+    case 3: return data[lenghtData -1];
+    case 2: return data[lenghtData -1];
+    case 1: return data[lenghtData -1];
+    default: return '';
   }
 };
-const renderCheckOutText = (data:any) => {
+const renderCheckinText = (data:any) => getCheckinRaw(data).replace(/ AM| PM| am| pm/g, '');
+
+const getCheckOutRaw = (data:any) => {
   switch (data.length) {
-    case 4:
-      return data[0];
-    case 3:
-      return data[0];
-    case 2:
-      return data[0];
-    case 1:
-      return data[0];
-    default:
-      return '';
+    case 4: return data[0];
+    case 3: return data[0];
+    case 2: return data[0];
+    case 1: return data[0];
+    default: return '';
   }
 };
+const renderCheckOutText = (data:any) => getCheckOutRaw(data).replace(/ AM| PM| am| pm/g, '');
 
-const renderAmDepartureText = (outTime:any,inTime:any, selectedSched?: string) => {
-     
-      switch (outTime.length) {
-        case 3:
-          if (inTime.length !=0 && outTime.length !=2) {
-            return selectedSched === "14" ? "12:59" : "12:00"
-          }else{
-            return outTime[0]
-          }
-    
-          
-        case 2:
-          if (inTime.length !=0 && outTime.length !=2) {
-            return selectedSched === "14" ? "12:59" : "12:00"
-          }else{
-            return outTime[0]
-          }
-        case 1:
-          if (inTime.length !=0 && outTime.length !=1) {
-            return selectedSched === "14" ? "12:59" : "12:00"
-          }else{
-            return outTime[0]
-          }
-          
-          
-      
-    
-          
-        default:
-          if (inTime.length !=0) {
-            return selectedSched === "14" ? "12:59" : "12:00"
-          }else{
-            return '';
-          }
-          
-      }
-
-    
-    
-  
-
-  
-  
+const getAmDepartureRaw = (outTime:any,inTime:any, selectedSched?: string) => {
+    switch (outTime.length) {
+      case 3:
+        if (inTime.length !=0 && outTime.length !=2) return selectedSched === "14" ? "12:59 PM" : "12:00 PM";
+        else return outTime[0];
+      case 2:
+        if (inTime.length !=0 && outTime.length !=2) return selectedSched === "14" ? "12:59 PM" : "12:00 PM";
+        else return outTime[0];
+      case 1:
+        if (inTime.length !=0 && outTime.length !=1) return selectedSched === "14" ? "12:59 PM" : "12:00 PM";
+        else return outTime[0];
+      default:
+        if (inTime.length !=0) return selectedSched === "14" ? "12:59 PM" : "12:00 PM";
+        else return '';
+    }
 };
+const renderAmDepartureText = (o:any, i:any, s:any) => getAmDepartureRaw(o,i,s).replace(/ AM| PM| am| pm/g, '');
 
-const renderPMArivalText = (inTime:any,outTime:any, selectedSched?: string) => {
- 
+const getPMArivalRaw = (inTime:any,outTime:any, selectedSched?: string) => {
     switch (inTime.length) {
       case 3:
-        if (outTime.length !=0  && outTime.length !=3) {
-          return selectedSched === "14" ? "01:00" : "01:00"
-        }else{
-        return inTime[0]
-      }
-  
-        
+        if (outTime.length !=0  && outTime.length !=3) return selectedSched === "14" ? "01:00 PM" : "01:00 PM";
+        else return inTime[0];
       case 2:
-        if (outTime.length !=0  && outTime.length !=2) {
-          return selectedSched === "14" ? "01:00" : "01:00"
-        }else{
-        return inTime[0]
-      }
+        if (outTime.length !=0  && outTime.length !=2) return selectedSched === "14" ? "01:00 PM" : "01:00 PM";
+        else return inTime[0];
       case 1:
-        if (outTime.length !=0  && outTime.length !=1) {
-          return selectedSched === "14" ? "01:00" : "01:00"
-        }else{
-        return inTime[0]
-      }
-        
-    
-  
-        
+        if (outTime.length !=0  && outTime.length !=1) return selectedSched === "14" ? "01:00 PM" : "01:00 PM";
+        else return inTime[0];
       default:
-        if (outTime.length !=0) {
-          return selectedSched === "14" ? "01:00" : "01:00"
-        }else{
-          return '';
-        }
+        if (outTime.length !=0) return selectedSched === "14" ? "01:00 PM" : "01:00 PM";
+        else return '';
     }
-
-  
-  
-  
 };
+const renderPMArivalText = (i:any, o:any, s:any) => getPMArivalRaw(i,o,s).replace(/ AM| PM| am| pm/g, '');
 
 const getScheduleTime = (scheduleValue: string): { timeIn: number, timeOut: number } => {
   const schedules: { [key: string]: { timeIn: number, timeOut: number } } = {
@@ -232,22 +173,23 @@ const convertScheduleToTimeRange = (scheduleValue: string): string => {
   return scheduleRanges[scheduleValue] || "8:00-5:00"; // Default to 8:00-5:00 if invalid
 };
 
-const convertTo24Hour = (time: any): string => {
-  if (!time || typeof time !== 'string') return '';
-  
-  const [hours, minutes] = time.split(':').map(Number);
-  
-  if (isNaN(hours) || isNaN(minutes)) return '';
-  
-  // Convert 1:00 to 13:00 for afternoon times
-  const hours24 = hours >= 1 && hours <= 11 ? hours + 12 : hours;
-  
-  return `${hours24.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-};
-
 const parseTimeToMinutes = (time: string): number => {
   if (!time) return 0;
-  const [hours, minutes] = time.split(':').map(Number);
+  const isPM = time.toUpperCase().includes('PM');
+  const isAM = time.toUpperCase().includes('AM');
+  const cleanTime = time.replace(/ AM| PM| am| pm/g, '').trim();
+  const [hoursStr, minutesStr] = cleanTime.split(':');
+  let hours = Number(hoursStr);
+  const minutes = Number(minutesStr);
+  if (isNaN(hours) || isNaN(minutes)) return 0;
+  
+  if (isPM && hours !== 12) hours += 12;
+  else if (isAM && hours === 12) hours = 0;
+  else if (!isPM && !isAM && hours >= 1 && hours <= 6) {
+    // Basic fallback for unformatted PM afternoon
+    hours += 12;
+  }
+
   return (hours * 60) + minutes;
 };
 
@@ -394,11 +336,10 @@ const calculateTotalUndertime = (): { totalHours: number, totalMinutes: number }
     const checkinTimes = groupedData[day]?.I || [];
     const checkoutTimes = groupedData[day]?.O || [];
     
-    const timeIn = renderCheckinText(checkinTimes);
-    const timeOut = renderCheckOutText(checkoutTimes);
-    const timeOut24 = convertTo24Hour(timeOut);
+    const timeIn = getCheckinRaw(checkinTimes);
+    const timeOut = getCheckOutRaw(checkoutTimes);
     
-    const undertime = undertimeCalc(timeIn, timeOut24 || '', day);
+    const undertime = undertimeCalc(timeIn, timeOut, day);
     
     if (typeof undertime.hours === 'number' && typeof undertime.minutes === 'number') {
       totalMinutes += (undertime.hours * 60) + undertime.minutes;
@@ -604,12 +545,12 @@ const activities = activitiesByDate[day] || [];
         </View>
         <View style={{ width: '10%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
           <Text style={{ textAlign: 'center', marginTop: 2 }}>
-            {undertimeCalc(renderCheckinText(checkinTimes), convertTo24Hour(renderCheckOutText(checkoutTimes)) || '', day).hours}
+            {undertimeCalc(getCheckinRaw(checkinTimes), getCheckOutRaw(checkoutTimes), day).hours}
           </Text>
         </View>
         <View style={{ width: '10%', paddingLeft: 2, height: '100%', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
           <Text style={{ textAlign: 'center', marginTop: 2 }}>
-            {undertimeCalc(renderCheckinText(checkinTimes), convertTo24Hour(renderCheckOutText(checkoutTimes)) || '', day).minutes}
+            {undertimeCalc(getCheckinRaw(checkinTimes), getCheckOutRaw(checkoutTimes), day).minutes}
           </Text>
         </View>
       </View>
@@ -710,12 +651,12 @@ const activities = activitiesByDate[day] || [];
 
         <View style={{ width: '10%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center', borderRightStyle: 'solid' }}>
           <Text style={{ textAlign: 'center', marginTop: 2 }}>
-            {undertimeCalc(renderCheckinText(checkinTimes), convertTo24Hour(renderCheckOutText(checkoutTimes)) || '', day).hours}
+            {undertimeCalc(getCheckinRaw(checkinTimes), getCheckOutRaw(checkoutTimes), day).hours}
           </Text>
         </View>
         <View style={{ width: '10%', paddingLeft: 2, height: '100%', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
           <Text style={{ textAlign: 'center', marginTop: 2 }}>
-            {undertimeCalc(renderCheckinText(checkinTimes), convertTo24Hour(renderCheckOutText(checkoutTimes)) || '', day).minutes}
+            {undertimeCalc(getCheckinRaw(checkinTimes), getCheckOutRaw(checkoutTimes), day).minutes}
           </Text>
         </View>
       </View>
@@ -742,12 +683,12 @@ const activities = activitiesByDate[day] || [];
       </View>
       <View style={{ width: '10%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
         <Text style={{ textAlign: 'center', marginTop: 2 }}>
-          {undertimeCalc(renderCheckinText(checkinTimes), convertTo24Hour(renderCheckOutText(checkoutTimes)) || '', day).hours}
+          {undertimeCalc(getCheckinRaw(checkinTimes), getCheckOutRaw(checkoutTimes), day).hours}
         </Text>
       </View>
       <View style={{ width: '10%', paddingLeft: 2, height: '100%', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
         <Text style={{ textAlign: 'center', marginTop: 2 }}>
-          {undertimeCalc(renderCheckinText(checkinTimes), convertTo24Hour(renderCheckOutText(checkoutTimes)) || '', day).minutes}
+          {undertimeCalc(getCheckinRaw(checkinTimes), getCheckOutRaw(checkoutTimes), day).minutes}
         </Text>
       </View>
     </View>
