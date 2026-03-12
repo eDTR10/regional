@@ -16,8 +16,19 @@ const MyDocument = ({ name, date, data,selectedYear, selectedMonth,previewUrl,se
   console.log(date)
   const getDateFromChecktime = (checktime: any) => new Date(checktime).getUTCDate();
 
-
-
+  const dateRangeParts = (date || '').split('-');
+  let startDay = 1;
+  let endDay = new Date(selectedYear, selectedMonth || 1, 0).getDate();
+  
+  if (dateRangeParts.length > 1) {
+    const firstPart = dateRangeParts[0].trim().split(' ');
+    const secondPart = dateRangeParts[1].trim().split(',')[0];
+    
+    const parsedStart = parseInt(firstPart[firstPart.length - 1]);
+    const parsedEnd = parseInt(secondPart);
+    if (!isNaN(parsedStart)) startDay = parsedStart;
+    if (!isNaN(parsedEnd)) endDay = parsedEnd;
+  }
 
   let groupedData: any = {};
 
@@ -241,23 +252,9 @@ const parseTimeToMinutes = (time: string): number => {
 };
 
 const undertimeCalc = (timeIn: string, timeOut: string, day: number): { hours: number | string, minutes: number | string } => {
-  // Parse the date string to get the actual date range
-  const dateRangeParts = date.split('-');
-  let startDay = 1;
-  let endDay = new Date(selectedYear, selectedMonth, 0).getDate();
-  
-  if (dateRangeParts.length > 1) {
-    // If date format is "October 1-15, 2025"
-    const firstPart = dateRangeParts[0].trim().split(' ');
-    const secondPart = dateRangeParts[1].trim().split(',')[0];
-    
-    startDay = parseInt(firstPart[firstPart.length - 1]);
-    endDay = parseInt(secondPart);
-  }
-  
   // Check if the current day is within the selected date range
   if (day < startDay || day > endDay) {
-    return { hours: 0, minutes: 0 };
+    return { hours: '', minutes: '' };
   }
   
   const currentDate = new Date(selectedYear, selectedMonth - 1, day);
@@ -283,6 +280,19 @@ const undertimeCalc = (timeIn: string, timeOut: string, day: number): { hours: n
 
   // If it's a full day activity/holiday, return 0 undertime
   if (hasFullDayActivity) {
+    return { hours: 0, minutes: 0 };
+  }
+
+  // Check if there's any attendance data
+  const hasAttendanceData = timeIn || timeOut;
+
+  // If it's a weekend without attendance, return blank (no undertime)
+  if (isWeekend && !hasAttendanceData) {
+    return { hours: '', minutes: '' };
+  }
+
+  // If it's a weekend with attendance, return 0 undertime (they're working on their day off)
+  if (isWeekend && hasAttendanceData) {
     return { hours: 0, minutes: 0 };
   }
 
@@ -328,19 +338,6 @@ const undertimeCalc = (timeIn: string, timeOut: string, day: number): { hours: n
   // Use schedule times instead of hardcoded values
   const expectedTimeIn = schedule.timeIn;
   const expectedTimeOut = schedule.timeOut;
-
-  // Check if there's any attendance data
-  const hasAttendanceData = timeIn || timeOut;
-
-  // If it's a weekend without attendance, return blank (no undertime)
-  if (isWeekend && !hasAttendanceData) {
-    return { hours: '', minutes: '' };
-  }
-
-  // If it's a weekend with attendance, return 0 undertime (they're working on their day off)
-  if (isWeekend && hasAttendanceData) {
-    return { hours: 0, minutes: 0 };
-  }
 
   // Special case: If it's a regular day with no times at all
   if (!timeIn && !timeOut) {
@@ -520,6 +517,7 @@ const activities = activitiesByDate[day] || [];
  // Check if day exists in the selected month
  const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
  const isValidDay = day <= daysInMonth;
+ const isOutOfRange = day < startDay || day > endDay;
 
   // Check if there's any actual attendance data (check-in/out times)
   const hasAttendanceData = (checkinTimes && checkinTimes.length > 0) || 
@@ -533,6 +531,35 @@ const activities = activitiesByDate[day] || [];
       <View key={index} style={{ flexDirection: 'row', borderBottom: 0.5, alignItems: 'center', height: 12, fontSize: 7, textAlign: 'center', borderBottomStyle: 'dashed' }}>
         <View style={{ width: '8%', borderRight: 0.5, height: '100%', alignItems: 'center', justifyContent: 'center', textAlign: 'center', borderRightStyle: 'solid' }}>
           <Text style={{ textAlign: 'center', marginTop: 2 }}></Text>
+        </View>
+        <View style={{ width: '17.25%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
+          <Text style={{ textAlign: 'center', marginTop: 2 }}></Text>
+        </View>
+        <View style={{ width: '17.25%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
+          <Text style={{ textAlign: 'center', marginTop: 2 }}></Text>
+        </View>
+        <View style={{ width: '17.25%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
+          <Text style={{ textAlign: 'center', marginTop: 2 }}></Text>
+        </View>
+        <View style={{ width: '17.25%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
+          <Text style={{ textAlign: 'center', marginTop: 2 }}></Text>
+        </View>
+        <View style={{ width: '10%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
+          <Text style={{ textAlign: 'center', marginTop: 2 }}></Text>
+        </View>
+        <View style={{ width: '10%', paddingLeft: 2, height: '100%', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+          <Text style={{ textAlign: 'center', marginTop: 2 }}></Text>
+        </View>
+      </View>
+    );
+  }
+
+  // If day is valid but outside the selected date range (e.g. day 1-15 when 16-31 is selected), return completely blank data
+  if (isOutOfRange) {
+    return (
+      <View key={index} style={{ flexDirection: 'row', borderBottom: 0.5, alignItems: 'center', height: 12, fontSize: 7, textAlign: 'center', borderBottomStyle: 'dashed' }}>
+        <View style={{ width: '8%', borderRight: 0.5, height: '100%', alignItems: 'center', justifyContent: 'center', textAlign: 'center', borderRightStyle: 'solid' }}>
+          <Text style={{ textAlign: 'center', marginTop: 2 }}>{day}</Text>
         </View>
         <View style={{ width: '17.25%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
           <Text style={{ textAlign: 'center', marginTop: 2 }}></Text>
