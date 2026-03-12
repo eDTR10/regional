@@ -101,12 +101,12 @@ const renderCheckOutText = (data:any) => {
   }
 };
 
-const renderAmDepartureText = (outTime:any,inTime:any) => {
+const renderAmDepartureText = (outTime:any,inTime:any, selectedSched?: string) => {
      
       switch (outTime.length) {
         case 3:
           if (inTime.length !=0 && outTime.length !=2) {
-            return "12:00"
+            return selectedSched === "14" ? "12:59" : "12:00"
           }else{
             return outTime[0]
           }
@@ -114,13 +114,13 @@ const renderAmDepartureText = (outTime:any,inTime:any) => {
           
         case 2:
           if (inTime.length !=0 && outTime.length !=2) {
-            return "12:00"
+            return selectedSched === "14" ? "12:59" : "12:00"
           }else{
             return outTime[0]
           }
         case 1:
           if (inTime.length !=0 && outTime.length !=1) {
-            return "12:00"
+            return selectedSched === "14" ? "12:59" : "12:00"
           }else{
             return outTime[0]
           }
@@ -131,7 +131,7 @@ const renderAmDepartureText = (outTime:any,inTime:any) => {
           
         default:
           if (inTime.length !=0) {
-            return "12:00"
+            return selectedSched === "14" ? "12:59" : "12:00"
           }else{
             return '';
           }
@@ -146,12 +146,12 @@ const renderAmDepartureText = (outTime:any,inTime:any) => {
   
 };
 
-const renderPMArivalText = (inTime:any,outTime:any) => {
+const renderPMArivalText = (inTime:any,outTime:any, selectedSched?: string) => {
  
     switch (inTime.length) {
       case 3:
         if (outTime.length !=0  && outTime.length !=3) {
-          return "01:00"
+          return selectedSched === "14" ? "01:00" : "01:00"
         }else{
         return inTime[0]
       }
@@ -159,13 +159,13 @@ const renderPMArivalText = (inTime:any,outTime:any) => {
         
       case 2:
         if (outTime.length !=0  && outTime.length !=2) {
-          return "01:00"
+          return selectedSched === "14" ? "01:00" : "01:00"
         }else{
         return inTime[0]
       }
       case 1:
         if (outTime.length !=0  && outTime.length !=1) {
-          return "01:00"
+          return selectedSched === "14" ? "01:00" : "01:00"
         }else{
         return inTime[0]
       }
@@ -175,7 +175,7 @@ const renderPMArivalText = (inTime:any,outTime:any) => {
         
       default:
         if (outTime.length !=0) {
-          return "01:00"
+          return selectedSched === "14" ? "01:00" : "01:00"
         }else{
           return '';
         }
@@ -195,7 +195,9 @@ const getScheduleTime = (scheduleValue: string): { timeIn: number, timeOut: numb
     "8": { timeIn: 8.5 * 60, timeOut: 17.5 * 60 }, // 8:30-5:30
     "9": { timeIn: 9 * 60, timeOut: 18 * 60 },  // 9:00-6:00
     "10": { timeIn: 9.5 * 60, timeOut: 18.5 * 60 }, // 9:30-6:30
-    "11": { timeIn: 10 * 60, timeOut: 19 * 60 }  // 10:00-7:00
+    "11": { timeIn: 10 * 60, timeOut: 19 * 60 },  // 10:00-7:00
+    "13": { timeIn: 7 * 60, timeOut: 18 * 60 },  // NEW Normal placeholder
+    "14": { timeIn: 7 * 60, timeOut: 17 * 60 }   // On Fasting placeholder
   };
   
   return schedules[scheduleValue] || schedules["7"]; // Default to 8:00-5:00 if invalid
@@ -211,7 +213,9 @@ const convertScheduleToTimeRange = (scheduleValue: string): string => {
     "9": "9:00-6:00",
     "10": "9:30-6:30",
     "11": "10:00-7:00",
-    "12": "6:00-6:00 NS"
+    "12": "6:00-6:00 NS",
+    "13": "NEW Normal",
+    "14": "On Fasting"
   };
   
   return scheduleRanges[scheduleValue] || "8:00-5:00"; // Default to 8:00-5:00 if invalid
@@ -260,7 +264,8 @@ const undertimeCalc = (timeIn: string, timeOut: string, day: number): { hours: n
   
   // Check day of week
   const dayOfWeek = currentDate.getDay();
-  const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+  const isFridayNoDuty = (selectedSchedule === "13" || selectedSchedule === "14") && dayOfWeek === 5;
+  const isWeekend = dayOfWeek === 0 || dayOfWeek === 6 || isFridayNoDuty;
   
   // Get the last day of the selected month
   const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
@@ -289,6 +294,35 @@ const undertimeCalc = (timeIn: string, timeOut: string, day: number): { hours: n
     return { hours: 0, minutes: 0 };
   }
   
+  if (selectedSched === "13" || selectedSched === "14") {
+    const REQUIRED_MINUTES = 600; // 10 hours * 60 minutes
+    
+    if (!timeIn && !timeOut) {
+      if (hasAMActivity && hasPMActivity) return { hours: 0, minutes: 0 };
+      if (hasAMActivity || hasPMActivity) return { hours: 5, minutes: 0 };
+      return { hours: 10, minutes: 0 };
+    }
+
+    let actualTimeIn = timeIn ? parseTimeToMinutes(timeIn) : 12 * 60; // default to noon if no time in
+    let actualTimeOut = timeOut ? parseTimeToMinutes(timeOut) : 13 * 60; // default to 1 pm if no time out
+    
+    if (actualTimeIn < 420) actualTimeIn = 420;
+
+    let totalMinutes = actualTimeOut - actualTimeIn;
+    // Deduct 1 hour for lunch if time span covers 12:00 to 13:00 AND not fasting
+    if (selectedSched !== "14" && actualTimeIn <= 12 * 60 && actualTimeOut >= 13 * 60) {
+      totalMinutes -= 60;
+    }
+
+    if (hasAMActivity) totalMinutes += 5 * 60;
+    if (hasPMActivity) totalMinutes += 5 * 60;
+
+    let undertimeMinutes = REQUIRED_MINUTES - totalMinutes;
+    if (undertimeMinutes < 0) undertimeMinutes = 0;
+
+    return { hours: Math.floor(undertimeMinutes / 60), minutes: undertimeMinutes % 60 };
+  }
+
   const schedule = getScheduleTime(selectedSched);
 
   // Use schedule times instead of hardcoded values
@@ -474,8 +508,9 @@ const calculateTotalUndertime = (): { totalHours: number, totalMinutes: number }
                   {Array.from({ length: 31 }, (_, index) => {
  const day = index + 1;
  const dayOfWeek = new Date(selectedYear, selectedMonth - 1, day).getDay();
- const dayName = dayOfWeek === 0 ? 'Sunday' : dayOfWeek === 6 ? 'Saturday' : '';
- const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+ const isFridayNoDuty = (selectedSchedule === "13" || selectedSchedule === "14") && dayOfWeek === 5;
+ const dayName = dayOfWeek === 0 ? 'Sunday' : dayOfWeek === 6 ? 'Saturday' : isFridayNoDuty ? 'Friday' : '';
+ const isWeekend = dayOfWeek === 0 || dayOfWeek === 6 || isFridayNoDuty;
  const checkinTimes = groupedData[day]?.I || [];
  const checkoutTimes = groupedData[day]?.O || [];
  const checkoinTimes2 = groupedData[day]?.i || [];
@@ -532,10 +567,10 @@ const activities = activitiesByDate[day] || [];
           <Text style={{ textAlign: 'center', marginTop: 2 }}>{renderCheckinText(checkinTimes)}</Text>
         </View>
         <View style={{ width: '17.25%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center', backgroundColor: '#bff6bf' }}>
-          <Text style={{ textAlign: 'center', marginTop: 2 }}>{renderAmDepartureText(checkoinTimes2,checkinTimes)}</Text>
+          <Text style={{ textAlign: 'center', marginTop: 2 }}>{renderAmDepartureText(checkoinTimes2,checkinTimes, selectedSchedule)}</Text>
         </View>
         <View style={{ width: '17.25%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center', backgroundColor: '#bff6bf' }}>
-          <Text style={{ textAlign: 'center', marginTop: 2 }}>{renderPMArivalText(checkoutTimes2,checkoutTimes)}</Text>
+          <Text style={{ textAlign: 'center', marginTop: 2 }}>{renderPMArivalText(checkoutTimes2,checkoutTimes, selectedSchedule)}</Text>
         </View>
         <View style={{ width: '17.25%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center', backgroundColor: '#bff6bf' }}>
           <Text style={{ textAlign: 'center', marginTop: 2 }}>{renderCheckOutText(checkoutTimes)}</Text>
@@ -620,8 +655,8 @@ const activities = activitiesByDate[day] || [];
               <View style={{ width: '50%', alignItems: 'center', paddingLeft: 2, justifyContent: 'center',height:'100%', backgroundColor: (hasAttendanceData && renderCheckinText(checkinTimes) && hasAMActivity) ? "#bff6bf" : "transparent", borderRight: 0.5, borderRightStyle: 'solid' }}>
                 <Text style={{ textAlign: 'center', marginTop: 1 }}>{renderCheckinText(checkinTimes)}</Text>
               </View>
-              <View style={{ width: '50%', alignItems: 'center', paddingLeft: 2, justifyContent: 'center', backgroundColor: (hasAttendanceData && renderAmDepartureText(checkoinTimes2,checkinTimes) && hasAMActivity) ? "#bff6bf" : "transparent" }}>
-                <Text style={{ textAlign: 'center', marginTop: 1 }}>{renderAmDepartureText(checkoinTimes2,checkinTimes)}</Text>
+              <View style={{ width: '50%', alignItems: 'center', paddingLeft: 2, justifyContent: 'center', backgroundColor: (hasAttendanceData && renderAmDepartureText(checkoinTimes2,checkinTimes, selectedSchedule) && hasAMActivity) ? "#bff6bf" : "transparent" }}>
+                <Text style={{ textAlign: 'center', marginTop: 1 }}>{renderAmDepartureText(checkoinTimes2,checkinTimes, selectedSchedule)}</Text>
               </View>
             </View>
           )}
@@ -636,8 +671,8 @@ const activities = activitiesByDate[day] || [];
             ))
           ) : (
             <View style={{ flexDirection: 'row', width: '100%' }}>
-              <View style={{ width: '50%', alignItems: 'center', justifyContent: 'center', backgroundColor: (hasAttendanceData && renderPMArivalText(checkoutTimes2,checkoutTimes) && hasPMActivity) ? "#bff6bf" : "transparent", borderRight: 0.5, borderRightStyle: 'solid' }}>
-                <Text style={{ textAlign: 'center', marginTop: 1 }}>{renderPMArivalText(checkoutTimes2,checkoutTimes)}</Text>
+              <View style={{ width: '50%', alignItems: 'center', justifyContent: 'center', backgroundColor: (hasAttendanceData && renderPMArivalText(checkoutTimes2,checkoutTimes, selectedSchedule) && hasPMActivity) ? "#bff6bf" : "transparent", borderRight: 0.5, borderRightStyle: 'solid' }}>
+                <Text style={{ textAlign: 'center', marginTop: 1 }}>{renderPMArivalText(checkoutTimes2,checkoutTimes, selectedSchedule)}</Text>
               </View>
               <View style={{ width: '50%', alignItems: 'center', paddingLeft: 2, justifyContent: 'center', backgroundColor: (hasAttendanceData && renderCheckOutText(checkoutTimes) && hasPMActivity) ? "#bff6bf" : "transparent" }}>
                 <Text style={{ textAlign: 'center', marginTop: 1 }}>{renderCheckOutText(checkoutTimes)}</Text>
@@ -670,10 +705,10 @@ const activities = activitiesByDate[day] || [];
         <Text style={{ textAlign: 'center', marginTop: 2 }}>{renderCheckinText(checkinTimes)}</Text>
       </View>
       <View style={{ width: '17.25%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
-        <Text style={{ textAlign: 'center', marginTop: 2 }}>{renderAmDepartureText(checkoinTimes2,checkinTimes)}</Text>
+        <Text style={{ textAlign: 'center', marginTop: 2 }}>{renderAmDepartureText(checkoinTimes2,checkinTimes, selectedSchedule)}</Text>
       </View>
       <View style={{ width: '17.25%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
-        <Text style={{ textAlign: 'center', marginTop: 2 }}>{renderPMArivalText(checkoutTimes2,checkoutTimes)}</Text>
+        <Text style={{ textAlign: 'center', marginTop: 2 }}>{renderPMArivalText(checkoutTimes2,checkoutTimes, selectedSchedule)}</Text>
       </View>
       <View style={{ width: '17.25%', borderRight: 0.5, alignItems: 'center', paddingLeft: 2, height: '100%', justifyContent: 'center', textAlign: 'center' }}>
         <Text style={{ textAlign: 'center', marginTop: 2 }}>{renderCheckOutText(checkoutTimes)}</Text>
