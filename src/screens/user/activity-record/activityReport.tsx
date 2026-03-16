@@ -237,94 +237,105 @@ const styles = StyleSheet.create({
 });
 
 // PDF Document Component with pagination
+const ITEMS_PER_PAGE = 28;
+// ~2000 chars fits in the duties cell per page (50% width, fontSize 8, ~55 chars/line, ~36 visual lines)
+const DUTIES_CHARS_PER_PAGE = 2000;
+
+/** Split long text into page-sized chunks at word/newline boundaries */
+function splitTextIntoPages(text: string, charsPerPage: number): string[] {
+  if (!text) return [''];
+  if (text.length <= charsPerPage) return [text];
+
+  const pages: string[] = [];
+  let remaining = text;
+
+  while (remaining.length > 0) {
+    if (remaining.length <= charsPerPage) {
+      pages.push(remaining);
+      break;
+    }
+    // prefer splitting at a newline, then a space
+    let splitAt = charsPerPage;
+    const lastNL = remaining.lastIndexOf('\n', charsPerPage);
+    const lastSP = remaining.lastIndexOf(' ', charsPerPage);
+    if (lastNL > charsPerPage * 0.4) splitAt = lastNL;
+    else if (lastSP > charsPerPage * 0.4) splitAt = lastSP;
+
+    pages.push(remaining.slice(0, splitAt));
+    remaining = remaining.slice(splitAt).replace(/^[\n ]/, ''); // trim leading break
+  }
+  return pages.length > 0 ? pages : [''];
+}
+
 const DARDocument = ({ activities, dateRange, name, position, project, verifiedBy, duties }: any) => {
   const allActivities = activities.flatMap((day: any) => day.activities);
-  const ITEMS_PER_PAGE = 28;
 
+  // Paginate deliverables
   const activityPages: string[][] = [];
   for (let i = 0; i < allActivities.length; i += ITEMS_PER_PAGE) {
     activityPages.push(allActivities.slice(i, i + ITEMS_PER_PAGE));
   }
+  if (activityPages.length === 0) activityPages.push([]);
 
-  if (activityPages.length === 0) {
-    activityPages.push([]);
-  }
+  // Paginate duties by character count so no single row exceeds page height
+  const dutiesPages = splitTextIntoPages(duties || '', DUTIES_CHARS_PER_PAGE);
 
-  const totalPages = activityPages.length;
+  // Total pages = max of both paginations
+  const totalPages = Math.max(activityPages.length, dutiesPages.length);
+
+  // Pad arrays so both have entries for every page
+  while (activityPages.length < totalPages) activityPages.push([]);
+  while (dutiesPages.length < totalPages) dutiesPages.push('');
 
   return (
     <Document>
-      {activityPages.map((pageActivities, pageIndex) => (
+      {Array.from({ length: totalPages }, (_, pageIndex) => (
         <Page key={pageIndex} size="A4" style={styles.page}>
 
           <Text style={styles.afpCode}>AFD-HRM-AHR-009/r0/24Nov2025</Text>
 
-          {/* Page Content */}
-          {true ? (
-            <>
-              {/* ... First Page Header Content ... */}
-              <View style={styles.headerSection}>
-                <Image src={DICT} style={{ width: "100%", transform: 'translate(0, -13)', marginTop: 10, objectFit: 'contain', alignSelf: 'center', marginBottom: 5 }} />
-                <Text style={styles.title}>Accomplishment Report</Text>
-                <Text style={styles.dateRange}>{dateRange}</Text>
-              </View>
+          {/* Header — same on every page */}
+          <View style={styles.headerSection}>
+            <Image src={DICT} style={{ width: "100%", transform: 'translate(0, -13)', marginTop: 10, objectFit: 'contain', alignSelf: 'center', marginBottom: 5 }} />
+            <Text style={styles.title}>Accomplishment Report</Text>
+            <Text style={styles.dateRange}>{dateRange}</Text>
+          </View>
 
-              <View style={styles.infoSection}>
-                <View style={styles.infoRow}>
-                  <Text style={styles.label}>Name</Text>
-                  <Text style={styles.infoValue}>{name || '[Surname, First Name, MI]'}</Text>
-                  <Text style={[styles.label, { marginLeft: 20 }]}>Office</Text>
-                  <Text style={styles.infoValue}>{getDepartmentName((() => { try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; } })().deptid)}</Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={styles.label}>Position</Text>
-                  <Text style={styles.infoValue}>{position || '[Do not abbreviate position]'}</Text>
-                  <Text style={[styles.label, { marginLeft: 20 }]}>Project</Text>
-                  <Text style={styles.infoValue}>{project || ''}</Text>
-                </View>
-              </View>
+          <View style={styles.infoSection}>
+            <View style={styles.infoRow}>
+              <Text style={styles.label}>Name</Text>
+              <Text style={styles.infoValue}>{name || '[Surname, First Name, MI]'}</Text>
+              <Text style={[styles.label, { marginLeft: 20 }]}>Office</Text>
+              <Text style={styles.infoValue}>{getDepartmentName((() => { try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; } })().deptid)}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text style={styles.label}>Position</Text>
+              <Text style={styles.infoValue}>{position || '[Do not abbreviate position]'}</Text>
+              <Text style={[styles.label, { marginLeft: 20 }]}>Project</Text>
+              <Text style={styles.infoValue}>{project || ''}</Text>
+            </View>
+          </View>
 
-              <View style={styles.table}>
-                <View style={[styles.tableRow, styles.tableHeader]}>
-                  <Text style={styles.dutiesCells}>Duties and Responsibilities</Text>
-                  <Text style={styles.activityCells}>Actual Deliverables</Text>
-                </View>
+          {/* Table */}
+          <View style={styles.table}>
+            <View style={[styles.tableRow, styles.tableHeader]}>
+              <Text style={styles.dutiesCells}>Duties and Responsibilities</Text>
+              <Text style={styles.activityCells}>Actual Deliverables</Text>
+            </View>
 
-                <View style={styles.tableRow}>
-                  <Text style={styles.dutiesCell}>{duties || '(Consistent with the approved and submitted Terms of Reference)'}</Text>
-                  <View style={styles.activityCell}>
-                    {pageActivities.map((act: string, i: number) => (
-                      <Text key={i} style={styles.activityItem}>{act}</Text>
-                    ))}
-                  </View>
-                </View>
+            <View style={styles.tableRow}>
+              <Text style={styles.dutiesCell}>
+                {pageIndex === 0 && !dutiesPages[0]
+                  ? '(Consistent with the approved and submitted Terms of Reference)'
+                  : dutiesPages[pageIndex] || ''}
+              </Text>
+              <View style={styles.activityCell}>
+                {activityPages[pageIndex].map((act: string, i: number) => (
+                  <Text key={i} style={styles.activityItem}>{act}</Text>
+                ))}
               </View>
-            </>
-          ) : (
-            <>
-              {/* ... Subsequent Page Header Content ... */}
-              <View style={styles.headerSection}>
-                <Text style={styles.title}>Accomplishment Report (Continued)</Text>
-                <Text style={styles.dateRange}>{dateRange}</Text>
-              </View>
-
-              <View style={styles.table}>
-                <View style={[styles.tableRow, styles.tableHeader]}>
-                  <Text style={styles.dutiesCells}>Duties and Responsibilities</Text>
-                  <Text style={styles.activityCells}>Actual Deliverables</Text>
-                </View>
-
-                <View style={styles.tableRow}>
-                  <Text style={styles.dutiesCell}>{duties || '(Consistent with the approved and submitted Terms of Reference)'}</Text>
-                  <View style={styles.activityCell}>
-                    {pageActivities.map((act: string, i: number) => (
-                      <Text key={i} style={styles.activityItem}>{act}</Text>
-                    ))}
-                  </View>
-                </View>
-              </View>
-            </>
-          )}
+            </View>
+          </View>
 
           {/* --- Footer Content that should ONLY be on the LAST page --- */}
           {pageIndex === totalPages - 1 && (
@@ -391,7 +402,7 @@ function ActivityReport() {
     yRatio: pnpkiDarConfig.yRatio,
     wRatio: pnpkiDarConfig.wRatio,
     hRatio: pnpkiDarConfig.hRatio,
-    page:   pnpkiDarConfig.page,
+    page: pnpkiDarConfig.page,
   };
 
   /** On save: push all non-position fields to shared store, coords to DAR store */
@@ -488,7 +499,7 @@ function ActivityReport() {
   const isAdditionalDetailsComplete = () => {
     return !!verifiedBy.name && !!verifiedBy.designation;
   };
-  
+
   const [userData, setUserData] = useState(() => {
     const saved = localStorage.getItem('userDAR');
     return saved ? JSON.parse(saved) : {
@@ -625,8 +636,7 @@ function ActivityReport() {
   );
 
   const getDARFileName = () =>
-    `${userData.name.split(',')[0] || 'Report'}-AR_${
-      new Date(2000, parseInt(selectedMonth) - 1).toLocaleString('default', { month: 'long' })
+    `${userData.name.split(',')[0] || 'Report'}-AR_${new Date(2000, parseInt(selectedMonth) - 1).toLocaleString('default', { month: 'long' })
     }_${selectedPeriod}_${selectedYear}.pdf`;
 
   const openPNPKISetup = async () => {
@@ -674,7 +684,6 @@ function ActivityReport() {
   };
 
   const getPaginatedActivities = () => {
-    const ITEMS_PER_PAGE = 30;
     const pages: string[][] = [];
     for (let i = 0; i < deliverableLines.length; i += ITEMS_PER_PAGE) {
       pages.push(deliverableLines.slice(i, i + ITEMS_PER_PAGE));
@@ -682,8 +691,18 @@ function ActivityReport() {
     return pages.length > 0 ? pages : [[]];
   };
 
+  // Paginate duties for preview (same logic as PDF)
+  const paginatedDuties = splitTextIntoPages(userData.duties || '', DUTIES_CHARS_PER_PAGE);
+
   const paginatedActivities = getPaginatedActivities();
-  const totalPages = paginatedActivities.length;
+  const totalPages = Math.max(paginatedActivities.length, paginatedDuties.length);
+
+  // Pad arrays
+  while (paginatedActivities.length < totalPages) paginatedActivities.push([]);
+  while (paginatedDuties.length < totalPages) paginatedDuties.push('');
+
+  // Compute actual PDF page count (must match DARDocument pagination)
+  const pdfTotalPages = totalPages;
 
   // helper: collapsible section header
   const SectionHeader = ({
@@ -692,11 +711,10 @@ function ActivityReport() {
     <button
       type="button"
       onClick={onToggle}
-      className={`w-full flex items-center justify-between px-4 py-3 rounded-lg border transition-colors text-left ${
-        complete
-          ? 'border-green-200 bg-green-50 hover:bg-green-100'
-          : 'border-red-200 bg-red-50 hover:bg-red-100'
-      }`}
+      className={`w-full flex items-center justify-between px-4 py-3 rounded-lg border transition-colors text-left ${complete
+        ? 'border-green-200 bg-green-50 hover:bg-green-100'
+        : 'border-red-200 bg-red-50 hover:bg-red-100'
+        }`}
     >
       <div className="flex items-center gap-2">
         <span className={`w-2 h-2 rounded-full shrink-0 ${complete ? 'bg-green-500' : 'bg-red-400'}`} />
@@ -709,435 +727,403 @@ function ActivityReport() {
 
   return (
     <>
-    <div className="min-h-screen bg-gray-50 w-full overflow-y-auto">
-      <div className="mx-auto px-3 py-5 max-w-[1100px] md:px-2 md:py-3">
+      <div className="min-h-screen bg-gray-50 w-full overflow-y-auto">
+        <div className="mx-auto px-3 py-5 max-w-[1100px] md:px-2 md:py-3">
 
-        <div className="mb-4">
-          <h1 className="text-xl font-bold text-gray-800 leading-tight">Accomplishment Report</h1>
-        </div>
+          <div className="mb-4">
+            <h1 className="text-xl font-bold text-gray-800 leading-tight">Accomplishment Report</h1>
+          </div>
 
-        {/* ── Settings card ───────────────────────────────────────── */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-4">
+          {/* ── Settings card ───────────────────────────────────────── */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-4">
 
-          {/* Period row */}
-          <div className="px-5 pt-5 pb-4 border-b border-gray-100">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Report Period</p>
+            {/* Period row */}
+            <div className="px-5 pt-5 pb-4 border-b border-gray-100">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Report Period</p>
 
-            <div className="grid grid-cols-3 gap-3 sm:grid-cols-1">
-              {/* Period toggle */}
-              <div className="space-y-1">
-                <label className="block text-xs font-medium text-gray-500">Period</label>
-                <div className="flex rounded-md border border-input overflow-hidden h-9 text-sm">
-                  {(['1-15', '16-31'] as const).map((p) => (
-                    <button
-                      key={p}
-                      type="button"
-                      onClick={() => handlePeriodChange(p)}
-                      className={`flex-1 px-4 font-medium transition-colors ${
-                        selectedPeriod === p
+              <div className="grid grid-cols-3 gap-3 sm:grid-cols-1">
+                {/* Period toggle */}
+                <div className="space-y-1">
+                  <label className="block text-xs font-medium text-gray-500">Period</label>
+                  <div className="flex rounded-md border border-input overflow-hidden h-9 text-sm">
+                    {(['1-15', '16-31'] as const).map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => handlePeriodChange(p)}
+                        className={`flex-1 px-4 font-medium transition-colors ${selectedPeriod === p
                           ? 'bg-primary text-primary-foreground'
                           : 'bg-background text-muted-foreground hover:bg-muted'
-                      } ${p === '1-15' ? 'border-r border-input' : ''}`}
-                    >
-                      {p}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Month */}
-              <div className="space-y-1">
-                <label className="block text-xs font-medium text-gray-500">Month</label>
-                <Select value={selectedMonth} onValueChange={handleMonthChange}>
-                  <SelectTrigger className="h-9 text-sm">
-                    <SelectValue placeholder="Select month" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
-                      <SelectItem key={month} value={month.toString()}>
-                        {new Date(2000, month - 1).toLocaleString('default', { month: 'long' })}
-                      </SelectItem>
+                          } ${p === '1-15' ? 'border-r border-input' : ''}`}
+                      >
+                        {p}
+                      </button>
                     ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Year */}
-              <div className="space-y-1">
-                <label className="block text-xs font-medium text-gray-500">Year</label>
-                <Select value={selectedYear} onValueChange={handleYearChange}>
-                  <SelectTrigger className="h-9 text-sm">
-                    <SelectValue placeholder="Year" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map((year) => (
-                      <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Summary badge — shows once all three are selected */}
-            {selectedPeriod && selectedMonth && selectedYear && (
-              <div className="mt-3">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold">
-                  {getDateRange()}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Personal Information */}
-          <div className="px-5 py-4 border-b border-gray-100">
-            <SectionHeader
-              title="Personal Information"
-              complete={isPersonalInfoComplete()}
-              expanded={isPersonalInfoExpanded}
-              onToggle={() => setIsPersonalInfoExpanded(!isPersonalInfoExpanded)}
-              badge={isPersonalInfoComplete() ? 'Complete' : 'Incomplete — required'}
-            />
-            <div className={`transition-all duration-300 ease-in-out ${isPersonalInfoExpanded ? 'max-h-[2000px] opacity-100 mt-4 overflow-visible' : 'max-h-0 opacity-0 overflow-hidden'}`}>
-              <div className="grid grid-cols-3 gap-3 mb-3 sm:grid-cols-1">
-                <div className="space-y-1">
-                  <label className="block text-xs font-medium text-gray-500">Name <span className="text-red-400">*</span></label>
-                  <Input
-                    className="h-9 text-sm"
-                    placeholder="Surname, First Name, MI"
-                    value={userData.name}
-                    onChange={(e) => setUserData({...userData, name: e.target.value})}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="block text-xs font-medium text-gray-500">Position <span className="text-red-400">*</span></label>
-                  <Input
-                    className="h-9 text-sm"
-                    placeholder="Do not abbreviate"
-                    value={userData.position}
-                    onChange={(e) => setUserData({...userData, position: e.target.value})}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="block text-xs font-medium text-gray-500">Project</label>
-                  <Input
-                    className="h-9 text-sm"
-                    placeholder="If applicable"
-                    value={userData.project}
-                    onChange={(e) => setUserData({...userData, project: e.target.value})}
-                  />
-                </div>
-              </div>
-              <div className="space-y-1">
-                <label className="block text-xs font-medium text-gray-500">Duties and Responsibilities <span className="text-red-400">*</span></label>
-                <div className="border border-input rounded-md overflow-hidden focus-within:ring-2 focus-within:ring-ring bg-background">
-                  {/* Toolbar */}
-                  <div className="flex items-center gap-0.5 px-2 py-1 bg-gray-50 border-b border-input">
-                    <button type="button" title="Bullet list (• )" onClick={() => insertAtLines(() => '• ')}
-                      className="p-1 rounded hover:bg-gray-200 text-gray-600 transition-colors">
-                      <List className="w-3.5 h-3.5" />
-                    </button>
-                    <button type="button" title="Numbered list" onClick={() => insertAtLines((i) => `${i + 1}. `)}
-                      className="p-1 rounded hover:bg-gray-200 text-gray-600 transition-colors">
-                      <ListOrdered className="w-3.5 h-3.5" />
-                    </button>
-                    <button type="button" title="Dash list" onClick={() => insertAtLines(() => '- ')}
-                      className="p-1 rounded hover:bg-gray-200 text-gray-600 transition-colors">
-                      <Minus className="w-3.5 h-3.5" />
-                    </button>
-                    <div className="w-px h-4 bg-gray-300 mx-1" />
-                    <Type className="w-3 h-3 text-gray-400" />
-                    <button type="button" title="Decrease font size"
-                      onClick={() => setDutiesFontSize(s => Math.max(10, s - 1))}
-                      className="px-1.5 py-0.5 rounded hover:bg-gray-200 text-gray-600 text-xs font-mono leading-none transition-colors">
-                      A−
-                    </button>
-                    <span className="text-[10px] text-gray-400 font-mono w-5 text-center select-none">{dutiesFontSize}</span>
-                    <button type="button" title="Increase font size"
-                      onClick={() => setDutiesFontSize(s => Math.min(20, s + 1))}
-                      className="px-1.5 py-0.5 rounded hover:bg-gray-200 text-gray-600 text-xs font-mono leading-none transition-colors">
-                      A+
-                    </button>
                   </div>
-                  <textarea
-                    ref={dutiesRef}
-                    className="w-full px-3 py-2 focus:outline-none bg-background overflow-hidden resize-none"
-                    style={{ fontSize: dutiesFontSize, minHeight: 80 }}
-                    placeholder="Enter your duties and responsibilities (consistent with approved Terms of Reference)"
-                    rows={4}
-                    value={userData.duties}
-                    onChange={(e) => setUserData({...userData, duties: e.target.value})}
-                  />
                 </div>
-              </div>
-            </div>
-          </div>
 
-          {/* Actual Deliverables */}
-          <div className="px-5 py-4 border-b border-gray-100">
-            <SectionHeader
-              title="Actual Deliverables"
-              complete={isDeliverablesComplete()}
-              expanded={isDeliverablesExpanded}
-              onToggle={() => setIsDeliverablesExpanded(!isDeliverablesExpanded)}
-              badge={isDeliverablesComplete() ? 'Complete' : 'Incomplete — required'}
-            />
-            <div className={`transition-all duration-300 ease-in-out ${isDeliverablesExpanded ? 'max-h-[2000px] opacity-100 mt-4 overflow-visible' : 'max-h-0 opacity-0 overflow-hidden'}`}>
-              <div className="space-y-1">
-                <label className="block text-xs font-medium text-gray-500">Actual Deliverables <span className="text-red-400">*</span></label>
-                <div className="border border-input rounded-md overflow-hidden focus-within:ring-2 focus-within:ring-ring bg-background">
-                  {/* Toolbar */}
-                  <div className="flex items-center gap-0.5 px-2 py-1 bg-gray-50 border-b border-input">
-                    <button type="button" title="Bullet list (• )" onClick={() => insertAtDeliverableLines(() => '• ')}
-                      className="p-1 rounded hover:bg-gray-200 text-gray-600 transition-colors">
-                      <List className="w-3.5 h-3.5" />
-                    </button>
-                    <button type="button" title="Numbered list" onClick={() => insertAtDeliverableLines((i) => `${i + 1}. `)}
-                      className="p-1 rounded hover:bg-gray-200 text-gray-600 transition-colors">
-                      <ListOrdered className="w-3.5 h-3.5" />
-                    </button>
-                    <button type="button" title="Dash list" onClick={() => insertAtDeliverableLines(() => '- ')}
-                      className="p-1 rounded hover:bg-gray-200 text-gray-600 transition-colors">
-                      <Minus className="w-3.5 h-3.5" />
-                    </button>
-                    <div className="w-px h-4 bg-gray-300 mx-1" />
-                    <Type className="w-3 h-3 text-gray-400" />
-                    <button type="button" title="Decrease font size"
-                      onClick={() => setDeliverablesFontSize(s => Math.max(10, s - 1))}
-                      className="px-1.5 py-0.5 rounded hover:bg-gray-200 text-gray-600 text-xs font-mono leading-none transition-colors">
-                      A−
-                    </button>
-                    <span className="text-[10px] text-gray-400 font-mono w-5 text-center select-none">{deliverablesFontSize}</span>
-                    <button type="button" title="Increase font size"
-                      onClick={() => setDeliverablesFontSize(s => Math.min(20, s + 1))}
-                      className="px-1.5 py-0.5 rounded hover:bg-gray-200 text-gray-600 text-xs font-mono leading-none transition-colors">
-                      A+
-                    </button>
-                  </div>
-                  <textarea
-                    ref={deliverableRef}
-                    className="w-full px-3 py-2 focus:outline-none bg-background overflow-hidden resize-none"
-                    style={{ fontSize: deliverablesFontSize, minHeight: 80 }}
-                    placeholder="Enter your actual deliverables — each line becomes a separate item in the report"
-                    rows={4}
-                    value={userData.deliverables || ''}
-                    onChange={(e) => setUserData({...userData, deliverables: e.target.value})}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Verifier Details */}
-          <div className="px-5 py-4">
-            <SectionHeader
-              title="Verifier Details"
-              complete={isAdditionalDetailsComplete()}
-              expanded={isAdditionalDetailsExpanded}
-              onToggle={() => setIsAdditionalDetailsExpanded(!isAdditionalDetailsExpanded)}
-              badge={isAdditionalDetailsComplete() ? 'Complete' : 'Incomplete — required'}
-            />
-            <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isAdditionalDetailsExpanded ? 'max-h-[300px] opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-1">
+                {/* Month */}
                 <div className="space-y-1">
-                  <label className="block text-xs font-medium text-gray-500">Verified by — Name <span className="text-red-400">*</span></label>
-                  <Input
-                    className="h-9 text-sm"
-                    placeholder="Name of Immediate Supervisor"
-                    value={verifiedBy.name}
-                    onChange={(e) => setVerifiedBy({...verifiedBy, name: e.target.value})}
-                  />
+                  <label className="block text-xs font-medium text-gray-500">Month</label>
+                  <Select value={selectedMonth} onValueChange={handleMonthChange}>
+                    <SelectTrigger className="h-9 text-sm">
+                      <SelectValue placeholder="Select month" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
+                        <SelectItem key={month} value={month.toString()}>
+                          {new Date(2000, month - 1).toLocaleString('default', { month: 'long' })}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div className="space-y-1">
-                  <label className="block text-xs font-medium text-gray-500">Verified by — Designation <span className="text-red-400">*</span></label>
-                  <Input
-                    className="h-9 text-sm"
-                    placeholder="e.g. Regional Director"
-                    value={verifiedBy.designation}
-                    onChange={(e) => setVerifiedBy({...verifiedBy, designation: e.target.value})}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
 
-        {/* ── Report Preview ───────────────────────────────────────── */}
-        {selectedPeriod && selectedMonth && selectedYear && (
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-            {/* Preview header */}
-            <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-gray-100 sm:flex-col sm:items-start">
-              <div>
-                <h2 className="font-semibold text-gray-800 text-sm">Report Preview</h2>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  {totalPages} page{totalPages > 1 ? 's' : ''} · live
-                </p>
+                {/* Year */}
+                <div className="space-y-1">
+                  <label className="block text-xs font-medium text-gray-500">Year</label>
+                  <Select value={selectedYear} onValueChange={handleYearChange}>
+                    <SelectTrigger className="h-9 text-sm">
+                      <SelectValue placeholder="Year" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map((year) => (
+                        <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              {true && (
-                <div className="flex gap-2 sm:w-full">
-                  <Button
-                    onClick={openPNPKISetup}
-                    variant={pnpkiReady ? 'default' : 'outline'}
-                    size="sm"
-                    className="gap-1.5 sm:flex-1"
-                    title={pnpkiReady ? `PNPKI configured — ${pnpkiBaseConfig.fileName}` : 'Set up PNPKI digital signature'}
-                  >
-                    {pnpkiReady
-                      ? <><ShieldCheckIcon className="h-3.5 w-3.5 text-green-300" /> PNPKI ✓</>
-                      : <><KeyRoundIcon className="h-3.5 w-3.5 animate-bounce" /> PNPKI</>}
-                  </Button>
-                  <Button
-                    onClick={handleDARDownload}
-                    disabled={signing}
-                    size="sm"
-                    className="gap-1.5 sm:flex-1"
-                  >
-                    {signing
-                      ? <><LoaderIcon className="w-3.5 h-3.5 animate-spin" /> Signing…</>
-                      : <><FileDown className="w-3.5 h-3.5" />{pnpkiReady ? 'Save + Sign' : 'Download PDF'}</>}
-                  </Button>
+
+              {/* Summary badge — shows once all three are selected */}
+              {selectedPeriod && selectedMonth && selectedYear && (
+                <div className="mt-3">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold">
+                    {getDateRange()}
+                  </span>
                 </div>
               )}
             </div>
 
-            {/* Paper pages */}
-            <div className="p-4 bg-gray-100 overflow-x-auto">
-              {paginatedActivities.map((pageActivities, pageIndex) => (
-                <div
-                  key={pageIndex}
-                  className="mb-6 bg-white shadow-md relative"
-                  style={{ width: '8.5in', minHeight: '11in', margin: '0 auto', padding: '0.75in 0.75in 1.2in' }}
-                >
-                  {/* AFP code */}
-                  <div className="absolute top-6 right-6 text-[10px] italic text-gray-400">
-                    AFD-HRM-AHR-009/r0/24Nov2025
+            {/* Personal Information */}
+            <div className="px-5 py-4 border-b border-gray-100">
+              <SectionHeader
+                title="Personal Information"
+                complete={isPersonalInfoComplete()}
+                expanded={isPersonalInfoExpanded}
+                onToggle={() => setIsPersonalInfoExpanded(!isPersonalInfoExpanded)}
+                badge={isPersonalInfoComplete() ? 'Complete' : 'Incomplete — required'}
+              />
+              <div className={`transition-all duration-300 ease-in-out ${isPersonalInfoExpanded ? 'max-h-[2000px] opacity-100 mt-4 overflow-visible' : 'max-h-0 opacity-0 overflow-hidden'}`}>
+                <div className="grid grid-cols-3 gap-3 mb-3 sm:grid-cols-1">
+                  <div className="space-y-1">
+                    <label className="block text-xs font-medium text-gray-500">Name <span className="text-red-400">*</span></label>
+                    <Input
+                      className="h-9 text-sm"
+                      placeholder="Surname, First Name, MI"
+                      value={userData.name}
+                      onChange={(e) => setUserData({ ...userData, name: e.target.value })}
+                    />
                   </div>
+                  <div className="space-y-1">
+                    <label className="block text-xs font-medium text-gray-500">Position <span className="text-red-400">*</span></label>
+                    <Input
+                      className="h-9 text-sm"
+                      placeholder="Do not abbreviate"
+                      value={userData.position}
+                      onChange={(e) => setUserData({ ...userData, position: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-xs font-medium text-gray-500">Project</label>
+                    <Input
+                      className="h-9 text-sm"
+                      placeholder="If applicable"
+                      value={userData.project}
+                      onChange={(e) => setUserData({ ...userData, project: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-xs font-medium text-gray-500">Duties and Responsibilities <span className="text-red-400">*</span></label>
+                  <div className="border border-input rounded-md overflow-hidden focus-within:ring-2 focus-within:ring-ring bg-background">
+                    {/* Toolbar */}
+                    <div className="flex items-center gap-0.5 px-2 py-1 bg-gray-50 border-b border-input">
+                      <button type="button" title="Bullet list (• )" onClick={() => insertAtLines(() => '• ')}
+                        className="p-1 rounded hover:bg-gray-200 text-gray-600 transition-colors">
+                        <List className="w-3.5 h-3.5" />
+                      </button>
+                      <button type="button" title="Numbered list" onClick={() => insertAtLines((i) => `${i + 1}. `)}
+                        className="p-1 rounded hover:bg-gray-200 text-gray-600 transition-colors">
+                        <ListOrdered className="w-3.5 h-3.5" />
+                      </button>
+                      <button type="button" title="Dash list" onClick={() => insertAtLines(() => '- ')}
+                        className="p-1 rounded hover:bg-gray-200 text-gray-600 transition-colors">
+                        <Minus className="w-3.5 h-3.5" />
+                      </button>
+                      <div className="w-px h-4 bg-gray-300 mx-1" />
+                      <Type className="w-3 h-3 text-gray-400" />
+                      <button type="button" title="Decrease font size"
+                        onClick={() => setDutiesFontSize(s => Math.max(10, s - 1))}
+                        className="px-1.5 py-0.5 rounded hover:bg-gray-200 text-gray-600 text-xs font-mono leading-none transition-colors">
+                        A−
+                      </button>
+                      <span className="text-[10px] text-gray-400 font-mono w-5 text-center select-none">{dutiesFontSize}</span>
+                      <button type="button" title="Increase font size"
+                        onClick={() => setDutiesFontSize(s => Math.min(20, s + 1))}
+                        className="px-1.5 py-0.5 rounded hover:bg-gray-200 text-gray-600 text-xs font-mono leading-none transition-colors">
+                        A+
+                      </button>
+                    </div>
+                    <textarea
+                      ref={dutiesRef}
+                      className="w-full px-3 py-2 focus:outline-none bg-background overflow-hidden resize-none"
+                      style={{ fontSize: dutiesFontSize, minHeight: 80 }}
+                      placeholder="Enter your duties and responsibilities (consistent with approved Terms of Reference)"
+                      rows={4}
+                      value={userData.duties}
+                      onChange={(e) => setUserData({ ...userData, duties: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
 
-                  {pageIndex === 0 ? (
-                    <>
-                      <div className="text-center flex flex-col items-center mb-5 pb-4 border-b border-gray-300">
-                        <img src={DICT} className="h-[110px] object-contain" alt="DICT" />
-                        <h1 className="text-lg font-bold mt-2">Accomplishment Report</h1>
-                        <p className="text-sm text-gray-600 mt-0.5">{getDateRange()}</p>
-                      </div>
+            {/* Actual Deliverables */}
+            <div className="px-5 py-4 border-b border-gray-100">
+              <SectionHeader
+                title="Actual Deliverables"
+                complete={isDeliverablesComplete()}
+                expanded={isDeliverablesExpanded}
+                onToggle={() => setIsDeliverablesExpanded(!isDeliverablesExpanded)}
+                badge={isDeliverablesComplete() ? 'Complete' : 'Incomplete — required'}
+              />
+              <div className={`transition-all duration-300 ease-in-out ${isDeliverablesExpanded ? 'max-h-[2000px] opacity-100 mt-4 overflow-visible' : 'max-h-0 opacity-0 overflow-hidden'}`}>
+                <div className="space-y-1">
+                  <label className="block text-xs font-medium text-gray-500">Actual Deliverables <span className="text-red-400">*</span></label>
+                  <div className="border border-input rounded-md overflow-hidden focus-within:ring-2 focus-within:ring-ring bg-background">
+                    {/* Toolbar */}
+                    <div className="flex items-center gap-0.5 px-2 py-1 bg-gray-50 border-b border-input">
+                      <button type="button" title="Bullet list (• )" onClick={() => insertAtDeliverableLines(() => '• ')}
+                        className="p-1 rounded hover:bg-gray-200 text-gray-600 transition-colors">
+                        <List className="w-3.5 h-3.5" />
+                      </button>
+                      <button type="button" title="Numbered list" onClick={() => insertAtDeliverableLines((i) => `${i + 1}. `)}
+                        className="p-1 rounded hover:bg-gray-200 text-gray-600 transition-colors">
+                        <ListOrdered className="w-3.5 h-3.5" />
+                      </button>
+                      <button type="button" title="Dash list" onClick={() => insertAtDeliverableLines(() => '- ')}
+                        className="p-1 rounded hover:bg-gray-200 text-gray-600 transition-colors">
+                        <Minus className="w-3.5 h-3.5" />
+                      </button>
+                      <div className="w-px h-4 bg-gray-300 mx-1" />
+                      <Type className="w-3 h-3 text-gray-400" />
+                      <button type="button" title="Decrease font size"
+                        onClick={() => setDeliverablesFontSize(s => Math.max(10, s - 1))}
+                        className="px-1.5 py-0.5 rounded hover:bg-gray-200 text-gray-600 text-xs font-mono leading-none transition-colors">
+                        A−
+                      </button>
+                      <span className="text-[10px] text-gray-400 font-mono w-5 text-center select-none">{deliverablesFontSize}</span>
+                      <button type="button" title="Increase font size"
+                        onClick={() => setDeliverablesFontSize(s => Math.min(20, s + 1))}
+                        className="px-1.5 py-0.5 rounded hover:bg-gray-200 text-gray-600 text-xs font-mono leading-none transition-colors">
+                        A+
+                      </button>
+                    </div>
+                    <textarea
+                      ref={deliverableRef}
+                      className="w-full px-3 py-2 focus:outline-none bg-background overflow-hidden resize-none"
+                      style={{ fontSize: deliverablesFontSize, minHeight: 80 }}
+                      placeholder="Enter your actual deliverables — each line becomes a separate item in the report"
+                      rows={4}
+                      value={userData.deliverables || ''}
+                      onChange={(e) => setUserData({ ...userData, deliverables: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
 
-                      <div className="mb-5 text-sm">
-                        <div className="grid grid-cols-2 gap-x-6 gap-y-2">
-                          {[
-                            ['Name', userData.name],
-                            ['Office', getDepartmentName((() => { try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; } })().deptid)],
-                            ['Position', userData.position],
-                            ['Project', userData.project],
-                          ].map(([label, value]) => (
-                            <div key={label} className="flex gap-3 items-end">
-                              <span className="font-bold shrink-0 w-16">{label}</span>
-                              <span className="flex-1 border-b border-dotted border-black pb-0.5 font-semibold min-w-0 truncate">{value || ''}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
+            {/* Verifier Details */}
+            <div className="px-5 py-4">
+              <SectionHeader
+                title="Verifier Details"
+                complete={isAdditionalDetailsComplete()}
+                expanded={isAdditionalDetailsExpanded}
+                onToggle={() => setIsAdditionalDetailsExpanded(!isAdditionalDetailsExpanded)}
+                badge={isAdditionalDetailsComplete() ? 'Complete' : 'Incomplete — required'}
+              />
+              <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isAdditionalDetailsExpanded ? 'max-h-[300px] opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-1">
+                  <div className="space-y-1">
+                    <label className="block text-xs font-medium text-gray-500">Verified by — Name <span className="text-red-400">*</span></label>
+                    <Input
+                      className="h-9 text-sm"
+                      placeholder="Name of Immediate Supervisor"
+                      value={verifiedBy.name}
+                      onChange={(e) => setVerifiedBy({ ...verifiedBy, name: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-xs font-medium text-gray-500">Verified by — Designation <span className="text-red-400">*</span></label>
+                    <Input
+                      className="h-9 text-sm"
+                      placeholder="e.g. Regional Director"
+                      value={verifiedBy.designation}
+                      onChange={(e) => setVerifiedBy({ ...verifiedBy, designation: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
-                      <div className="border border-black">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b border-black bg-gray-50">
-                              <th className="border-r border-black px-3 py-2 text-left w-1/2 font-semibold">Duties and Responsibilities</th>
-                              <th className="px-3 py-2 text-left w-1/2 font-semibold">Actual Deliverables</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr>
-                              <td className="border-r border-dashed border-gray-400 px-3 py-3 whitespace-pre-wrap align-top" style={{ fontSize: dutiesFontSize }}>
-                                {userData.duties || '(Consistent with the approved and submitted Terms of Reference)'}
-                              </td>
-                              <td className="px-3 py-3 align-top">
-                                <div className="min-h-[40px]">
-                                  {pageActivities.map((activity, actIndex) => (
-                                    <div key={actIndex} className="mb-1">
-                                      <span style={{ fontSize: deliverablesFontSize }}>{activity}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
+          {/* ── Report Preview ───────────────────────────────────────── */}
+          {selectedPeriod && selectedMonth && selectedYear && (
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+              {/* Preview header */}
+              <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-gray-100 sm:flex-col sm:items-start">
+                <div>
+                  <h2 className="font-semibold text-gray-800 text-sm">Report Preview</h2>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {totalPages} page{totalPages > 1 ? 's' : ''} · live
+                  </p>
+                </div>
+                {true && (
+                  <div className="flex gap-2 sm:w-full">
+                    <Button
+                      onClick={openPNPKISetup}
+                      variant={pnpkiReady ? 'default' : 'outline'}
+                      size="sm"
+                      className="gap-1.5 sm:flex-1"
+                      title={pnpkiReady ? `PNPKI configured — ${pnpkiBaseConfig.fileName}` : 'Set up PNPKI digital signature'}
+                    >
+                      {pnpkiReady
+                        ? <><ShieldCheckIcon className="h-3.5 w-3.5 text-green-300" /> PNPKI ✓</>
+                        : <><KeyRoundIcon className="h-3.5 w-3.5 animate-bounce" /> PNPKI</>}
+                    </Button>
+                    <Button
+                      onClick={handleDARDownload}
+                      disabled={signing}
+                      size="sm"
+                      className="gap-1.5 sm:flex-1"
+                    >
+                      {signing
+                        ? <><LoaderIcon className="w-3.5 h-3.5 animate-spin" /> Signing…</>
+                        : <><FileDown className="w-3.5 h-3.5" />{pnpkiReady ? 'Save + Sign' : 'Download PDF'}</>}
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {/* Paper pages */}
+              <div className="p-4 bg-gray-100 overflow-x-auto">
+                {Array.from({ length: totalPages }, (_, pageIndex) => (
+                  <div
+                    key={pageIndex}
+                    className="mb-6 bg-white shadow-md relative"
+                    style={{ width: '8.5in', minHeight: '11in', margin: '0 auto', padding: '0.75in 0.75in 1.2in' }}
+                  >
+                    {/* AFP code */}
+                    <div className="absolute top-6 right-6 text-[10px] italic text-gray-400">
+                      AFD-HRM-AHR-009/r0/24Nov2025
+                    </div>
+
+                    {/* Header — same on every page */}
+                    <div className="text-center flex flex-col items-center mb-5 pb-4 border-b border-gray-300">
+                      <img src={DICT} className="h-[110px] object-contain" alt="DICT" />
+                      <h1 className="text-lg font-bold mt-2">Accomplishment Report</h1>
+                      <p className="text-sm text-gray-600 mt-0.5">{getDateRange()}</p>
+                    </div>
+
+                    <div className="mb-5 text-sm">
+                      <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+                        {[
+                          ['Name', userData.name],
+                          ['Office', getDepartmentName((() => { try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; } })().deptid)],
+                          ['Position', userData.position],
+                          ['Project', userData.project],
+                        ].map(([label, value]) => (
+                          <div key={label} className="flex gap-3 items-end">
+                            <span className="font-bold shrink-0 w-16">{label}</span>
+                            <span className="flex-1 border-b border-dotted border-black pb-0.5 font-semibold min-w-0 truncate">{value || ''}</span>
+                          </div>
+                        ))}
                       </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="text-center mb-5 pb-4 border-b border-gray-300">
-                        <h1 className="text-lg font-bold">Accomplishment Report (Continued)</h1>
-                        <p className="text-sm text-gray-600 mt-0.5">{getDateRange()}</p>
-                      </div>
-                      <div className="border border-black">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b border-black bg-gray-50">
-                              <th className="border-r border-black px-3 py-2 text-left w-1/2 font-semibold">Duties and Responsibilities</th>
-                              <th className="px-3 py-2 text-left w-1/2 font-semibold">Actual Deliverables</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr>
-                              <td className="border-r border-dashed border-gray-400 px-3 py-3 whitespace-pre-wrap align-top" style={{ fontSize: dutiesFontSize }}>
-                                {userData.duties || '(Consistent with the approved and submitted Terms of Reference)'}
-                              </td>
-                              <td className="px-3 py-3 align-top">
-                                {pageActivities.map((activity, actIndex) => (
+                    </div>
+
+                    {/* Table */}
+                    <div className="border border-black">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-black bg-gray-50">
+                            <th className="border-r border-black px-3 py-2 text-left w-1/2 font-semibold">Duties and Responsibilities</th>
+                            <th className="px-3 py-2 text-left w-1/2 font-semibold">Actual Deliverables</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td className="border-r border-dashed border-gray-400 px-3 py-3 whitespace-pre-wrap align-top" style={{ fontSize: dutiesFontSize }}>
+                              {pageIndex === 0 && !paginatedDuties[0]
+                                ? '(Consistent with the approved and submitted Terms of Reference)'
+                                : paginatedDuties[pageIndex] || ''}
+                            </td>
+                            <td className="px-3 py-3 align-top">
+                              <div className="min-h-[40px]">
+                                {(paginatedActivities[pageIndex] || []).map((activity, actIndex) => (
                                   <div key={actIndex} className="mb-1">
                                     <span style={{ fontSize: deliverablesFontSize }}>{activity}</span>
                                   </div>
                                 ))}
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </>
-                  )}
+                              </div>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
 
-                  {/* Signatures — last page only */}
-                  {pageIndex === totalPages - 1 && (
-                    <>
-                      <div className="mt-10 flex justify-between text-sm gap-4">
-                        <div>
-                          <p className="mb-8 text-gray-600">Prepared by:</p>
-                          <div className="border-b border-black w-56 mb-1" />
-                          <p className="font-bold">{userData.name || '[Surname, First Name, MI]'}</p>
-                          <p className="italic text-xs text-gray-600">{userData.position || '[Position]'}</p>
+                    {/* Signatures — last page only */}
+                    {pageIndex === totalPages - 1 && (
+                      <>
+                        <div className="mt-10 flex justify-between text-sm gap-4">
+                          <div>
+                            <p className="mb-8 text-gray-600">Prepared by:</p>
+                            <div className="border-b border-black w-56 mb-1" />
+                            <p className="font-bold">{userData.name || '[Surname, First Name, MI]'}</p>
+                            <p className="italic text-xs text-gray-600">{userData.position || '[Position]'}</p>
+                          </div>
+                          <div>
+                            <p className="mb-8 text-gray-600">Verified by:</p>
+                            <div className="border-b border-black w-56 mb-1" />
+                            <p className="font-bold">{verifiedBy.name || '[Supervisor Name]'}</p>
+                            <p className="italic text-xs text-gray-600">{verifiedBy.designation || 'Designation'}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="mb-8 text-gray-600">Verified by:</p>
-                          <div className="border-b border-black w-56 mb-1" />
-                          <p className="font-bold">{verifiedBy.name || '[Supervisor Name]'}</p>
-                          <p className="italic text-xs text-gray-600">{verifiedBy.designation || 'Designation'}</p>
-                        </div>
-                      </div>
-                    </>
-                  )}
+                      </>
+                    )}
 
-                  {/* Page footer — always visible */}
-                  <div className="absolute bottom-6 left-0 right-0 px-6 flex items-end justify-between text-[10px] text-gray-400">
-                    <span className="italic">— This is a system-generated file. —</span>
-                    <span>Page {pageIndex + 1} of {totalPages}</span>
+                    {/* Page footer — always visible */}
+                    <div className="absolute bottom-6 left-0 right-0 px-6 flex items-end justify-between text-[10px] text-gray-400">
+                      <span className="italic">— This is a system-generated file. —</span>
+                      <span>Page {pageIndex + 1} of {totalPages}</span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
 
-    <PNPKISetup
-      open={pnpkiOpen}
-      onClose={() => setPnpkiOpen(false)}
-      config={pnpkiMergedConfig}
-      onSave={handleSavePNPKIDar}
-      onClear={handleClearPNPKIDar}
-      pdfBlob={previewPdfBlob}
-      totalPages={totalPages}
-    />
+      <PNPKISetup
+        open={pnpkiOpen}
+        onClose={() => setPnpkiOpen(false)}
+        config={pnpkiMergedConfig}
+        onSave={handleSavePNPKIDar}
+        onClear={handleClearPNPKIDar}
+        pdfBlob={previewPdfBlob}
+        totalPages={pdfTotalPages}
+      />
     </>
   );
 }
