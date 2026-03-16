@@ -360,7 +360,7 @@ const MyDocument = ({ name, date, data, selectedYear, selectedMonth, previewUrl,
         {[1].map((_, index) => (
           <View key={index} style={{ width: '50%', border: 0.5, borderStyle: 'solid', padding: 1 }}>
             <View key={index} style={{ width: '100%', border: 0.5, borderStyle: 'solid', padding: 8, paddingBottom: 30 }}>
-              <Text style={{ fontSize: 6, marginBottom: 5, fontStyle: 'italic', fontWeight: 'bold', alignSelf: "flex-end" }}>Civil Service Form No. 48 - RX</Text>
+              <Text style={{ fontSize: 6, marginBottom: 5, fontStyle: 'italic', fontWeight: 'bold', alignSelf: "flex-end" }}>Civil Service Form No. 48</Text>
               <Image src={DICT} style={{ height: 50, objectFit: 'contain', alignSelf: 'center', marginBottom: 5 }} />
               <Text style={{ fontSize: 14, fontStyle: 'bold', textAlign: 'center', marginBottom: 3 }}>DAILY TIME RECORD</Text>
               <Text style={{ fontSize: 10, textAlign: 'center', marginBottom: 5 }}></Text>
