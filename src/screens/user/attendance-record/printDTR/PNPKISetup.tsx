@@ -90,6 +90,7 @@ interface CanvasProps {
   sigFontSize?: number;
   sigFontFamily?: string;
   sigTextColor?: string;
+  showSignedBy?: boolean;
 }
 
 function SigCanvas({
@@ -99,6 +100,7 @@ function SigCanvas({
   signImageScale = 1, signImageOffsetX = 0, signImageOffsetY = 0,
   onContentChange,
   sigFontSize = 10, sigFontFamily = 'Arial, sans-serif', sigTextColor = '#1e3a5f',
+  showSignedBy = false,
 }: CanvasProps) {
   const containerRef  = useRef<HTMLDivElement>(null);
   const stageRef      = useRef<HTMLDivElement>(null);
@@ -361,6 +363,11 @@ function SigCanvas({
                     whiteSpace: 'nowrap',
                   }}
                 >
+                  {showSignedBy && (
+                    <span style={{ fontSize: '0.8em', color: '#64748b', fontWeight: 400 }}>
+                      Digitally Signed by:
+                    </span>
+                  )}
                   <span style={{ fontWeight: 700 }}>{signerName || 'Signer Name'}</span>
                   {signNote && <span>{signNote}</span>}
                 </div>
@@ -534,6 +541,7 @@ export default function PNPKISetup({ open, onClose, config, onSave, onClear, pdf
               sigFontSize={draft.sigFontSize ?? 8}
               sigFontFamily={draft.sigFontFamily ?? 'Arial, sans-serif'}
               sigTextColor={draft.sigTextColor ?? '#1e3a5f'}
+              showSignedBy={draft.showSignedBy}
             />
 
 
@@ -614,6 +622,27 @@ export default function PNPKISetup({ open, onClose, config, onSave, onClear, pdf
                 value={draft.signerPosition}
                 onChange={(e) => set('signerPosition', e.target.value)}
               />
+            </div>
+
+            {/* Digitally Signed by checkbox */}
+            <div className="flex flex-col gap-1.5 mt-1">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                Stamp Label
+              </label>
+              <label className="flex items-start gap-3 rounded-lg border border-gray-200 bg-background px-3 py-2.5 cursor-pointer hover:border-blue-400 transition select-none">
+                <input
+                  type="checkbox"
+                  checked={draft.showSignedBy}
+                  onChange={(e) => set('showSignedBy', e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded accent-blue-600 cursor-pointer shrink-0"
+                />
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-sm text-foreground font-medium">Add "Digitally Signed by:" label</span>
+                  <p className="text-[10px] text-muted-foreground leading-snug">
+                    Prepend a small label above your name on the stamp.
+                  </p>
+                </div>
+              </label>
             </div>
 
             {/* Stamp designer */}
@@ -800,7 +829,7 @@ export default function PNPKISetup({ open, onClose, config, onSave, onClear, pdf
                   </button>
                 </div>
                 <input
-                  type="range" min="0.3" max="2.5" step="0.05"
+                  type="range" min="0.3" max="2" step="0.05"
                   className="w-full mt-1 accent-blue-500"
                   value={draft.signTextScale ?? 1}
                   onChange={(e) => set('signTextScale', parseFloat(e.target.value))}
@@ -808,30 +837,23 @@ export default function PNPKISetup({ open, onClose, config, onSave, onClear, pdf
                 <p className="text-[10px] text-muted-foreground mt-0.5">Drag text in preview to reposition</p>
               </div>
             )}
+
           </div>
 
         </div>
 
-        {/* ─ Footer ─ */}
-        <div className="flex justify-between items-center gap-2 pt-2 border-t">
-          <Button
-            type="button"
-            variant="destructive"
-            size="sm"
-            className="gap-1"
-            onClick={handleClear}
-          >
-            <Trash2Icon className="w-3.5 h-3.5" /> Clear
+        {/* ─ Actions ─ */}
+        <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100">
+          <Button variant="outline" className="text-xs h-9" onClick={handleClear}>
+            Clear Settings
           </Button>
-          <div className="flex gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="button" size="sm" onClick={handleSave} className="gap-1">
-              <CheckCircle2Icon className="w-3.5 h-3.5" />
-              Save &amp; Enable
-            </Button>
-          </div>
+          <div className="flex-1" />
+          <Button variant="ghost" className="text-xs h-9" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button className="text-xs h-9 px-6 bg-blue-600 hover:bg-blue-700" onClick={handleSave}>
+            Save Configuration
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

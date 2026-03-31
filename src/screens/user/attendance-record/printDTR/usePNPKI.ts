@@ -26,6 +26,7 @@ export interface PNPKIConfig {
   sigFontSize?: number;        // font size in px at 190px editor reference height (default 24)
   sigFontFamily?: string;      // CSS font-family (default 'Arial, sans-serif')
   sigTextColor?: string;       // CSS color string (default '#1e3a5f')
+  showSignedBy: boolean;       // Prepend 'Digitally Signed by:' label
 }
 
 export const DEFAULT_PNPKI_CONFIG: PNPKIConfig = {
@@ -51,6 +52,7 @@ export const DEFAULT_PNPKI_CONFIG: PNPKIConfig = {
   sigFontSize: 10,      // % of sig-box height (1-30)
   sigFontFamily: 'Arial, sans-serif',
   sigTextColor: '#1e3a5f',
+  showSignedBy: false,
 };
 
 const STORAGE_KEY = 'pnpki_config';
@@ -208,21 +210,41 @@ export async function buildSignDesignBlob(cfg: PNPKIConfig): Promise<Blob | null
   const fontSize    = (cfg.sigFontSize ?? 10) / 100 * H * (cfg.signTextScale ?? 1);
   const fontFamily  = cfg.sigFontFamily ?? 'Arial, sans-serif';
   const color       = cfg.sigTextColor  ?? '#1e3a5f';
-  const lines       = [
-    cfg.signerName || 'Signer',
-    ...(cfg.signerPosition ? [cfg.signerPosition] : []),
-  ];
+  const lines: string[] = [];
+  if (cfg.showSignedBy) {
+    lines.push('Digitally Signed by:');
+  }
+  lines.push(cfg.signerName || 'Signer');
+  if (cfg.signerPosition) {
+    lines.push(cfg.signerPosition);
+  }
 
   ctx.fillStyle    = color;
-  ctx.font         = `bold ${fontSize}px ${fontFamily}`;
   ctx.textBaseline = 'top';
 
   const textX = (cfg.signTextOffsetX ?? 0) * W;
   const textY = (cfg.signTextOffsetY ?? 0) * H;
   const lineH = fontSize * 1.35;
+
   lines.forEach((line, i) => {
-    if (i > 0) ctx.font = `${fontSize}px ${fontFamily}`; // signer name bold, rest normal
-    ctx.fillText(line, textX, textY + i * lineH);
+    let currentFontSize = fontSize;
+    let currentFontWeight = 'normal';
+
+    if (cfg.showSignedBy && i === 0) {
+      // "Digitally Signed by:" label
+      currentFontSize = fontSize * 0.8;
+      ctx.fillStyle = '#64748b'; // Slate-500
+    } else if ((cfg.showSignedBy && i === 1) || (!cfg.showSignedBy && i === 0)) {
+      // Signer Name
+      currentFontWeight = 'bold';
+      ctx.fillStyle = color;
+    } else {
+      // Signer Position
+      ctx.fillStyle = color;
+    }
+
+    ctx.font = `${currentFontWeight} ${currentFontSize}px ${fontFamily}`;
+    ctx.fillText(line, textX, textY + (cfg.showSignedBy && i > 0 ? (i - 1) * lineH + (fontSize * 0.8 * 1.35) : i * lineH));
   });
 
   return new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
