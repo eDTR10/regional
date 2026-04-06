@@ -105,34 +105,35 @@ const MyDocument = ({ name, date, data, selectedYear, selectedMonth, previewUrl,
   const getAmDepartureRaw = (outTime: any, inTime: any, selectedSched?: string) => {
     switch (outTime.length) {
       case 3:
-        if (inTime.length != 0 && outTime.length != 2) return selectedSched === "14" ? "12:59 PM" : "12:00 PM";
+        if (inTime.length != 0 && outTime.length != 2) return (selectedSched === "14" || selectedSched === "15") ? "12:59 PM" : "12:00 PM";
         else return outTime[0];
       case 2:
-        if (inTime.length != 0 && outTime.length != 2) return selectedSched === "14" ? "12:59 PM" : "12:00 PM";
+        if (inTime.length != 0 && outTime.length != 2) return (selectedSched === "14" || selectedSched === "15") ? "12:59 PM" : "12:00 PM";
         else return outTime[0];
       case 1:
-        if (inTime.length != 0 && outTime.length != 1) return selectedSched === "14" ? "12:59 PM" : "12:00 PM";
+        if (inTime.length != 0 && outTime.length != 1) return (selectedSched === "14" || selectedSched === "15") ? "12:59 PM" : "12:00 PM";
         else return outTime[0];
       default:
-        if (inTime.length != 0) return selectedSched === "14" ? "12:59 PM" : "12:00 PM";
+        if (inTime.length != 0) return (selectedSched === "14" || selectedSched === "15") ? "12:59 PM" : "12:00 PM";
         else return '';
     }
   };
   const renderAmDepartureText = (o: any, i: any, s: any) => getAmDepartureRaw(o, i, s).replace(/ AM| PM| am| pm/g, '');
 
   const getPMArivalRaw = (inTime: any, outTime: any, selectedSched?: string) => {
+    const isFasting = selectedSched === "14" || selectedSched === "15";
     switch (inTime.length) {
       case 3:
-        if (outTime.length != 0 && outTime.length != 3) return selectedSched === "14" ? "01:00 PM" : "01:00 PM";
+        if (outTime.length != 0 && outTime.length != 3) return isFasting ? "01:00 PM" : "01:00 PM";
         else return inTime[0];
       case 2:
-        if (outTime.length != 0 && outTime.length != 2) return selectedSched === "14" ? "01:00 PM" : "01:00 PM";
+        if (outTime.length != 0 && outTime.length != 2) return isFasting ? "01:00 PM" : "01:00 PM";
         else return inTime[0];
       case 1:
-        if (outTime.length != 0 && outTime.length != 1) return selectedSched === "14" ? "01:00 PM" : "01:00 PM";
+        if (outTime.length != 0 && outTime.length != 1) return isFasting ? "01:00 PM" : "01:00 PM";
         else return inTime[0];
       default:
-        if (outTime.length != 0) return selectedSched === "14" ? "01:00 PM" : "01:00 PM";
+        if (outTime.length != 0) return isFasting ? "01:00 PM" : "01:00 PM";
         else return '';
     }
   };
@@ -149,7 +150,8 @@ const MyDocument = ({ name, date, data, selectedYear, selectedMonth, previewUrl,
       "10": { timeIn: 9.5 * 60, timeOut: 18.5 * 60 }, // 9:30-6:30
       "11": { timeIn: 10 * 60, timeOut: 19 * 60 },  // 10:00-7:00
       "13": { timeIn: 7 * 60, timeOut: 18 * 60 },  // NEW Normal placeholder
-      "14": { timeIn: 7 * 60, timeOut: 17 * 60 }   // On Fasting placeholder
+      "14": { timeIn: 7 * 60, timeOut: 17 * 60 },  // On Fasting 7-6pm
+      "15": { timeIn: 7 * 60, timeOut: 15 * 60 }   // On Fasting 7-3pm
     };
 
     return schedules[scheduleValue] || schedules["7"]; // Default to 8:00-5:00 if invalid
@@ -167,7 +169,8 @@ const MyDocument = ({ name, date, data, selectedYear, selectedMonth, previewUrl,
       "11": "10:00-7:00",
       "12": "6:00-6:00 NS",
       "13": "NEW Normal",
-      "14": "On Fasting"
+      "14": "On Fasting(7-6pm)",
+      "15": "On Fasting(7-3pm)"
     };
 
     return scheduleRanges[scheduleValue] || "8:00-5:00"; // Default to 8:00-5:00 if invalid
@@ -246,13 +249,14 @@ const MyDocument = ({ name, date, data, selectedYear, selectedMonth, previewUrl,
       return { hours: 0, minutes: 0 };
     }
 
-    if (selectedSched === "13" || selectedSched === "14") {
-      const REQUIRED_MINUTES = 600; // 10 hours * 60 minutes
+    if (selectedSched === "13" || selectedSched === "14" || selectedSched === "15") {
+      const REQUIRED_MINUTES = selectedSched === "15" ? 480 : 600; // 8 hrs for 7-3pm, 10 hrs for others
+      const halfDay = REQUIRED_MINUTES / 2;
 
       if (!timeIn && !timeOut) {
         if (hasAMActivity && hasPMActivity) return { hours: 0, minutes: 0 };
-        if (hasAMActivity || hasPMActivity) return { hours: 5, minutes: 0 };
-        return { hours: 10, minutes: 0 };
+        if (hasAMActivity || hasPMActivity) return { hours: Math.floor(halfDay / 60), minutes: halfDay % 60 };
+        return { hours: Math.floor(REQUIRED_MINUTES / 60), minutes: REQUIRED_MINUTES % 60 };
       }
 
       let actualTimeIn = timeIn ? parseTimeToMinutes(timeIn) : 12 * 60; // default to noon if no time in
@@ -261,13 +265,13 @@ const MyDocument = ({ name, date, data, selectedYear, selectedMonth, previewUrl,
       if (actualTimeIn < 420) actualTimeIn = 420;
 
       let totalMinutes = actualTimeOut - actualTimeIn;
-      // Deduct 1 hour for lunch if time span covers 12:00 to 13:00 AND not fasting
-      if (selectedSched !== "14" && actualTimeIn <= 12 * 60 && actualTimeOut >= 13 * 60) {
+      // Deduct 1 hour for lunch only for 4D Work Week (not fasting)
+      if (selectedSched === "13" && actualTimeIn <= 12 * 60 && actualTimeOut >= 13 * 60) {
         totalMinutes -= 60;
       }
 
-      if (hasAMActivity) totalMinutes += 5 * 60;
-      if (hasPMActivity) totalMinutes += 5 * 60;
+      if (hasAMActivity) totalMinutes += halfDay;
+      if (hasPMActivity) totalMinutes += halfDay;
 
       let undertimeMinutes = REQUIRED_MINUTES - totalMinutes;
       if (undertimeMinutes < 0) undertimeMinutes = 0;

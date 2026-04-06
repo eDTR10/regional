@@ -164,7 +164,8 @@ export default function PrintDTR({ name = '', data, date, show, selectedYear, se
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="13">4D Work Week</SelectItem>
-                    <SelectItem value="14">On Fasting</SelectItem>
+                    <SelectItem value="14">On Fasting(7-6pm)</SelectItem>
+                    <SelectItem value="15">On Fasting(7-3pm)</SelectItem>
                     <SelectItem value="4">6:00-6:00</SelectItem>
                     <SelectItem value="5">7:00-4:00</SelectItem>
                     <SelectItem value="6">7:30-4:30</SelectItem>
@@ -213,7 +214,8 @@ export default function PrintDTR({ name = '', data, date, show, selectedYear, se
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="13">4D Work Week</SelectItem>
-                      <SelectItem value="14">On Fasting</SelectItem>
+                      <SelectItem value="14">On Fasting(7-6pm)</SelectItem>
+                      <SelectItem value="15">On Fasting(7-3pm)</SelectItem>
                       <SelectItem value="4">6:00-6:00</SelectItem>
                       <SelectItem value="5">7:00-4:00</SelectItem>
                       <SelectItem value="6">7:30-4:30</SelectItem>
