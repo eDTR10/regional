@@ -9,8 +9,8 @@ import { Link, Outlet } from "react-router-dom";
 
 import NavLink from "@/components/link/link";
 import { ModeToggle } from "@/components/mode-toggle";
-import { ArrowLeftIcon, Building2Icon, LayoutGridIcon, ListChecksIcon, LogOutIcon, MenuIcon,PenIcon,ScanFaceIcon } from "lucide-react";
-import {useState } from "react";
+import { ArrowLeftIcon, Building2Icon, LayoutGridIcon, ListChecksIcon, LogOutIcon, MenuIcon, PenIcon, ScanFaceIcon } from "lucide-react";
+import { useState } from "react";
 import Profile from "@/components/profile/Profile";
 
 import { useNavigate, } from "react-router-dom";
@@ -43,17 +43,17 @@ function User() {
     const navigate = useNavigate()
     const [show, setShow] = useState(false)
 
-    
-    
+
+
 
     // 8.4847692,124.6541419
     // Target office location coordinates (the ones provided)
- 
+
 
     return (
         <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
             <div className=" bg-background  h-screen w-screen overflow-hidden flex  ">
-                
+
                 <div className=" absolute z-30 flex gap-3 items-center right-0 p-7">
                     <ModeToggle />
                     <Profile />
@@ -113,9 +113,9 @@ function User() {
                                 />
 
                                 {/* Location Button */}
-                               
 
-                               
+
+
                             </div>
 
 

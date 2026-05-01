@@ -16,7 +16,144 @@ import {
   LoaderIcon,
   Trash2Icon,
   UploadIcon,
+  MousePointer2,
+  ChevronDown
 } from 'lucide-react';
+
+const FONT_OPTIONS = [
+  { value: "Inter, sans-serif", label: "Inter" },
+  { value: "Arial, sans-serif", label: "Arial" },
+  { value: "'Times New Roman', serif", label: "Times New Roman" },
+  { value: "Georgia, serif", label: "Georgia" },
+  { value: "Verdana, sans-serif", label: "Verdana" },
+  { value: "'Trebuchet MS', sans-serif", label: "Trebuchet MS" },
+  { value: "'Courier New', monospace", label: "Courier New" },
+  { value: "'Brush Script MT', cursive", label: "Brush Script MT" },
+  { value: "'Segoe Script', cursive", label: "Segoe Script" },
+  { value: "'Segoe Script Bold', cursive", label: "Segoe Script Bold" },
+  { value: "'Comic Sans MS', cursive", label: "Comic Sans MS" },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  STAMP PREVIEW (canvas-based)
+//  Uses the EXACT SAME drawing logic as buildSignDesignBlob in usePNPKI.ts
+//  so preview == output (true WYSIWYG).
+// ─────────────────────────────────────────────────────────────────────────────
+interface StampPreviewProps {
+  cssW: number;
+  cssH: number;
+  signImageBase64?: string;
+  signerName?: string;
+  signerPosition?: string;
+  showSignedBy?: boolean;
+  imgTop?: number;
+  imgLeft?: number;
+  imgWidthPct?: number;
+  txtTop?: number;
+  txtLeft?: number;
+  textSizePct?: number;
+  sigFontFamily?: string;
+  isBold?: boolean;
+  isItalic?: boolean;
+  nameColor?: string;
+  positionColor?: string;
+  signedByColor?: string;
+}
+
+function StampPreview({
+  cssW, cssH,
+  signImageBase64,
+  signerName, signerPosition,
+  showSignedBy = false,
+  imgTop = 5, imgLeft = 50, imgWidthPct = 35,
+  txtTop = 55, txtLeft = 50, textSizePct = 18,
+  sigFontFamily = 'Inter, sans-serif',
+  isBold = true, isItalic = false,
+  nameColor = '#1e3a5f', positionColor = '#2563eb', signedByColor = '#64748b',
+}: StampPreviewProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const W = Math.max(1, Math.round(cssW));
+    const H = Math.max(1, Math.round(cssH));
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, W, H);
+
+    // Mirror buildSignDesignBlob exactly so preview == output
+    const tsp = textSizePct / 100;
+    const nameFs = Math.max(0.01, tsp * H);
+    const posFs = Math.max(0.01, tsp * 0.833 * H);
+    const signedByFs = Math.max(0.01, tsp * 0.667 * H);
+
+    const nameLines = signerName
+      ? signerName
+        .replace(/<br\s*\/?>/gi, '\n')
+        .split('\n')
+        .map(l => l.trim())
+        .filter(Boolean)
+      : [];
+
+    const drawText = () => {
+      const tx = (txtLeft / 100) * W;
+      const ty = (txtTop / 100) * H;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+
+      let nameY = ty;
+      if (showSignedBy) {
+        ctx.font = `${isItalic ? 'italic ' : ''}${signedByFs}px ${sigFontFamily}`;
+        ctx.fillStyle = signedByColor;
+        ctx.fillText('Digitally Signed by:', tx, ty);
+        nameY = ty + signedByFs * 1.4;
+      }
+
+      if (nameLines.length) {
+        ctx.font = `${isItalic ? 'italic ' : ''}${isBold ? 'bold ' : ''}${nameFs}px ${sigFontFamily}`;
+        ctx.fillStyle = nameColor;
+        nameLines.forEach((line, i) => {
+          ctx.fillText(line, tx, nameY + i * nameFs * 1.3);
+        });
+      }
+
+      if (signerPosition) {
+        ctx.font = `${isItalic ? 'italic ' : ''}${posFs}px ${sigFontFamily}`;
+        ctx.fillStyle = positionColor;
+        ctx.fillText(signerPosition, tx, nameY + nameLines.length * nameFs * 1.3);
+      }
+    };
+
+    if (signImageBase64) {
+      const img = new Image();
+      img.onload = () => {
+        const iw = (imgWidthPct / 100) * W;
+        const ih = img.naturalHeight * (iw / Math.max(1, img.naturalWidth));
+        const ix = (imgLeft / 100) * W - iw / 2;
+        const iy = (imgTop / 100) * H;
+        ctx.drawImage(img, ix, iy, iw, ih);
+        drawText();
+      };
+      img.onerror = () => drawText();
+      img.src = `data:image/png;base64,${signImageBase64}`;
+    } else {
+      drawText();
+    }
+  }, [cssW, cssH, signImageBase64, signerName, signerPosition, showSignedBy,
+    imgTop, imgLeft, imgWidthPct, txtTop, txtLeft, textSizePct,
+    sigFontFamily, isItalic, isBold, nameColor, positionColor, signedByColor]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="absolute inset-0 pointer-events-none"
+      style={{ width: '100%', height: '100%' }}
+    />
+  );
+}
 
 interface Props {
   open: boolean;
@@ -76,37 +213,41 @@ interface CanvasProps {
   pdfBlob?: Blob | null;
   /** Signature appearance fields */
   signerName?: string;
-  signNote?: string;   // kept for internal prop name; maps to signerPosition
+  signerPosition?: string;
   signImageBase64?: string;
   /** Content position & scale within the sig box */
-  signTextScale?: number;
-  signTextOffsetX?: number;
-  signTextOffsetY?: number;
-  signImageScale?: number;
-  signImageOffsetX?: number;
-  signImageOffsetY?: number;
+  imgWidthPct?: number;
+  textSizePct?: number;
+  imgTop?: number;
+  imgLeft?: number;
+  txtTop?: number;
+  txtLeft?: number;
   onContentChange?: (offsetX: number, offsetY: number, scale: number, type: 'text' | 'image') => void;
   /** Text appearance */
-  sigFontSize?: number;
   sigFontFamily?: string;
-  sigTextColor?: string;
+  isBold?: boolean;
+  isItalic?: boolean;
+  nameColor?: string;
+  positionColor?: string;
+  signedByColor?: string;
   showSignedBy?: boolean;
 }
 
 function SigCanvas({
   xRatio, yRatio, wRatio, hRatio, onChange,
-  pageNum = 1, pdfBlob, signerName, signNote, signImageBase64,
-  signTextScale = 1, signTextOffsetX = 0, signTextOffsetY = 0,
-  signImageScale = 1, signImageOffsetX = 0, signImageOffsetY = 0,
+  pageNum = 1, pdfBlob, signerName, signerPosition, signImageBase64,
+  imgWidthPct = 35, textSizePct = 18, imgTop = 5, imgLeft = 50, txtTop = 55, txtLeft = 50,
   onContentChange,
-  sigFontSize = 10, sigFontFamily = 'Arial, sans-serif', sigTextColor = '#1e3a5f',
+  sigFontFamily = 'Inter, sans-serif', isBold = true, isItalic = false,
+  nameColor = '#1e3a5f', positionColor = '#2563eb', signedByColor = '#64748b',
   showSignedBy = false,
 }: CanvasProps) {
-  const containerRef  = useRef<HTMLDivElement>(null);
-  const stageRef      = useRef<HTMLDivElement>(null);
-  const bgCanvasRef   = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const bgCanvasRef = useRef<HTMLCanvasElement>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
-  const [pdfReady,   setPdfReady]   = useState(false);
+  const [pdfReady, setPdfReady] = useState(false);
+  const [zoom, setZoom] = useState(1);
 
   // Keep stage size in sync with responsive layout so preview math always matches output.
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
@@ -120,8 +261,8 @@ function SigCanvas({
     return () => ro.disconnect();
   }, []);
 
-  const dragging        = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
-  const resizing        = useRef<{ startX: number; startY: number; origW: number; origH: number } | null>(null);
+  const dragging = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
+  const resizing = useRef<{ startX: number; startY: number; origW: number; origH: number } | null>(null);
   const contentDragging = useRef<{ startX: number; startY: number; origOX: number; origOY: number; type: 'text' | 'image' } | null>(null);
 
   const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
@@ -139,20 +280,20 @@ function SigCanvas({
         const pdfjs = await loadPdfJs();
         if (cancelled) return;
 
-        const ab  = await pdfBlob.arrayBuffer();
+        const ab = await pdfBlob.arrayBuffer();
         const doc = await pdfjs.getDocument({ data: ab }).promise;
-        const pg  = await doc.getPage(Math.min(pageNum, doc.numPages));
+        const pg = await doc.getPage(Math.min(pageNum, doc.numPages));
         if (cancelled) return;
 
         const canvas = bgCanvasRef.current;
         if (!canvas) return;
 
         const containerW = stageSize.width || stageRef.current?.clientWidth || 420;
-        const raw        = pg.getViewport({ scale: 1 });
-        const scale      = containerW / raw.width;
-        const vp         = pg.getViewport({ scale });
+        const raw = pg.getViewport({ scale: 1 });
+        const scale = containerW / raw.width;
+        const vp = pg.getViewport({ scale });
 
-        canvas.width  = vp.width;
+        canvas.width = vp.width;
         canvas.height = vp.height;
 
         const ctx = canvas.getContext('2d')!;
@@ -185,21 +326,7 @@ function SigCanvas({
     [wRatio, hRatio]
   );
 
-  const onMouseDownTextContent = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault(); e.stopPropagation();
-      contentDragging.current = { startX: e.clientX, startY: e.clientY, origOX: signTextOffsetX, origOY: signTextOffsetY, type: 'text' };
-    },
-    [signTextOffsetX, signTextOffsetY]
-  );
 
-  const onMouseDownImageContent = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault(); e.stopPropagation();
-      contentDragging.current = { startX: e.clientX, startY: e.clientY, origOX: signImageOffsetX, origOY: signImageOffsetY, type: 'image' };
-    },
-    [signImageOffsetX, signImageOffsetY]
-  );
 
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
@@ -231,16 +358,16 @@ function SigCanvas({
         const boxW = stageW * wRatio;
         const boxH = stageH * hRatio;
         if (!boxW || !boxH) return;
-        const dx = (e.clientX - contentDragging.current.startX) / boxW;
-        const dy = (e.clientY - contentDragging.current.startY) / boxH;
+        // Calculate dragging in percentages (0-100)
+        const dxPct = ((e.clientX - contentDragging.current.startX) / boxW) * 100;
+        const dyPct = ((e.clientY - contentDragging.current.startY) / boxH) * 100;
         const { type } = contentDragging.current;
-        const scale = type === 'image' ? signImageScale : signTextScale;
-        const bounds = type === 'image'
-          ? { min: -1, max: 1 }
-          : { min: 0, max: 1 };
+        const scale = type === 'image' ? imgWidthPct : textSizePct; // we pass the size as the 'scale' parameter to keep the signature
+        const boundsX = { min: 0, max: 100 };
+        const boundsY = { min: 0, max: 100 };
         onContentChange(
-          clamp(contentDragging.current.origOX + dx, bounds.min, bounds.max),
-          clamp(contentDragging.current.origOY + dy, bounds.min, bounds.max),
+          clamp(contentDragging.current.origOX + dxPct, boundsX.min, boundsX.max),
+          clamp(contentDragging.current.origOY + dyPct, boundsY.min, boundsY.max),
           scale,
           type
         );
@@ -250,29 +377,34 @@ function SigCanvas({
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
-  }, [xRatio, yRatio, wRatio, hRatio, onChange, onContentChange, signImageScale, signTextScale]);
+  }, [xRatio, yRatio, wRatio, hRatio, onChange, onContentChange, imgWidthPct, textSizePct]);
 
   const pct = (v: number) => `${(v * 100).toFixed(2)}%`;
-  // sigFontSize is % of sig-box height — compute actual px for preview
-  const sigBoxH   = (stageSize.height || 200) * hRatio;
-  const fontPx    = Math.max(4, sigFontSize / 100 * sigBoxH) * signTextScale;
   const interactionsLocked = !!pdfBlob && !pdfReady;
 
   return (
     <div className="flex flex-col gap-1 flex-1 min-h-0">
-      <p className="text-xs text-muted-foreground text-center select-none">
-        Drag the top grip to move · <span className="font-bold">⌟</span> grip to resize · drag <span className="font-bold">content inside</span> to move text/image
-      </p>
+      <div className="flex items-center justify-between px-1">
+        <p className="text-[11px] text-muted-foreground select-none">
+          Drag the top grip to move · <span className="font-bold">⌟</span> grip to resize · drag <span className="font-bold">image</span> to move
+        </p>
+        <div className="flex items-center gap-1 bg-gray-100 dark:bg-slate-800 rounded px-1">
+          <button type="button" onClick={() => setZoom(z => Math.max(0.5, z - 0.25))} className="w-6 h-6 hover:bg-white dark:hover:bg-slate-700 rounded text-muted-foreground hover:text-foreground font-bold shadow-sm transition-all">-</button>
+          <span className="w-10 text-center text-xs font-medium text-muted-foreground">{Math.round(zoom * 100)}%</span>
+          <button type="button" onClick={() => setZoom(z => Math.min(3, z + 0.25))} className="w-6 h-6 hover:bg-white dark:hover:bg-slate-700 rounded text-muted-foreground hover:text-foreground font-bold shadow-sm transition-all">+</button>
+        </div>
+      </div>
 
       {/* ── Canvas container ── */}
       <div
         ref={containerRef}
-        className="relative w-full border border-gray-300 shadow-inner select-none overflow-hidden bg-white"
+        className="relative w-full border border-gray-300 dark:border-slate-700 shadow-inner select-none overflow-auto bg-white"
+        style={{ maxHeight: '65vh' }}
       >
         <div
           ref={stageRef}
-          className="relative w-full"
-          style={pdfReady ? {} : { aspectRatio: '1 / 1.414' }}
+          className="relative origin-top-left"
+          style={{ width: `${zoom * 100}%`, ...(pdfReady ? {} : { aspectRatio: '1 / 1.414' }) }}
         >
           {/* PDF background */}
           <canvas
@@ -328,49 +460,28 @@ function SigCanvas({
                 <GripVertical className="rotate-90" style={{ width: 12, height: 12, color: 'white', opacity: 0.9 }} />
               </div>
 
-              {/* ── Signature appearance preview ── */}
+              {/* ── Signature appearance preview (canvas-based WYSIWYG) ── */}
               <div className="w-full h-full relative overflow-hidden rounded-[2px]">
-                {signImageBase64 && (
-                  <img
-                    src={`data:image/png;base64,${signImageBase64}`}
-                    draggable={false}
-                    onMouseDown={onMouseDownImageContent}
-                    style={{
-                      position: 'absolute',
-                      left: `${signImageOffsetX * 100}%`,
-                      top:  `${signImageOffsetY * 100}%`,
-                      width:  `${signImageScale * 100}%`,
-                      height: `${signImageScale * 100}%`,
-                      objectFit: 'contain',
-                      cursor: interactionsLocked ? 'not-allowed' : 'grab',
-                      pointerEvents: 'all',
-                    }}
-                  />
-                )}
-                <div
-                  onMouseDown={onMouseDownTextContent}
-                  className="absolute flex flex-col px-1"
-                  style={{
-                    left: `${signTextOffsetX * 100}%`,
-                    top:  `${signTextOffsetY * 100}%`,
-                    fontSize: `${fontPx}px`,
-                    fontFamily: sigFontFamily,
-                    lineHeight: 1.35,
-                    color: sigTextColor,
-                    cursor: interactionsLocked ? 'not-allowed' : 'grab',
-                    pointerEvents: 'all',
-                    userSelect: 'none',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {showSignedBy && (
-                    <span style={{ fontSize: '0.8em', color: '#64748b', fontWeight: 400 }}>
-                      Digitally Signed by:
-                    </span>
-                  )}
-                  <span style={{ fontWeight: 700 }}>{signerName || 'Signer Name'}</span>
-                  {signNote && <span>{signNote}</span>}
-                </div>
+                <StampPreview
+                  cssW={(stageSize.width || 400) * wRatio}
+                  cssH={(stageSize.height || 200) * hRatio}
+                  signImageBase64={signImageBase64}
+                  signerName={signerName}
+                  signerPosition={signerPosition}
+                  showSignedBy={showSignedBy}
+                  imgTop={imgTop}
+                  imgLeft={imgLeft}
+                  imgWidthPct={imgWidthPct}
+                  txtTop={txtTop}
+                  txtLeft={txtLeft}
+                  textSizePct={textSizePct}
+                  sigFontFamily={sigFontFamily}
+                  isBold={isBold}
+                  isItalic={isItalic}
+                  nameColor={nameColor}
+                  positionColor={positionColor}
+                  signedByColor={signedByColor}
+                />
               </div>
 
               {/* Floating resize grip kept outside content area */}
@@ -415,6 +526,47 @@ export default function PNPKISetup({ open, onClose, config, onSave, onClear, pdf
       setSigImgPreview(`data:image/png;base64,${config.signImageBase64}`);
     }
   }, [config.signImageBase64]);
+
+  const stampDesRef = useRef<HTMLDivElement>(null);
+  const [designerDragging, setDesignerDragging] = useState<null | 'img' | 'txt'>(null);
+  const [fontDropdownOpen, setFontDropdownOpen] = useState(false);
+  const fontDropdownRef = useRef<HTMLDivElement>(null);
+  const [designerWidth, setDesignerWidth] = useState(300);
+
+  // Track the designer container width for accurate canvas rendering
+  useEffect(() => {
+    const el = stampDesRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setDesignerWidth(entry.contentRect.width || 300);
+      }
+    });
+    ro.observe(el);
+    setDesignerWidth(el.clientWidth || 300);
+    return () => ro.disconnect();
+  }, [open]); // re-run when dialog opens
+
+  // designer mouse tracking
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!designerDragging || !stampDesRef.current) return;
+      const rect = stampDesRef.current.getBoundingClientRect();
+      const pctX = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+      const pctY = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
+      setDraft((d) => {
+        if (designerDragging === 'img') {
+          return { ...d, imgLeft: pctX, imgTop: pctY };
+        } else {
+          return { ...d, txtLeft: pctX, txtTop: pctY };
+        }
+      });
+    };
+    const onUp = () => setDesignerDragging(null);
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    return () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
+  }, [designerDragging]);
 
   const set = <K extends keyof PNPKIConfig>(key: K, value: PNPKIConfig[K]) =>
     setDraft((d) => ({ ...d, [key]: value }));
@@ -471,8 +623,8 @@ export default function PNPKISetup({ open, onClose, config, onSave, onClear, pdf
     (offsetX: number, offsetY: number, scale: number, type: 'text' | 'image') =>
       setDraft((d) =>
         type === 'image'
-          ? { ...d, signImageOffsetX: offsetX, signImageOffsetY: offsetY, signImageScale: scale }
-          : { ...d, signTextOffsetX: offsetX, signTextOffsetY: offsetY, signTextScale: scale }
+          ? { ...d, imgLeft: offsetX, imgTop: offsetY, imgWidthPct: scale }
+          : { ...d, txtLeft: offsetX, txtTop: offsetY, textSizePct: scale }
       ),
     []
   );
@@ -529,19 +681,22 @@ export default function PNPKISetup({ open, onClose, config, onSave, onClear, pdf
               pdfBlob={pdfBlob}
               pageNum={draft.page}
               signerName={draft.signerName}
-              signNote={draft.signerPosition}
+              signerPosition={draft.signerPosition}
               signImageBase64={draft.signImageBase64}
-              signTextScale={draft.signTextScale ?? 1}
-              signTextOffsetX={draft.signTextOffsetX ?? 0}
-              signTextOffsetY={draft.signTextOffsetY ?? 0}
-              signImageScale={draft.signImageScale ?? 1}
-              signImageOffsetX={draft.signImageOffsetX ?? 0}
-              signImageOffsetY={draft.signImageOffsetY ?? 0}
+              imgWidthPct={draft.imgWidthPct ?? 35}
+              textSizePct={draft.textSizePct ?? 18}
+              imgTop={draft.imgTop ?? 5}
+              imgLeft={draft.imgLeft ?? 50}
+              txtTop={draft.txtTop ?? 55}
+              txtLeft={draft.txtLeft ?? 50}
               onContentChange={handleContentChange}
-              sigFontSize={draft.sigFontSize ?? 8}
-              sigFontFamily={draft.sigFontFamily ?? 'Arial, sans-serif'}
-              sigTextColor={draft.sigTextColor ?? '#1e3a5f'}
-              showSignedBy={draft.showSignedBy}
+              sigFontFamily={draft.sigFontFamily ?? 'Inter, sans-serif'}
+              isBold={draft.isBold !== false}
+              isItalic={draft.isItalic ?? false}
+              nameColor={draft.nameColor ?? '#1e3a5f'}
+              positionColor={draft.positionColor ?? '#2563eb'}
+              signedByColor={draft.signedByColor ?? '#64748b'}
+              showSignedBy={draft.showSignedBy ?? false}
             />
 
 
@@ -596,148 +751,50 @@ export default function PNPKISetup({ open, onClose, config, onSave, onClear, pdf
               </div>
             </div>
 
-            {/* Signer name */}
+            {/* Signer Name */}
             <div>
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                 Signer Name
               </label>
-              <input
-                type="text"
-                className="mt-1 w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm outline-none focus:border-blue-400"
-                placeholder="Optional override"
+              <textarea
+                rows={2}
+                className="w-full mt-1 border border-gray-300 rounded-md px-3 py-1.5 text-sm outline-none focus:border-blue-400 resize-none"
+                placeholder="Your full name (use Enter for new line)"
                 value={draft.signerName}
                 onChange={(e) => set('signerName', e.target.value)}
               />
             </div>
 
-            {/* Signer position */}
+            {/* Show "Digitally Signed by:" Label */}
+            <div>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 rounded border-gray-300 accent-blue-500"
+                  checked={draft.showSignedBy ?? false}
+                  onChange={(e) => set('showSignedBy', e.target.checked)}
+                />
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  Show "Digitally Signed by:" Label
+                </span>
+              </label>
+            </div>
+
+            {/* Signer Position */}
             <div>
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                Signer Position
+                Position / Title
               </label>
-              <input
-                type="text"
-                className="mt-1 w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm outline-none focus:border-blue-400"
-                placeholder="e.g. IT Officer"
+              <textarea
+                rows={2}
+                className="w-full mt-1 border border-gray-300 rounded-md px-3 py-1.5 text-sm outline-none focus:border-blue-400 resize-none"
+                placeholder="e.g., Manager, HR Director (use Enter for new line)"
                 value={draft.signerPosition}
                 onChange={(e) => set('signerPosition', e.target.value)}
               />
             </div>
 
-            {/* Digitally Signed by checkbox */}
-            <div className="flex flex-col gap-1.5 mt-1">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                Stamp Label
-              </label>
-              <label className="flex items-start gap-3 rounded-lg border border-gray-200 bg-background px-3 py-2.5 cursor-pointer hover:border-blue-400 transition select-none">
-                <input
-                  type="checkbox"
-                  checked={draft.showSignedBy}
-                  onChange={(e) => set('showSignedBy', e.target.checked)}
-                  className="mt-0.5 w-4 h-4 rounded accent-blue-600 cursor-pointer shrink-0"
-                />
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-sm text-foreground font-medium">Add "Digitally Signed by:" label</span>
-                  <p className="text-[10px] text-muted-foreground leading-snug">
-                    Prepend a small label above your name on the stamp.
-                  </p>
-                </div>
-              </label>
-            </div>
 
-            {/* Stamp designer */}
-            <div className="border border-gray-200 rounded-md p-2 flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Stamp Designer</label>
-                <button
-                  type="button"
-                  className="text-[10px] text-blue-500 hover:underline"
-                  onClick={() => updateStampSize(DEFAULT_PNPKI_CONFIG.wRatio, DEFAULT_PNPKI_CONFIG.hRatio)}
-                >
-                  Reset Box
-                </button>
-              </div>
-
-              <div>
-                <div className="flex justify-between">
-                  <span className="text-xs text-muted-foreground">Width</span>
-                  <span className="text-xs font-mono text-muted-foreground">{(draft.wRatio * 100).toFixed(1)}%</span>
-                </div>
-                <input
-                  type="range"
-                  min="5"
-                  max="95"
-                  step="0.5"
-                  className="w-full accent-blue-500"
-                  value={draft.wRatio * 100}
-                  onChange={(e) => updateStampSize(parseFloat(e.target.value) / 100, draft.hRatio)}
-                />
-              </div>
-
-              <div>
-                <div className="flex justify-between">
-                  <span className="text-xs text-muted-foreground">Height</span>
-                  <span className="text-xs font-mono text-muted-foreground">{(draft.hRatio * 100).toFixed(1)}%</span>
-                </div>
-                <input
-                  type="range"
-                  min="2"
-                  max="40"
-                  step="0.5"
-                  className="w-full accent-blue-500"
-                  value={draft.hRatio * 100}
-                  onChange={(e) => updateStampSize(draft.wRatio, parseFloat(e.target.value) / 100)}
-                />
-              </div>
-            </div>
-
-            {/* Text appearance */}
-            <div className="border border-gray-200 rounded-md p-2 flex flex-col gap-2">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Text Appearance</label>
-
-              {/* Font size */}
-              <div>
-                <div className="flex justify-between">
-                  <span className="text-xs text-muted-foreground">Font Size</span>
-                  <span className="text-xs font-mono text-muted-foreground">{draft.sigFontSize ?? 10}% of box</span>
-                </div>
-                <input
-                  type="range" min="2" max="30" step="1"
-                  className="w-full accent-blue-500"
-                  value={draft.sigFontSize ?? 10}
-                  onChange={(e) => set('sigFontSize', parseInt(e.target.value))}
-                />
-              </div>
-
-              {/* Font family */}
-              <div>
-                <span className="text-xs text-muted-foreground block mb-1">Font</span>
-                <select
-                  className="w-full border border-gray-300 rounded-md px-2 py-1 text-xs outline-none focus:border-blue-400 bg-background"
-                  value={draft.sigFontFamily ?? 'Arial, sans-serif'}
-                  onChange={(e) => set('sigFontFamily', e.target.value)}
-                >
-                  <option value="Arial, sans-serif">Arial</option>
-                  <option value="'Segoe UI', Arial, sans-serif">Segoe UI</option>
-                  <option value="'Times New Roman', Times, serif">Times New Roman</option>
-                  <option value="Georgia, serif">Georgia</option>
-                  <option value="'Courier New', Courier, monospace">Courier New</option>
-                  <option value="cursive">Cursive</option>
-                </select>
-              </div>
-
-              {/* Text color */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground flex-1">Color</span>
-                <input
-                  type="color"
-                  className="w-8 h-7 rounded cursor-pointer border border-gray-300"
-                  value={draft.sigTextColor ?? '#1e3a5f'}
-                  onChange={(e) => set('sigTextColor', e.target.value)}
-                />
-                <span className="text-xs font-mono text-muted-foreground">{draft.sigTextColor ?? '#1e3a5f'}</span>
-              </div>
-            </div>
 
             {/* Page to Sign (only shown when document has multiple pages) */}
             {totalPages > 1 && (
@@ -765,7 +822,7 @@ export default function PNPKISetup({ open, onClose, config, onSave, onClear, pdf
             {/* Signature image */}
             <div>
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                Signature Image (optional)
+                Signature Image *
               </label>
               {sigImgPreview ? (
                 <div className="mt-1 relative">
@@ -791,52 +848,192 @@ export default function PNPKISetup({ open, onClose, config, onSave, onClear, pdf
                 </label>
               )}
             </div>
-            {/* Content scale & position reset */}
-            {draft.signImageBase64 ? (
-              <div>
-                <div className="flex justify-between items-center">
-                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                    Image Scale ({((draft.signImageScale ?? 1) * 100).toFixed(0)}%)
-                  </label>
+
+            {/* ── Standalone Stamp Designer ── */}
+            <div className="border border-gray-200 rounded-md p-3 flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Stamp Designer</label>
+              </div>
+
+              {/* Designer Preview Box */}
+              <div className="flex flex-col gap-1 items-center">
+                {(() => {
+                  // Compute the designer box height to match the ACTUAL stamp
+                  // aspect ratio on the PDF page (A4 = 595×842 points).
+                  const PDF_W = 595, PDF_H = 842;
+                  const desH = Math.max(40, Math.round(designerWidth * (draft.hRatio * PDF_H) / (draft.wRatio * PDF_W)));
+                  return (
+                    <div
+                      ref={stampDesRef}
+                      className="relative w-full border-2 border-blue-500 rounded-md bg-white overflow-hidden select-none"
+                      style={{ height: desH, padding: 0 }}
+                    >
+                      {/* Canvas-based WYSIWYG preview */}
+                      <StampPreview
+                        cssW={designerWidth}
+                        cssH={desH}
+                        signImageBase64={draft.signImageBase64}
+                        signerName={draft.signerName}
+                        signerPosition={draft.signerPosition}
+                        showSignedBy={draft.showSignedBy}
+                        imgTop={draft.imgTop ?? 5}
+                        imgLeft={draft.imgLeft ?? 50}
+                        imgWidthPct={draft.imgWidthPct ?? 35}
+                        txtTop={draft.txtTop ?? 55}
+                        txtLeft={draft.txtLeft ?? 50}
+                        textSizePct={draft.textSizePct ?? 18}
+                        sigFontFamily={draft.sigFontFamily ?? 'Inter, sans-serif'}
+                        isBold={draft.isBold !== false}
+                        isItalic={draft.isItalic ?? false}
+                        nameColor={draft.nameColor ?? '#1e3a5f'}
+                        positionColor={draft.positionColor ?? '#2563eb'}
+                        signedByColor={draft.signedByColor ?? '#64748b'}
+                      />
+
+                      {/* Transparent drag overlay for image area */}
+                      <div
+                        className="absolute inset-0 cursor-grab active:cursor-grabbing"
+                        onMouseDown={(e) => { e.preventDefault(); setDesignerDragging("img"); }}
+                        style={{ zIndex: 1 }}
+                      />
+                      {/* Transparent drag overlay for text area — sits on top of the lower half */}
+                      <div
+                        className="absolute left-0 right-0 bottom-0 cursor-grab active:cursor-grabbing"
+                        style={{ top: '45%', zIndex: 2 }}
+                        onMouseDown={(e) => { e.preventDefault(); setDesignerDragging("txt"); }}
+                      />
+                    </div>
+                  );
+                })()}
+                <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                  <MousePointer2 className="w-3 h-3" />
+                  Drag to reposition
+                </p>
+              </div>
+
+              {/* Box Dimensions */}
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                <div>
+                  <div className="flex justify-between">
+                    <span className="text-[10px] text-muted-foreground">Stamp Width</span>
+                  </div>
+                  <input
+                    type="range" min="5" max="95" step="0.5"
+                    className="w-full accent-blue-500"
+                    value={draft.wRatio * 100}
+                    onChange={(e) => updateStampSize(parseFloat(e.target.value) / 100, draft.hRatio)}
+                  />
+                </div>
+                <div>
+                  <div className="flex justify-between">
+                    <span className="text-[10px] text-muted-foreground">Stamp Height</span>
+                  </div>
+                  <input
+                    type="range" min="2" max="40" step="0.5"
+                    className="w-full accent-blue-500"
+                    value={draft.hRatio * 100}
+                    onChange={(e) => updateStampSize(draft.wRatio, parseFloat(e.target.value) / 100)}
+                  />
+                </div>
+              </div>
+
+              {/* Text Size & Image Width */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <div className="flex justify-between">
+                    <span className="text-[10px] text-muted-foreground">Text Size ({draft.textSizePct ?? 18}%)</span>
+                  </div>
+                  <input
+                    type="range" min="5" max="50" step="1"
+                    className="w-full accent-blue-500"
+                    value={draft.textSizePct ?? 18}
+                    onChange={(e) => set('textSizePct', parseInt(e.target.value))}
+                  />
+                </div>
+                <div>
+                  <div className="flex justify-between">
+                    <span className="text-[10px] text-muted-foreground">Image Width ({draft.imgWidthPct ?? 35}%)</span>
+                  </div>
+                  <input
+                    type="range" min="5" max="100" step="1"
+                    className="w-full accent-blue-500"
+                    value={draft.imgWidthPct ?? 35}
+                    onChange={(e) => set('imgWidthPct', parseInt(e.target.value))}
+                  />
+                </div>
+              </div>
+
+              {/* Font Family Dropdown */}
+              <div className="flex flex-col gap-1.5 mt-2">
+                <label className="text-xs font-medium text-foreground">Font Family</label>
+                <div className="relative" ref={fontDropdownRef}>
                   <button
                     type="button"
-                    className="text-[10px] text-blue-500 hover:underline"
-                    onClick={() => setDraft((d) => ({ ...d, signImageScale: 1, signImageOffsetX: 0, signImageOffsetY: 0 }))}
+                    onClick={() => setFontDropdownOpen(v => !v)}
+                    className="w-full flex items-center justify-between rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition"
                   >
-                    Reset
+                    <span style={{ fontFamily: draft.sigFontFamily ?? 'Inter, sans-serif' }}>
+                      {FONT_OPTIONS.find(f => f.value === (draft.sigFontFamily ?? 'Inter, sans-serif'))?.label ?? (draft.sigFontFamily ?? 'Inter, sans-serif')}
+                    </span>
+                    <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground shrink-0 ml-2 transition-transform ${fontDropdownOpen ? "rotate-180" : ""}`} />
                   </button>
+                  {fontDropdownOpen && (
+                    <div className="absolute z-50 mt-1 w-full rounded-md border border-gray-300 bg-white shadow-lg overflow-y-auto max-h-48">
+                      {FONT_OPTIONS.map(opt => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => { set('sigFontFamily', opt.value); setFontDropdownOpen(false); }}
+                          className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 transition ${(draft.sigFontFamily ?? 'Inter, sans-serif') === opt.value ? "bg-blue-50 text-blue-600" : "text-foreground"}`}
+                          style={{ fontFamily: opt.value }}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <input
-                  type="range" min="0.3" max="2" step="0.05"
-                  className="w-full mt-1 accent-blue-500"
-                  value={draft.signImageScale ?? 1}
-                  onChange={(e) => set('signImageScale', parseFloat(e.target.value))}
-                />
-                <p className="text-[10px] text-muted-foreground mt-0.5">Drag image in preview to reposition</p>
               </div>
-            ) : (
-              <div>
-                <div className="flex justify-between items-center">
-                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                    Text Scale ({((draft.signTextScale ?? 1) * 100).toFixed(0)}%)
-                  </label>
-                  <button
-                    type="button"
-                    className="text-[10px] text-blue-500 hover:underline"
-                    onClick={() => setDraft((d) => ({ ...d, signTextScale: 1, signTextOffsetX: 0, signTextOffsetY: 0 }))}
-                  >
-                    Reset
-                  </button>
+
+              {/* Bold & Italic Toggles */}
+              <div className="flex items-center gap-4 mt-1">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input type="checkbox" checked={draft.isBold !== false} onChange={e => set('isBold', e.target.checked)}
+                    className="w-3.5 h-3.5 rounded accent-blue-500 cursor-pointer" />
+                  <span className="text-xs text-foreground">Bold</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input type="checkbox" checked={draft.isItalic ?? false} onChange={e => set('isItalic', e.target.checked)}
+                    className="w-3.5 h-3.5 rounded accent-blue-500 cursor-pointer" />
+                  <span className="text-xs text-foreground">Italic</span>
+                </label>
+              </div>
+
+              {/* Text Colors */}
+              <div className="flex flex-col gap-1.5 mt-2">
+                <label className="text-xs font-medium text-foreground">Text Colors</label>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <input type="color" value={draft.nameColor ?? '#1e3a5f'} onChange={e => set('nameColor', e.target.value)}
+                      className="w-6 h-6 rounded border border-gray-300 cursor-pointer p-0 bg-white" />
+                    <label className="text-[10px] text-muted-foreground">Name</label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input type="color" value={draft.positionColor ?? '#2563eb'} onChange={e => set('positionColor', e.target.value)}
+                      className="w-6 h-6 rounded border border-gray-300 cursor-pointer p-0 bg-white" />
+                    <label className="text-[10px] text-muted-foreground">Position</label>
+                  </div>
+                  {draft.showSignedBy && (
+                    <div className="flex items-center gap-2">
+                      <input type="color" value={draft.signedByColor ?? '#64748b'} onChange={e => set('signedByColor', e.target.value)}
+                        className="w-6 h-6 rounded border border-gray-300 cursor-pointer p-0 bg-white" />
+                      <label className="text-[10px] text-muted-foreground">Label</label>
+                    </div>
+                  )}
                 </div>
-                <input
-                  type="range" min="0.3" max="2" step="0.05"
-                  className="w-full mt-1 accent-blue-500"
-                  value={draft.signTextScale ?? 1}
-                  onChange={(e) => set('signTextScale', parseFloat(e.target.value))}
-                />
-                <p className="text-[10px] text-muted-foreground mt-0.5">Drag text in preview to reposition</p>
               </div>
-            )}
+
+            </div>
 
           </div>
 

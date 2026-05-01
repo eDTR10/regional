@@ -17,16 +17,23 @@ export interface PNPKIConfig {
   serverUrl: string;
   signImageBase64?: string;
   signImageFileName?: string;
-  signTextScale?: number;      // font scale multiplier within sig box (default 1)
-  signTextOffsetX?: number;    // text x-offset as fraction within box (default 0)
-  signTextOffsetY?: number;    // text y-offset as fraction within box (default 0)
-  signImageScale?: number;     // image scale within sig box (default 1)
-  signImageOffsetX?: number;   // image x-offset as fraction within box (default 0)
-  signImageOffsetY?: number;   // image y-offset as fraction within box (default 0)
-  sigFontSize?: number;        // font size in px at 190px editor reference height (default 24)
-  sigFontFamily?: string;      // CSS font-family (default 'Arial, sans-serif')
-  sigTextColor?: string;       // CSS color string (default '#1e3a5f')
-  showSignedBy: boolean;       // Prepend 'Digitally Signed by:' label
+  
+  // Designer Fields
+  imgWidthPct?: number;       // % of stamp width
+  textSizePct?: number;       // % of stamp height
+  imgTop?: number;            // % from top (center)
+  imgLeft?: number;           // % from left (center)
+  txtTop?: number;            // % from top (top-left for text block)
+  txtLeft?: number;           // % from left (top-left for text block)
+  
+  sigFontFamily?: string;
+  isBold?: boolean;
+  isItalic?: boolean;
+  nameColor?: string;
+  positionColor?: string;
+  signedByColor?: string;
+  
+  showSignedBy: boolean;
 }
 
 export const DEFAULT_PNPKI_CONFIG: PNPKIConfig = {
@@ -43,15 +50,18 @@ export const DEFAULT_PNPKI_CONFIG: PNPKIConfig = {
   wRatio: 0.262,
   hRatio: 0.087,
   serverUrl: import.meta.env.VITE_PNPKI_SERVER,
-  signTextScale: 1,
-  signTextOffsetX: 0,
-  signTextOffsetY: 0,
-  signImageScale: 1,
-  signImageOffsetX: 0,
-  signImageOffsetY: 0,
-  sigFontSize: 10,      // % of sig-box height (1-30)
-  sigFontFamily: 'Arial, sans-serif',
-  sigTextColor: '#1e3a5f',
+  imgWidthPct: 35,
+  textSizePct: 18,
+  imgTop: 5,
+  imgLeft: 50,
+  txtTop: 55,
+  txtLeft: 50,
+  sigFontFamily: 'Inter, sans-serif',
+  isBold: true,
+  isItalic: false,
+  nameColor: '#1e3a5f',
+  positionColor: '#2563eb',
+  signedByColor: '#64748b',
   showSignedBy: false,
 };
 
@@ -120,8 +130,9 @@ export async function signPdfWithPNPKI(
   form.append('p12_file', new File([p12Bytes], cfg.fileName, { type: 'application/x-pkcs12' }));
 
   form.append('password', cfg.password);
-  form.append('signer_name', cfg.signerName);
-  form.append('sign_note', cfg.signerPosition);
+  // Send a space to bypass backend text rendering so it only uses our generated image
+  form.append('signer_name', ' ');
+  form.append('sign_note', ' ');
   form.append('page', String(cfg.page));
   form.append('sign_all_pages', cfg.signAllPages ? 'true' : 'false');
   form.append('x_ratio', String(cfg.xRatio));
@@ -158,94 +169,93 @@ export async function signPdfWithPNPKI(
  * Render the signature appearance (image + styled text) to an offscreen canvas
  * and return it as a PNG Blob.  The Flask server accepts this as `sign_design`
  * and uses it directly as the stamp background.
+ *
+ * IMPORTANT: The drawing logic here MUST exactly match the StampPreview canvas
+ * component in PNPKISetup.tsx so preview == output (true WYSIWYG).
  */
 export async function buildSignDesignBlob(cfg: PNPKIConfig): Promise<Blob | null> {
-  // Canvas dimensions based on sig box aspect ratio
+  // A4 page dimensions in points — wRatio/hRatio are relative to the page,
+  // so the actual stamp aspect ratio must factor in the page dimensions.
+  const PDF_W = 595, PDF_H = 842;
   const W = 1000;
-  const H = Math.max(160, Math.round(W * (cfg.hRatio / cfg.wRatio)));
+  const H = Math.max(160, Math.round(W * (cfg.hRatio * PDF_H) / (cfg.wRatio * PDF_W)));
 
   const canvas = document.createElement('canvas');
   canvas.width  = W;
   canvas.height = H;
   const ctx = canvas.getContext('2d')!;
 
-  // Draw image layer — mirrors CSS objectFit:contain inside a (scale*W) × (scale*H) box
+  // ── Font sizes ────────────────────────────────────────────────────────────
+  const tsp          = (cfg.textSizePct ?? 18) / 100;
+  const nameFs       = Math.max(0.01, tsp         * H);
+  const posFs        = Math.max(0.01, tsp * 0.833 * H);
+  const signedByFs   = Math.max(0.01, tsp * 0.667 * H);
+  const isItalic     = cfg.isItalic ? 'italic ' : '';
+  const isBold       = cfg.isBold !== false ? 'bold ' : '';
+  const fontFamily   = cfg.sigFontFamily ?? 'Inter, sans-serif';
+
+  // ── Parse name lines ──────────────────────────────────────────────────────
+  const nameLines = cfg.signerName
+    ? cfg.signerName
+        .replace(/<br\s*\/?>/gi, '\n')
+        .split('\n')
+        .map(l => l.trim())
+        .filter(Boolean)
+    : [];
+
+  // ── Draw text function (called after image so text is on top) ─────────────
+  const drawText = () => {
+    const tx = ((cfg.txtLeft ?? 50) / 100) * W;
+    const ty = ((cfg.txtTop  ?? 55) / 100) * H;
+    ctx.textAlign    = 'left';
+    ctx.textBaseline = 'top';
+
+    let nameY = ty;
+
+    // "Digitally Signed by:" label
+    if (cfg.showSignedBy) {
+      ctx.font      = `${isItalic}${signedByFs}px ${fontFamily}`;
+      ctx.fillStyle = cfg.signedByColor ?? '#64748b';
+      ctx.fillText('Digitally Signed by:', tx, ty);
+      nameY = ty + signedByFs * 1.4;
+    }
+
+    // Signer name
+    if (nameLines.length) {
+      ctx.font      = `${isItalic}${isBold}${nameFs}px ${fontFamily}`;
+      ctx.fillStyle = cfg.nameColor ?? '#1e3a5f';
+      nameLines.forEach((line, i) => {
+        ctx.fillText(line, tx, nameY + i * nameFs * 1.3);
+      });
+    }
+
+    // Position / title
+    if (cfg.signerPosition) {
+      ctx.font      = `${isItalic}${posFs}px ${fontFamily}`;
+      ctx.fillStyle = cfg.positionColor ?? '#2563eb';
+      ctx.fillText(cfg.signerPosition, tx, nameY + nameLines.length * nameFs * 1.3);
+    }
+  };
+
+  // ── Draw image layer, then text ───────────────────────────────────────────
   if (cfg.signImageBase64) {
     await new Promise<void>((resolve) => {
       const img = new Image();
       img.onload = () => {
-        const scale      = cfg.signImageScale ?? 1;
-        const contW      = scale * W;                          // container width
-        const contH      = scale * H;                          // container height
-        const imgAspect  = img.naturalWidth / Math.max(1, img.naturalHeight);
-        const contAspect = contW / contH;                      // = W/H (scale cancels)
-
-        // objectFit: contain — fit inside container preserving aspect ratio
-        let drawW: number, drawH: number;
-        if (imgAspect >= contAspect) {
-          drawW = contW;
-          drawH = contW / imgAspect;
-        } else {
-          drawH = contH;
-          drawW = contH * imgAspect;
-        }
-
-        // Center within container (same centering CSS objectFit: contain applies)
-        const contX = (cfg.signImageOffsetX ?? 0) * W;
-        const contY = (cfg.signImageOffsetY ?? 0) * H;
-        const drawX = contX + (contW - drawW) / 2;
-        const drawY = contY + (contH - drawH) / 2;
-
-        ctx.drawImage(img, drawX, drawY, drawW, drawH);
+        const iw = ((cfg.imgWidthPct ?? 35) / 100) * W;
+        const ih = img.naturalHeight * (iw / Math.max(1, img.naturalWidth));
+        const ix = ((cfg.imgLeft ?? 50) / 100) * W - iw / 2;
+        const iy = ((cfg.imgTop  ?? 5)  / 100) * H;
+        ctx.drawImage(img, ix, iy, iw, ih);
+        drawText();
         resolve();
       };
-      img.onerror = () => resolve();
+      img.onerror = () => { drawText(); resolve(); };
       img.src = `data:image/png;base64,${cfg.signImageBase64}`;
     });
+  } else {
+    drawText();
   }
-
-  // Draw text layer
-  // sigFontSize is stored as % of box height (1-30), so both preview and canvas
-  // compute the same proportion → WYSIWYG match.
-  const fontSize    = (cfg.sigFontSize ?? 10) / 100 * H * (cfg.signTextScale ?? 1);
-  const fontFamily  = cfg.sigFontFamily ?? 'Arial, sans-serif';
-  const color       = cfg.sigTextColor  ?? '#1e3a5f';
-  const lines: string[] = [];
-  if (cfg.showSignedBy) {
-    lines.push('Digitally Signed by:');
-  }
-  lines.push(cfg.signerName || 'Signer');
-  if (cfg.signerPosition) {
-    lines.push(cfg.signerPosition);
-  }
-
-  ctx.fillStyle    = color;
-  ctx.textBaseline = 'top';
-
-  const textX = (cfg.signTextOffsetX ?? 0) * W;
-  const textY = (cfg.signTextOffsetY ?? 0) * H;
-  const lineH = fontSize * 1.35;
-
-  lines.forEach((line, i) => {
-    let currentFontSize = fontSize;
-    let currentFontWeight = 'normal';
-
-    if (cfg.showSignedBy && i === 0) {
-      // "Digitally Signed by:" label
-      currentFontSize = fontSize * 0.8;
-      ctx.fillStyle = '#64748b'; // Slate-500
-    } else if ((cfg.showSignedBy && i === 1) || (!cfg.showSignedBy && i === 0)) {
-      // Signer Name
-      currentFontWeight = 'bold';
-      ctx.fillStyle = color;
-    } else {
-      // Signer Position
-      ctx.fillStyle = color;
-    }
-
-    ctx.font = `${currentFontWeight} ${currentFontSize}px ${fontFamily}`;
-    ctx.fillText(line, textX, textY + (cfg.showSignedBy && i > 0 ? (i - 1) * lineH + (fontSize * 0.8 * 1.35) : i * lineH));
-  });
 
   return new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
 }

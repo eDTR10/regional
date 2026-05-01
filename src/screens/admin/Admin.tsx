@@ -23,7 +23,7 @@ function Admin() {
   return (
     <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
       <div className=" bg-background  h-screen w-screen overflow-hidden flex  ">
-    
+
         <div className=" absolute flex z-50 gap-3 items-center right-0 p-7">
           <ModeToggle />
           <Profile />

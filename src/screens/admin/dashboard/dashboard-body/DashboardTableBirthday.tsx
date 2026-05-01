@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Cake,  PartyPopper, Gift, Sparkles } from "lucide-react";
+import { Cake, PartyPopper, Gift, Sparkles, X } from "lucide-react";
 import GIF from '/e6e67b2c679b33c3ccdc0c0e36b75082.gif';
 
 const DashboardTableBirthday = ({ data }: { data?: any }) => {
@@ -7,8 +7,6 @@ const DashboardTableBirthday = ({ data }: { data?: any }) => {
   const [selectedCelebrant, setSelectedCelebrant] = useState<any>(null);
   const [showMeme, setShowMeme] = useState(false);
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
-
-  // Sample data for demo purposes
 
   const birthdayCelebrants = data?.birthday_celebrants || [];
 
@@ -21,7 +19,7 @@ const DashboardTableBirthday = ({ data }: { data?: any }) => {
   const handleCelebrantClick = (celebrant: any) => {
     setSelectedCelebrant(celebrant);
     setShowMeme(true);
-    
+
     setTimeout(() => {
       setShowMeme(false);
       setSelectedCelebrant(null);
@@ -34,165 +32,132 @@ const DashboardTableBirthday = ({ data }: { data?: any }) => {
     }
   }, []);
 
-  const confettiColors = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#95E1D3', '#A8E6CF', '#FF8B94'];
-  const confettiElements = Array.from({ length: 50 }, (_, i) => i);
-
   return (
-    <div className="w-full max-w-3xl mx-auto p-0 bg-card border border-border relative overflow-hidden" style={{ height: '500px' }}>
-      {confettiElements.map((i) => (
-        <div
-          key={i}
-          className="absolute opacity-70"
-          style={{
-            width: i % 4 === 0 ? '10px' : '6px',
-            height: i % 4 === 0 ? '10px' : '6px',
-            backgroundColor: confettiColors[i % confettiColors.length],
-            borderRadius: i % 3 === 0 ? '50%' : '2px',
-            left: `${Math.random() * 100}%`,
-            top: `${Math.random() * 100}%`,
-            animation: `float ${4 + Math.random() * 5}s ease-in-out infinite`,
-            animationDelay: `${Math.random() * 3}s`,
-            transform: `rotate(${Math.random() * 360}deg)`,
-          }}
-        />
-      ))}
+    <div className="relative bg-card border border-border/60 rounded-2xl shadow-sm overflow-hidden flex flex-col" style={{ maxHeight: '500px' }}>
 
-      <style>{`
-        @keyframes float {
-          0%, 100% { transform: translateY(0px) rotate(0deg); }
-          50% { transform: translateY(-25px) rotate(180deg); }
-        }
-        
-        @keyframes bounce-in {
-          0% { transform: scale(0) rotate(-180deg); opacity: 0; }
-          50% { transform: scale(1.2) rotate(10deg); }
-          100% { transform: scale(1) rotate(0deg); opacity: 1; }
-        }
-        
-        @keyframes shake {
-          0%, 100% { transform: rotate(0deg); }
-          25% { transform: rotate(-12deg); }
-          75% { transform: rotate(12deg); }
-        }
-        
-        @keyframes pulse-glow {
-          0%, 100% { box-shadow: 0 0 10px rgba(59, 130, 246, 0.3); }
-          50% { box-shadow: 0 0 25px rgba(59, 130, 246, 0.6), 0 0 40px rgba(147, 51, 234, 0.4); }
-        }
-        
-        @keyframes slideIn {
-          from { transform: translateX(-50px); opacity: 0; }
-          to { transform: translateX(0); opacity: 1; }
-        }
-        
-        @keyframes rainbow {
-          0% { filter: hue-rotate(0deg); }
-          100% { filter: hue-rotate(360deg); }
-        }
-        
-
-        
-        @keyframes wiggle {
-          0%, 100% { transform: translateX(0); }
-          25% { transform: translateX(-3px); }
-          75% { transform: translateX(3px); }
-        }
-        
-        @keyframes pointer-bounce {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-5px); }
-        }
-        
-        .animate-bounce-in { animation: bounce-in 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
-        .animate-shake { animation: shake 0.6s ease-in-out infinite; }
-        .animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
-        .animate-slide-in { animation: slideIn 0.4s ease-out; }
-        .animate-rainbow { animation: rainbow 3s linear infinite; }
-
-        .animate-wiggle { animation: wiggle 0.5s ease-in-out infinite; }
-        .animate-pointer-bounce { animation: pointer-bounce 0.8s ease-in-out infinite; }
-      `}</style>
-
-      <div className="flex p-4 justify-between items-center bg-blue-600 mb-0 relative z-10">
-        <div className="flex items-center gap-2">
-          <p className="text-white font-semibold text-base uppercase tracking-wide">🎉 Today’s Birthday Celebrants!</p>
+      {/* Header */}
+      <div className="flex items-center justify-between p-5 border-b border-border/60">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-pink-50 dark:bg-pink-950/40 ring-1 ring-pink-200 dark:ring-pink-800">
+            <Cake className="w-5 h-5 text-pink-600" />
+          </div>
+          <div>
+            <h3 className="text-base font-semibold text-foreground">Birthday Celebrants</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {filteredCheckData.length} {filteredCheckData.length === 1 ? 'celebrant' : 'celebrants'} today
+            </p>
+          </div>
         </div>
-        <Cake className="text-white" size={32} />
+        <span className="text-2xl">🎉</span>
       </div>
 
-    
-
-      <div className="overflow-auto  relative z-10" style={{ height: 'calc(100% - 140px)' }}>
-        <table className="w-full border-collapse">
-          <thead>
-            <tr>
-             
-            </tr>
-          </thead>
-          <tbody>
+      {/* List */}
+      <div className="overflow-auto flex-1">
+        {filteredCheckData.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+            <div className="p-4 rounded-full bg-muted/50 mb-4">
+              <Cake className="w-8 h-8 text-muted-foreground/40" />
+            </div>
+            <p className="text-sm font-medium text-muted-foreground">No birthdays today</p>
+            <p className="text-xs text-muted-foreground/60 mt-1">Check back tomorrow!</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-border/40">
             {filteredCheckData.map((celebrant: any, index: number) => (
-              <tr
+              <div
                 key={index}
-                className="border border-border cursor-pointer transition-all bg-background/30 backdrop-blur-sm  duration-300 animate-slide-in group relative"
+                className="flex items-center gap-4 px-5 py-4 cursor-pointer hover:bg-muted/40 transition-all duration-200 group"
                 onClick={() => handleCelebrantClick(celebrant)}
                 onMouseEnter={() => setHoveredRow(index)}
                 onMouseLeave={() => setHoveredRow(null)}
-                style={{ 
-                  animationDelay: `${index * 0.1}s`
-                }}
               >
-                <td className="font-normal text-primary p-3 relative text-sm">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-1">
-                        <Cake className="text-pink-500 animate-gentle-pulse" size={18} />
-                        <span className="text-xs text-blue-600 font-semibold animate-wiggle">👆 Click me!</span>
-                      </div>
-                      <span className={`transition-all duration-500 ${hoveredRow === index ? 'font-semibold text-blue-600 ml-2' : ''}`}>
-                        {celebrant?.full_name}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <PartyPopper className="text-purple-500 animate-shake" size={18} />
-                      <Gift className="text-orange-500 animate-gentle-pulse" size={18} />
-                    </div>
-                  </div>
-                  <div className="absolute right-2 top-1/2 transform -translate-y-1/2 text-blue-600 font-bold text-lg animate-pointer-bounce">
-                    →
-                  </div>
-                </td>
-              </tr>
+                {/* Avatar circle */}
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 transition-all duration-300 ${hoveredRow === index
+                    ? 'bg-gradient-to-br from-pink-500 to-purple-500 text-white scale-110 shadow-lg'
+                    : 'bg-pink-50 dark:bg-pink-950/40 text-pink-600'
+                  }`}>
+                  {celebrant?.full_name?.substring(0, 2).toUpperCase()}
+                </div>
+
+                {/* Name */}
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-medium truncate transition-colors duration-200 ${hoveredRow === index ? 'text-primary' : 'text-foreground'
+                    }`}>
+                    {celebrant?.full_name}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">🎂 Happy Birthday!</p>
+                </div>
+
+                {/* Action hint */}
+                <div className={`flex items-center gap-1 transition-all duration-200 ${hoveredRow === index ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-2'
+                  }`}>
+                  <Gift className="w-4 h-4 text-pink-500" />
+                  <span className="text-xs text-pink-500 font-medium">Greet</span>
+                </div>
+              </div>
             ))}
-          </tbody>
-        </table>
+          </div>
+        )}
       </div>
 
+      {/* Birthday popup modal */}
       {showMeme && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-80 z-50 animate-bounce-in">
-          <div className="bg-white p-8 rounded-3xl shadow-2xl text-center max-w-lg border-8 border-primary  mx-4">
-            <h2 className="text-4xl font-bold mb-2">
-              <span className="animate-bounce inline-block">🎉</span>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 animate-pulse mx-2">
-                HAPPY BIRTHDAY!
-              </span>
-              <span className="animate-bounce inline-block">🎂</span>
-            </h2>
-            <img
-              src={GIF}
-              alt="Birthday celebration"
-              className="w-full h-72 object-cover rounded-xl mb-4 shadow-2xl"
-            />
-            <p className="text-2xl font-bold text-gray-800 mb-3 animate-pulse">
-              {selectedCelebrant?.full_name}
-            </p>
-            <p className="text-xl text-gray-600 italic mb-4">
-             {(selectedCelebrant?.full_name) === "Someone Special" ? "It’s someone’s special day today — let’s take a moment to greet them and celebrate! 🎂" : "You’re not just a year older — you’re a year more awesome! 🎉 Keep shining bright! 💫"} 
-            </p>
-            <div className="flex justify-center gap-4 mt-4">
-              <Cake className="text-pink-500 animate-bounce" size={40} />
-              <Gift className="text-blue-500 animate-bounce" size={40} style={{ animationDelay: '0.1s' }} />
-              <PartyPopper className="text-purple-500 animate-bounce" size={40} style={{ animationDelay: '0.2s' }} />
-              <Sparkles className="text-yellow-500 animate-bounce" size={40} style={{ animationDelay: '0.3s' }} />
+        <div className="fixed inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm z-50">
+          <div className="relative bg-white dark:bg-card p-8 rounded-3xl shadow-2xl text-center max-w-md mx-4 border border-border/60 overflow-hidden">
+            {/* Close button */}
+            <button
+              onClick={() => { setShowMeme(false); setSelectedCelebrant(null); }}
+              className="absolute top-4 right-4 p-1.5 rounded-full bg-muted hover:bg-muted/80 transition-colors z-10"
+            >
+              <X className="w-4 h-4 text-muted-foreground" />
+            </button>
+
+            {/* Decorative gradient blob */}
+            <div className="absolute -top-20 -right-20 w-40 h-40 bg-gradient-to-br from-pink-400/20 to-purple-400/20 rounded-full blur-2xl" />
+            <div className="absolute -bottom-16 -left-16 w-32 h-32 bg-gradient-to-br from-amber-400/20 to-pink-400/20 rounded-full blur-2xl" />
+
+            <div className="relative z-10">
+              <div className="flex justify-center gap-2 mb-4">
+                <span className="text-4xl animate-bounce" style={{ animationDelay: '0s' }}>🎉</span>
+                <span className="text-4xl animate-bounce" style={{ animationDelay: '0.1s' }}>🎂</span>
+                <span className="text-4xl animate-bounce" style={{ animationDelay: '0.2s' }}>🎈</span>
+              </div>
+
+              <h2 className="text-2xl font-extrabold mb-4">
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600">
+                  HAPPY BIRTHDAY!
+                </span>
+              </h2>
+
+              <img
+                src={GIF}
+                alt="Birthday celebration"
+                className="w-full h-56 object-cover rounded-2xl mb-5 shadow-lg ring-1 ring-border/20"
+              />
+
+              <p className="text-xl font-bold text-foreground mb-2">
+                {selectedCelebrant?.full_name}
+              </p>
+              <p className="text-sm text-muted-foreground leading-relaxed mb-6">
+                {(selectedCelebrant?.full_name) === "Someone Special"
+                  ? "It's someone's special day today — let's take a moment to greet them and celebrate! 🎂"
+                  : "You're not just a year older — you're a year more awesome! 🎉 Keep shining bright! 💫"}
+              </p>
+
+              <div className="flex justify-center gap-3">
+                <div className="p-2.5 rounded-xl bg-pink-50 dark:bg-pink-950/40 ring-1 ring-pink-200 dark:ring-pink-800">
+                  <Cake className="text-pink-500 w-6 h-6" />
+                </div>
+                <div className="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 ring-1 ring-blue-200 dark:ring-blue-800">
+                  <Gift className="text-blue-500 w-6 h-6" />
+                </div>
+                <div className="p-2.5 rounded-xl bg-purple-50 dark:bg-purple-950/40 ring-1 ring-purple-200 dark:ring-purple-800">
+                  <PartyPopper className="text-purple-500 w-6 h-6" />
+                </div>
+                <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 ring-1 ring-amber-200 dark:ring-amber-800">
+                  <Sparkles className="text-amber-500 w-6 h-6" />
+                </div>
+              </div>
             </div>
           </div>
         </div>

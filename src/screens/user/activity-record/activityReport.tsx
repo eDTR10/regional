@@ -712,39 +712,39 @@ function ActivityReport() {
       type="button"
       onClick={onToggle}
       className={`w-full flex items-center justify-between px-4 py-3 rounded-lg border transition-colors text-left ${complete
-        ? 'border-green-200 bg-green-50 hover:bg-green-100'
-        : 'border-red-200 bg-red-50 hover:bg-red-100'
+        ? 'border-green-200 bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:border-green-800/50 dark:hover:bg-green-900/40'
+        : 'border-red-200 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:border-red-800/50 dark:hover:bg-red-900/40'
         }`}
     >
       <div className="flex items-center gap-2">
         <span className={`w-2 h-2 rounded-full shrink-0 ${complete ? 'bg-green-500' : 'bg-red-400'}`} />
-        <span className={`font-semibold text-sm ${complete ? 'text-green-800' : 'text-red-800'}`}>{title}</span>
-        {badge && <span className="text-xs text-gray-400 font-normal">{badge}</span>}
+        <span className={`font-semibold text-sm ${complete ? 'text-green-800 dark:text-green-400' : 'text-red-800 dark:text-red-400'}`}>{title}</span>
+        {badge && <span className="text-xs text-gray-400 dark:text-slate-500 font-normal">{badge}</span>}
       </div>
-      <ChevronDown className={`w-4 h-4 shrink-0 transition-transform duration-200 ${expanded ? 'rotate-180' : ''} ${complete ? 'text-green-600' : 'text-red-400'}`} />
+      <ChevronDown className={`w-4 h-4 shrink-0 transition-transform duration-200 ${expanded ? 'rotate-180' : ''} ${complete ? 'text-green-600 dark:text-green-500' : 'text-red-400 dark:text-red-500'}`} />
     </button>
   );
 
   return (
     <>
-      <div className="min-h-screen bg-gray-50 w-full overflow-y-auto">
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-950 w-full overflow-y-auto">
         <div className="mx-auto px-3 py-5 max-w-[1100px] md:px-2 md:py-3">
 
           <div className="mb-4">
-            <h1 className="text-xl font-bold text-gray-800 leading-tight">Accomplishment Report</h1>
+            <h1 className="text-xl font-bold text-gray-800 dark:text-white leading-tight">Accomplishment Report</h1>
           </div>
 
           {/* ── Settings card ───────────────────────────────────────── */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-4">
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm mb-4">
 
             {/* Period row */}
-            <div className="px-5 pt-5 pb-4 border-b border-gray-100">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Report Period</p>
+            <div className="px-5 pt-5 pb-4 border-b border-gray-100 dark:border-slate-800">
+              <p className="text-xs font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-wider mb-3">Report Period</p>
 
               <div className="grid grid-cols-3 gap-3 sm:grid-cols-1">
                 {/* Period toggle */}
                 <div className="space-y-1">
-                  <label className="block text-xs font-medium text-gray-500">Period</label>
+                  <label className="block text-xs font-medium text-gray-500 dark:text-slate-400">Period</label>
                   <div className="flex rounded-md border border-input overflow-hidden h-9 text-sm">
                     {(['1-15', '16-31'] as const).map((p) => (
                       <button
@@ -764,15 +764,15 @@ function ActivityReport() {
 
                 {/* Month */}
                 <div className="space-y-1">
-                  <label className="block text-xs font-medium text-gray-500">Month</label>
+                  <label className="block text-xs font-medium text-accent-foreground dark:text-slate-400">Month</label>
                   <Select value={selectedMonth} onValueChange={handleMonthChange}>
-                    <SelectTrigger className="h-9 text-sm">
+                    <SelectTrigger className="h-9 text-sm dark:bg-slate-800 dark:border-slate-700">
                       <SelectValue placeholder="Select month" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="dark:bg-slate-800 text-accent-foreground dark:border-slate-700">
                       {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
                         <SelectItem key={month} value={month.toString()}>
-                          {new Date(2000, month - 1).toLocaleString('default', { month: 'long' })}
+                          <span className="text-accent-foreground"> {new Date(2000, month - 1).toLocaleString('default', { month: 'long' })}</span>
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -781,14 +781,14 @@ function ActivityReport() {
 
                 {/* Year */}
                 <div className="space-y-1">
-                  <label className="block text-xs font-medium text-gray-500">Year</label>
+                  <label className="block text-xs font-medium text-gray-500 dark:text-slate-400">Year</label>
                   <Select value={selectedYear} onValueChange={handleYearChange}>
-                    <SelectTrigger className="h-9 text-sm">
+                    <SelectTrigger className="h-9 text-sm dark:bg-slate-800 dark:border-slate-700">
                       <SelectValue placeholder="Year" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="dark:bg-slate-800 dark:border-slate-700">
                       {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map((year) => (
-                        <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                        <SelectItem key={year} value={year.toString()}> <span className="text-accent-foreground">{year}</span></SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -798,7 +798,7 @@ function ActivityReport() {
               {/* Summary badge — shows once all three are selected */}
               {selectedPeriod && selectedMonth && selectedYear && (
                 <div className="mt-3">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800/50 text-blue-700 dark:text-blue-400 text-xs font-semibold">
                     {getDateRange()}
                   </span>
                 </div>
@@ -806,7 +806,7 @@ function ActivityReport() {
             </div>
 
             {/* Personal Information */}
-            <div className="px-5 py-4 border-b border-gray-100">
+            <div className="px-5 py-4 border-b border-gray-100 dark:border-slate-800">
               <SectionHeader
                 title="Personal Information"
                 complete={isPersonalInfoComplete()}
@@ -817,27 +817,27 @@ function ActivityReport() {
               <div className={`transition-all duration-300 ease-in-out ${isPersonalInfoExpanded ? 'max-h-[2000px] opacity-100 mt-4 overflow-visible' : 'max-h-0 opacity-0 overflow-hidden'}`}>
                 <div className="grid grid-cols-3 gap-3 mb-3 sm:grid-cols-1">
                   <div className="space-y-1">
-                    <label className="block text-xs font-medium text-gray-500">Name <span className="text-red-400">*</span></label>
+                    <label className="block text-xs font-medium text-gray-500 dark:text-slate-400">Name <span className="text-red-400">*</span></label>
                     <Input
-                      className="h-9 text-sm"
+                      className="h-9 text-sm dark:bg-slate-800 dark:border-slate-700"
                       placeholder="Surname, First Name, MI"
                       value={userData.name}
                       onChange={(e) => setUserData({ ...userData, name: e.target.value })}
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="block text-xs font-medium text-gray-500">Position <span className="text-red-400">*</span></label>
+                    <label className="block text-xs font-medium text-gray-500 dark:text-slate-400">Position <span className="text-red-400">*</span></label>
                     <Input
-                      className="h-9 text-sm"
+                      className="h-9 text-sm dark:bg-slate-800 dark:border-slate-700"
                       placeholder="Do not abbreviate"
                       value={userData.position}
                       onChange={(e) => setUserData({ ...userData, position: e.target.value })}
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="block text-xs font-medium text-gray-500">Project</label>
+                    <label className="block text-xs font-medium text-gray-500 dark:text-slate-400">Project</label>
                     <Input
-                      className="h-9 text-sm"
+                      className="h-9 text-sm dark:bg-slate-800 dark:border-slate-700"
                       placeholder="If applicable"
                       value={userData.project}
                       onChange={(e) => setUserData({ ...userData, project: e.target.value })}
@@ -845,39 +845,39 @@ function ActivityReport() {
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <label className="block text-xs font-medium text-gray-500">Duties and Responsibilities <span className="text-red-400">*</span></label>
-                  <div className="border border-input rounded-md overflow-hidden focus-within:ring-2 focus-within:ring-ring bg-background">
+                  <label className="block text-xs font-medium text-gray-500 dark:text-slate-400">Duties and Responsibilities <span className="text-red-400">*</span></label>
+                  <div className="border border-input dark:border-slate-700 rounded-md overflow-hidden focus-within:ring-2 focus-within:ring-ring bg-background dark:bg-slate-900">
                     {/* Toolbar */}
-                    <div className="flex items-center gap-0.5 px-2 py-1 bg-gray-50 border-b border-input">
+                    <div className="flex items-center gap-0.5 px-2 py-1 bg-gray-50 dark:bg-slate-800 border-b border-input dark:border-slate-700">
                       <button type="button" title="Bullet list (• )" onClick={() => insertAtLines(() => '• ')}
-                        className="p-1 rounded hover:bg-gray-200 text-gray-600 transition-colors">
+                        className="p-1 rounded hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-600 dark:text-slate-400 transition-colors">
                         <List className="w-3.5 h-3.5" />
                       </button>
                       <button type="button" title="Numbered list" onClick={() => insertAtLines((i) => `${i + 1}. `)}
-                        className="p-1 rounded hover:bg-gray-200 text-gray-600 transition-colors">
+                        className="p-1 rounded hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-600 dark:text-slate-400 transition-colors">
                         <ListOrdered className="w-3.5 h-3.5" />
                       </button>
                       <button type="button" title="Dash list" onClick={() => insertAtLines(() => '- ')}
-                        className="p-1 rounded hover:bg-gray-200 text-gray-600 transition-colors">
+                        className="p-1 rounded hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-600 dark:text-slate-400 transition-colors">
                         <Minus className="w-3.5 h-3.5" />
                       </button>
-                      <div className="w-px h-4 bg-gray-300 mx-1" />
-                      <Type className="w-3 h-3 text-gray-400" />
+                      <div className="w-px h-4 bg-gray-300 dark:bg-slate-600 mx-1" />
+                      <Type className="w-3 h-3 text-gray-400 dark:text-slate-500" />
                       <button type="button" title="Decrease font size"
                         onClick={() => setDutiesFontSize(s => Math.max(10, s - 1))}
-                        className="px-1.5 py-0.5 rounded hover:bg-gray-200 text-gray-600 text-xs font-mono leading-none transition-colors">
+                        className="px-1.5 py-0.5 rounded hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-600 dark:text-slate-400 text-xs font-mono leading-none transition-colors">
                         A−
                       </button>
-                      <span className="text-[10px] text-gray-400 font-mono w-5 text-center select-none">{dutiesFontSize}</span>
+                      <span className="text-[10px] text-gray-400 dark:text-slate-500 font-mono w-5 text-center select-none">{dutiesFontSize}</span>
                       <button type="button" title="Increase font size"
                         onClick={() => setDutiesFontSize(s => Math.min(20, s + 1))}
-                        className="px-1.5 py-0.5 rounded hover:bg-gray-200 text-gray-600 text-xs font-mono leading-none transition-colors">
+                        className="px-1.5 py-0.5 rounded hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-600 dark:text-slate-400 text-xs font-mono leading-none transition-colors">
                         A+
                       </button>
                     </div>
                     <textarea
                       ref={dutiesRef}
-                      className="w-full px-3 py-2 focus:outline-none bg-background overflow-hidden resize-none"
+                      className="w-full px-3 py-2 focus:outline-none bg-background dark:bg-slate-900 text-gray-800 dark:text-slate-200 overflow-hidden resize-none"
                       style={{ fontSize: dutiesFontSize, minHeight: 80 }}
                       placeholder="Enter your duties and responsibilities (consistent with approved Terms of Reference)"
                       rows={4}
@@ -890,7 +890,7 @@ function ActivityReport() {
             </div>
 
             {/* Actual Deliverables */}
-            <div className="px-5 py-4 border-b border-gray-100">
+            <div className="px-5 py-4 border-b border-gray-100 dark:border-slate-800">
               <SectionHeader
                 title="Actual Deliverables"
                 complete={isDeliverablesComplete()}
@@ -900,39 +900,39 @@ function ActivityReport() {
               />
               <div className={`transition-all duration-300 ease-in-out ${isDeliverablesExpanded ? 'max-h-[2000px] opacity-100 mt-4 overflow-visible' : 'max-h-0 opacity-0 overflow-hidden'}`}>
                 <div className="space-y-1">
-                  <label className="block text-xs font-medium text-gray-500">Actual Deliverables <span className="text-red-400">*</span></label>
-                  <div className="border border-input rounded-md overflow-hidden focus-within:ring-2 focus-within:ring-ring bg-background">
+                  <label className="block text-xs font-medium text-gray-500 dark:text-slate-400">Actual Deliverables <span className="text-red-400">*</span></label>
+                  <div className="border border-input dark:border-slate-700 rounded-md overflow-hidden focus-within:ring-2 focus-within:ring-ring bg-background dark:bg-slate-900">
                     {/* Toolbar */}
-                    <div className="flex items-center gap-0.5 px-2 py-1 bg-gray-50 border-b border-input">
+                    <div className="flex items-center gap-0.5 px-2 py-1 bg-gray-50 dark:bg-slate-800 border-b border-input dark:border-slate-700">
                       <button type="button" title="Bullet list (• )" onClick={() => insertAtDeliverableLines(() => '• ')}
-                        className="p-1 rounded hover:bg-gray-200 text-gray-600 transition-colors">
+                        className="p-1 rounded hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-600 dark:text-slate-400 transition-colors">
                         <List className="w-3.5 h-3.5" />
                       </button>
                       <button type="button" title="Numbered list" onClick={() => insertAtDeliverableLines((i) => `${i + 1}. `)}
-                        className="p-1 rounded hover:bg-gray-200 text-gray-600 transition-colors">
+                        className="p-1 rounded hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-600 dark:text-slate-400 transition-colors">
                         <ListOrdered className="w-3.5 h-3.5" />
                       </button>
                       <button type="button" title="Dash list" onClick={() => insertAtDeliverableLines(() => '- ')}
-                        className="p-1 rounded hover:bg-gray-200 text-gray-600 transition-colors">
+                        className="p-1 rounded hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-600 dark:text-slate-400 transition-colors">
                         <Minus className="w-3.5 h-3.5" />
                       </button>
-                      <div className="w-px h-4 bg-gray-300 mx-1" />
-                      <Type className="w-3 h-3 text-gray-400" />
+                      <div className="w-px h-4 bg-gray-300 dark:bg-slate-600 mx-1" />
+                      <Type className="w-3 h-3 text-gray-400 dark:text-slate-500" />
                       <button type="button" title="Decrease font size"
                         onClick={() => setDeliverablesFontSize(s => Math.max(10, s - 1))}
-                        className="px-1.5 py-0.5 rounded hover:bg-gray-200 text-gray-600 text-xs font-mono leading-none transition-colors">
+                        className="px-1.5 py-0.5 rounded hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-600 dark:text-slate-400 text-xs font-mono leading-none transition-colors">
                         A−
                       </button>
-                      <span className="text-[10px] text-gray-400 font-mono w-5 text-center select-none">{deliverablesFontSize}</span>
+                      <span className="text-[10px] text-gray-400 dark:text-slate-500 font-mono w-5 text-center select-none">{deliverablesFontSize}</span>
                       <button type="button" title="Increase font size"
                         onClick={() => setDeliverablesFontSize(s => Math.min(20, s + 1))}
-                        className="px-1.5 py-0.5 rounded hover:bg-gray-200 text-gray-600 text-xs font-mono leading-none transition-colors">
+                        className="px-1.5 py-0.5 rounded hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-600 dark:text-slate-400 text-xs font-mono leading-none transition-colors">
                         A+
                       </button>
                     </div>
                     <textarea
                       ref={deliverableRef}
-                      className="w-full px-3 py-2 focus:outline-none bg-background overflow-hidden resize-none"
+                      className="w-full px-3 py-2 focus:outline-none bg-background dark:bg-slate-900 text-gray-800 dark:text-slate-200 overflow-hidden resize-none"
                       style={{ fontSize: deliverablesFontSize, minHeight: 80 }}
                       placeholder="Enter your actual deliverables — each line becomes a separate item in the report"
                       rows={4}
@@ -956,18 +956,18 @@ function ActivityReport() {
               <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isAdditionalDetailsExpanded ? 'max-h-[300px] opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-1">
                   <div className="space-y-1">
-                    <label className="block text-xs font-medium text-gray-500">Verified by — Name <span className="text-red-400">*</span></label>
+                    <label className="block text-xs font-medium text-gray-500 dark:text-slate-400">Verified by — Name <span className="text-red-400">*</span></label>
                     <Input
-                      className="h-9 text-sm"
+                      className="h-9 text-sm dark:bg-slate-800 dark:border-slate-700"
                       placeholder="Name of Immediate Supervisor"
                       value={verifiedBy.name}
                       onChange={(e) => setVerifiedBy({ ...verifiedBy, name: e.target.value })}
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="block text-xs font-medium text-gray-500">Verified by — Designation <span className="text-red-400">*</span></label>
+                    <label className="block text-xs font-medium text-gray-500 dark:text-slate-400">Verified by — Designation <span className="text-red-400">*</span></label>
                     <Input
-                      className="h-9 text-sm"
+                      className="h-9 text-sm dark:bg-slate-800 dark:border-slate-700"
                       placeholder="e.g. Regional Director"
                       value={verifiedBy.designation}
                       onChange={(e) => setVerifiedBy({ ...verifiedBy, designation: e.target.value })}
@@ -980,12 +980,12 @@ function ActivityReport() {
 
           {/* ── Report Preview ───────────────────────────────────────── */}
           {selectedPeriod && selectedMonth && selectedYear && (
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm">
               {/* Preview header */}
-              <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-gray-100 sm:flex-col sm:items-start">
+              <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-gray-100 dark:border-slate-800 sm:flex-col sm:items-start">
                 <div>
-                  <h2 className="font-semibold text-gray-800 text-sm">Report Preview</h2>
-                  <p className="text-xs text-gray-400 mt-0.5">
+                  <h2 className="font-semibold text-gray-800 dark:text-slate-200 text-sm">Report Preview</h2>
+                  <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">
                     {totalPages} page{totalPages > 1 ? 's' : ''} · live
                   </p>
                 </div>
@@ -995,7 +995,7 @@ function ActivityReport() {
                       onClick={openPNPKISetup}
                       variant={pnpkiReady ? 'default' : 'outline'}
                       size="sm"
-                      className="gap-1.5 sm:flex-1"
+                      className="gap-1.5 sm:flex-1 text-accent-foreground"
                       title={pnpkiReady ? `PNPKI configured — ${pnpkiBaseConfig.fileName}` : 'Set up PNPKI digital signature'}
                     >
                       {pnpkiReady
@@ -1017,11 +1017,11 @@ function ActivityReport() {
               </div>
 
               {/* Paper pages */}
-              <div className="p-4 bg-gray-100 overflow-x-auto">
+              <div className="p-4 bg-gray-100 dark:bg-slate-950 overflow-x-auto">
                 {Array.from({ length: totalPages }, (_, pageIndex) => (
                   <div
                     key={pageIndex}
-                    className="mb-6 bg-white shadow-md relative"
+                    className="mb-6 bg-white text-black shadow-md relative"
                     style={{ width: '8.5in', minHeight: '11in', margin: '0 auto', padding: '0.75in 0.75in 1.2in' }}
                   >
                     {/* AFP code */}

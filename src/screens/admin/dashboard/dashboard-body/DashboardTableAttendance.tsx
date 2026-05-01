@@ -1,4 +1,4 @@
-import  { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
     Table,
     TableBody,
@@ -136,9 +136,9 @@ const DashboardTableAttendance = () => {
                     <TableBody>
                         {filteredCheckData.map((item: any, index) => (
                             <TableRow key={index} className=' border border-border'>
-                                <TableCell className="font-small">{item?.full_name} 
-                                   <br />
-                                   <span className=' text-[7px]'>{item?.deptid}</span>
+                                <TableCell className="font-small">{item?.full_name}
+                                    <br />
+                                    <span className=' text-[7px]'>{item?.deptid}</span>
                                 </TableCell>
                                 <TableCell>{convertDate(item?.CHECKTIME).localeTime12HourFormat}</TableCell>
                                 <TableCell>
