@@ -10,7 +10,6 @@ import { useEffect, useState } from "react";
 
 import axios from "./../../../../plugin/axios";
 import { convertCheckType } from "@/helper/check-type";
-import InputText2 from "@/components/input/InputText2";
 import { Button } from "@/components/ui/button";
 import { convertDate } from "@/helper/date-time";
 import Swal from "sweetalert2";
@@ -31,10 +30,10 @@ type SortKey = "full_name" | "CHECKTIME" | "CHECKTYPE";
 type SortDir = "ascending" | "descending";
 
 const CHECK_TYPE_COLORS: Record<string, string> = {
-  "Time-In":    "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20",
-  "Time-Out":   "bg-red-50 text-red-600 border border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20",
-  "Break-In":   "bg-blue-50 text-blue-600 border border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20",
-  "Break-Out":  "bg-orange-50 text-orange-600 border border-orange-200 dark:bg-orange-500/10 dark:text-orange-400 dark:border-orange-500/20",
+  "Time-In": "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20",
+  "Time-Out": "bg-red-50 text-red-600 border border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20",
+  "Break-In": "bg-blue-50 text-blue-600 border border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20",
+  "Break-Out": "bg-orange-50 text-orange-600 border border-orange-200 dark:bg-orange-500/10 dark:text-orange-400 dark:border-orange-500/20",
 };
 
 const SortIcon = ({
@@ -52,10 +51,10 @@ const SortIcon = ({
 };
 
 const TABLE_COLUMNS: { key: SortKey; label: string; className?: string }[] = [
-  { key: "full_name",  label: "Employee Name", className: "w-52" },
-  { key: "CHECKTIME",  label: "Checked Date",  className: "w-44" },
-  { key: "CHECKTIME",  label: "Checked Time",  className: "w-40" },
-  { key: "CHECKTYPE",  label: "Check Type",    className: "w-36" },
+  { key: "full_name", label: "Employee Name", className: "w-52" },
+  { key: "CHECKTIME", label: "Checked Date", className: "w-44" },
+  { key: "CHECKTIME", label: "Checked Time", className: "w-40" },
+  { key: "CHECKTYPE", label: "Check Type", className: "w-36" },
 ];
 
 function ReportTable() {
@@ -70,10 +69,10 @@ function ReportTable() {
     return { month: date.getMonth() + 1, year: date.getFullYear() };
   };
 
-  const [show, setShow]                   = useState(false);
-  const [loading, setLoading]             = useState(false);
+  const [show, setShow] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState<number | null>(null);
-  const [data, setData]                   = useState<any>([]);
+  const [data, setData] = useState<any>([]);
   const [printableData, setPrintableData] = useState([]);
 
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDir }>({
@@ -93,12 +92,12 @@ function ReportTable() {
 
   const sortedData = data?.results
     ? [...data.results].sort((a: any, b: any) => {
-        const va = a[sortConfig.key] ?? "";
-        const vb = b[sortConfig.key] ?? "";
-        if (va < vb) return sortConfig.direction === "ascending" ? -1 : 1;
-        if (va > vb) return sortConfig.direction === "ascending" ? 1 : -1;
-        return 0;
-      })
+      const va = a[sortConfig.key] ?? "";
+      const vb = b[sortConfig.key] ?? "";
+      if (va < vb) return sortConfig.direction === "ascending" ? -1 : 1;
+      if (va > vb) return sortConfig.direction === "ascending" ? 1 : -1;
+      return 0;
+    })
     : [];
 
   const handleDelete = async (id: number) => {
@@ -167,7 +166,7 @@ function ReportTable() {
 
   function formatDateRange(fromDate: any, toDate: any) {
     const from = new Date(fromDate);
-    const to   = new Date(toDate);
+    const to = new Date(toDate);
     return `${from.toLocaleString("en-US", { month: "long" })} ${from.getDate()}-${to.getDate()}, ${from.getFullYear()}`;
   }
 
@@ -202,97 +201,97 @@ function ReportTable() {
         </div>
       </div>
 
-{/* ── Filter toolbar ── */}
-{/* ── Filter toolbar ── */}
-<div className="px-4 py-3 pb-0 border-b border-gray-100 dark:border-slate-800 shrink-0 bg-white dark:bg-slate-950">
-  <form
-    onSubmit={(e) => {
-      e.preventDefault();
-      if (localStorage.getItem("accessToken")) {
-        getAttendaceCon();
-      } else {
-        Swal.fire({ icon: "error", title: "Oops...", text: "Not authenticated.", showConfirmButton: false });
-      }
-    }}
-    className="flex flex-row items-center gap-3 md:flex-col md:gap-2"
-  >
-    {/* ── Date inputs row ── */}
-    <div className="flex items-center gap-2 flex-1 md:w-full md:flex-none">
-      {/* FROM */}
-      <div className="flex-1 flex items-center gap-1.5 h-10 px-3 rounded-lg border border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-900 min-w-0">
-        <CalendarRange className="w-3.5 h-3.5 text-gray-400 dark:text-slate-500 shrink-0" />
-        <span className="text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-widest whitespace-nowrap select-none">
-          From
-        </span>
-        <input
-          type="date"
-          value={inputData.fromDate}
-          onChange={(e) => setInputData({ ...inputData, fromDate: e.target.value })}
-          className="flex-1 min-w-0 text-gray-700 dark:text-slate-300 text-sm bg-transparent outline-none border-none cursor-pointer [color-scheme:light] dark:[color-scheme:dark]"
-        />
-      </div>
+      {/* ── Filter toolbar ── */}
+      {/* ── Filter toolbar ── */}
+      <div className="px-4 py-3 pb-0 border-b border-gray-100 dark:border-slate-800 shrink-0 bg-white dark:bg-slate-950">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (localStorage.getItem("accessToken")) {
+              getAttendaceCon();
+            } else {
+              Swal.fire({ icon: "error", title: "Oops...", text: "Not authenticated.", showConfirmButton: false });
+            }
+          }}
+          className="flex flex-row items-center gap-3 md:flex-col md:gap-2"
+        >
+          {/* ── Date inputs row ── */}
+          <div className="flex items-center gap-2 flex-1 md:w-full md:flex-none">
+            {/* FROM */}
+            <div className="flex-1 flex items-center gap-1.5 h-10 px-3 rounded-lg border border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-900 min-w-0">
+              <CalendarRange className="w-3.5 h-3.5 text-gray-400 dark:text-slate-500 shrink-0" />
+              <span className="text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-widest whitespace-nowrap select-none">
+                From
+              </span>
+              <input
+                type="date"
+                value={inputData.fromDate}
+                onChange={(e) => setInputData({ ...inputData, fromDate: e.target.value })}
+                className="flex-1 min-w-0 text-gray-700 dark:text-slate-300 text-sm bg-transparent outline-none border-none cursor-pointer [color-scheme:light] dark:[color-scheme:dark]"
+              />
+            </div>
 
-      {/* Arrow */}
-      <span className="text-gray-300 dark:text-slate-600 text-sm shrink-0">→</span>
+            {/* Arrow */}
+            <span className="text-gray-300 dark:text-slate-600 text-sm shrink-0">→</span>
 
-      {/* TO */}
-      <div className="flex-1 flex items-center gap-1.5 h-10 px-3 rounded-lg border border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-900 min-w-0">
-        <CalendarRange className="w-3.5 h-3.5 text-gray-400 dark:text-slate-500 shrink-0" />
-        <span className="text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-widest whitespace-nowrap select-none">
-          To
-        </span>
-        <input
-          type="date"
-          value={inputData.toDate}
-          onChange={(e) => setInputData({ ...inputData, toDate: e.target.value })}
-          className="flex-1 min-w-0 text-gray-700 dark:text-slate-300 text-sm bg-transparent outline-none border-none cursor-pointer [color-scheme:light] dark:[color-scheme:dark]"
-        />
-      </div>
-    </div>
+            {/* TO */}
+            <div className="flex-1 flex items-center gap-1.5 h-10 px-3 rounded-lg border border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-900 min-w-0">
+              <CalendarRange className="w-3.5 h-3.5 text-gray-400 dark:text-slate-500 shrink-0" />
+              <span className="text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-widest whitespace-nowrap select-none">
+                To
+              </span>
+              <input
+                type="date"
+                value={inputData.toDate}
+                onChange={(e) => setInputData({ ...inputData, toDate: e.target.value })}
+                className="flex-1 min-w-0 text-gray-700 dark:text-slate-300 text-sm bg-transparent outline-none border-none cursor-pointer [color-scheme:light] dark:[color-scheme:dark]"
+              />
+            </div>
+          </div>
 
-    {/* ── Action buttons row ── */}
-    <div className="flex items-center gap-2 shrink-0 md:w-full">
-      {/* Filter button */}
-      <Button
-        type="submit"
-        disabled={loading}
-        className="h-10 px-5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-semibold text-sm
+          {/* ── Action buttons row ── */}
+          <div className="flex items-center gap-2 shrink-0 md:w-full">
+            {/* Filter button */}
+            <Button
+              type="submit"
+              disabled={loading}
+              className="h-10 px-5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-semibold text-sm
                    rounded-lg flex items-center justify-center gap-1.5 shadow-sm transition-all md:flex-1"
-      >
-        {loading
-          ? <LoaderIcon className="w-3.5 h-3.5 animate-spin" />
-          : <Search className="w-3.5 h-3.5" />
-        }
-        {loading ? "Loading..." : "Filter"}
-      </Button>
+            >
+              {loading
+                ? <LoaderIcon className="w-3.5 h-3.5 animate-spin" />
+                : <Search className="w-3.5 h-3.5" />
+              }
+              {loading ? "Loading..." : "Filter"}
+            </Button>
 
-      {/* Divider */}
-      <div className="h-5 w-px bg-gray-200 dark:bg-slate-800 shrink-0" />
+            {/* Divider */}
+            <div className="h-5 w-px bg-gray-200 dark:bg-slate-800 shrink-0" />
 
-      {/* Print / PDF button */}
-      <div
-        className={`shrink-0 transition-opacity duration-200 ${show ? "opacity-100" : "opacity-30 pointer-events-none"}`}
-        title={show ? "Download PDF" : "Apply a date filter first"}
-      >
-        <PrintButton
-          name={JSON.parse(localStorage.getItem("user") || "{}").full_name}
-          data={printableData}
-          selectedYear={getMonthAndYear(inputData.fromDate).year}
-          selectedMonth={getMonthAndYear(inputData.fromDate).month}
-          show={show}
-          date={formatDateRange(inputData.fromDate, inputData.toDate)}
-        />
+            {/* Print / PDF button */}
+            <div
+              className={`shrink-0 transition-opacity duration-200 ${show ? "opacity-100" : "opacity-30 pointer-events-none"}`}
+              title={show ? "Download PDF" : "Apply a date filter first"}
+            >
+              <PrintButton
+                name={JSON.parse(localStorage.getItem("user") || "{}").full_name}
+                data={printableData}
+                selectedYear={getMonthAndYear(inputData.fromDate).year}
+                selectedMonth={getMonthAndYear(inputData.fromDate).month}
+                show={show}
+                date={formatDateRange(inputData.fromDate, inputData.toDate)}
+              />
+            </div>
+
+            {/* Record count */}
+            {sortedData.length > 0 && (
+              <span className="text-xs text-gray-400 dark:text-slate-500 font-medium tabular-nums shrink-0 md:hidden">
+                {sortedData.length} rec{sortedData.length !== 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
+        </form>
       </div>
-
-      {/* Record count */}
-      {sortedData.length > 0 && (
-        <span className="text-xs text-gray-400 dark:text-slate-500 font-medium tabular-nums shrink-0 md:hidden">
-          {sortedData.length} rec{sortedData.length !== 1 ? "s" : ""}
-        </span>
-      )}
-    </div>
-  </form>
-</div>
 
       {/* ── Scrollable table ── */}
       <div className="flex-1 overflow-auto">
