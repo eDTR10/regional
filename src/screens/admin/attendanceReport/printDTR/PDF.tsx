@@ -14,7 +14,16 @@ Font.register({
 
 const MyDocument = ({ name, date, data, selectedYear, selectedMonth, previewUrl, selectedSchedule, SupervisorsName }: any) => {
   console.log(date)
-  const getDateFromChecktime = (checktime: any) => new Date(checktime).getUTCDate();
+  const getDateFromChecktime = (checktime: any) => {
+    let safeTime = String(checktime).trim();
+    if (safeTime.includes(' ') && !safeTime.includes('T')) {
+      safeTime = safeTime.replace(' ', 'T');
+    }
+    if (safeTime.includes('T') && !safeTime.endsWith('Z') && !safeTime.match(/[+-]\d{2}:\d{2}$/)) {
+      safeTime += 'Z';
+    }
+    return new Date(safeTime).getUTCDate();
+  };
 
   const dateRangeParts = (date || '').split('-');
   let startDay = 1;

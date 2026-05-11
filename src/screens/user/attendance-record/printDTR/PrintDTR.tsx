@@ -140,7 +140,7 @@ export default function PrintDTR({ name = '', data, date, show, selectedYear, se
   return (
     <>
       <Drawer >
-        <DrawerTrigger className={show ? '  z-20 w-full flex gap-2 ' : ' flex gap-2 text-foreground z-20 w-full pointer-events-none  '}>
+        <DrawerTrigger asChild>
           <Button type='button' variant={show ? "default" : "outline"} className={show ? '  z-20 w-full flex gap-2 ' : ' flex gap-2 text-foreground z-20 w-full pointer-events-none '} >Show PDF <PrinterIcon className={show ? ' w-4 h-4 animate-bounce' : ' w-4 h-4 '} /> </Button>
         </DrawerTrigger>
 

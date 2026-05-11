@@ -1,5 +1,13 @@
 export function convertDate(dateString: string) {
-    const date = new Date(dateString);
+    let safeTime = String(dateString).trim();
+    if (safeTime.includes(' ') && !safeTime.includes('T')) {
+        safeTime = safeTime.replace(' ', 'T');
+    }
+    if (safeTime.includes('T') && !safeTime.endsWith('Z') && !safeTime.match(/[+-]\d{2}:\d{2}$/)) {
+        safeTime += 'Z';
+    }
+
+    const date = new Date(safeTime);
 
     // ISO format
     const isoFormat = date.toISOString();
