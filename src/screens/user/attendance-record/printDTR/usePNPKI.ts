@@ -153,8 +153,9 @@ export async function signPdfWithPNPKI(
     form.append('sign_image', new File([imgBytes], cfg.signImageFileName || 'sig.png', { type: 'image/png' }));
   }
 
-  // Pin to the env-configured server — never use the mutable cfg.serverUrl from storage
-  const pinnedServer = (import.meta.env.VITE_PNPKI_SERVER as string).replace(/\/$/, '');
+  // Pin to the env-configured server — fallback to cfg.serverUrl if env is not set
+  const rawServer = (import.meta.env.VITE_PNPKI_SERVER as string) || cfg.serverUrl || '';
+  const pinnedServer = rawServer.replace(/\/$/, '');
   const res = await fetch(`${pinnedServer}/sign-pdf`, { method: 'POST', body: form });
 
   if (!res.ok) {
