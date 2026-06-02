@@ -189,7 +189,6 @@ function FaceRecMain({ userObject }: { userObject: any }) {
   const [livelinessMessage, setLivelinessMessage] = useState<string>("Checking permissions...");
   const [status, setStatus] = useState("Loading...");
   const [camera, setCamera] = useState("user");
-  const [_name, setName] = useState<any[]>([]);
   const [permissionsInitialized, setPermissionsInitialized] = useState(false);
   const [floatingMenuShown, setFloatingMenuShown] = useState(false);
 
@@ -207,6 +206,10 @@ function FaceRecMain({ userObject }: { userObject: any }) {
   const floatingMenuTimeoutRef = useRef<NodeJS.Timeout>();
   const animationFrameRef = useRef<number>();
   const menuCooldownUntilRef = useRef<number>(0);
+  const livelinessPassedUntilRef = useRef<number>(0);
+  const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
+  const prevLivelinessStatusRef = useRef<"pending" | "passed" | "failed">("pending");
+  const prevLivelinessMessageRef = useRef<string>("");
 
   // Determine if actions are enabled
   const canPerformActions = livelinessStatus === "passed" &&
@@ -529,7 +532,6 @@ function FaceRecMain({ userObject }: { userObject: any }) {
             setLocationStatus("permission_denied");
             locationPermissionGrantedRef.current = false;
             PermissionManager.setPermissionStatus(LOCATION_PERMISSION_KEY, false);
-            showLocationPermissionError();
             resolve("denied");
           } else {
             setLocationStatus("error");
@@ -595,16 +597,34 @@ function FaceRecMain({ userObject }: { userObject: any }) {
       confirmButtonColor: '#3085d6'
     }).then((result) => {
       if (result.isConfirmed) {
-        // If permission is denied at browser level, open settings; otherwise prompt and then reload
         PermissionManager.checkBrowserPermission('geolocation' as PermissionName)
           .then((state) => {
             if (state === 'denied') {
               openSiteSettings();
             } else {
-              requestLocationPermission().finally(() => window.location.reload());
+              requestLocationPermission().then((permResult) => {
+                if (permResult === 'granted') {
+                  window.location.reload();
+                } else if (permResult === 'denied') {
+                  // Browser-level denied after prompt — guide to settings
+                  openSiteSettings();
+                } else {
+                  // Device GPS is off (error but not permission denied)
+                  Swal.fire({
+                    icon: 'warning',
+                    title: 'Location Unavailable',
+                    text: 'Please turn on GPS/Location Services on your device and try again.',
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: '#3085d6',
+                  });
+                }
+              });
             }
           })
-          .catch(() => requestLocationPermission().finally(() => window.location.reload()));
+          .catch(() => requestLocationPermission().then((permResult) => {
+            if (permResult === 'granted') window.location.reload();
+            else if (permResult === 'denied') openSiteSettings();
+          }));
       } else if (result.isDenied) {
         openSiteSettings();
       }
@@ -757,6 +777,8 @@ function FaceRecMain({ userObject }: { userObject: any }) {
         videoRef.current.srcObject = null;
       }
 
+      ctxRef.current = null; // invalidate cached context on camera switch
+
       const constraints = getOptimizedVideoConstraints(camera);
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
 
@@ -785,6 +807,8 @@ function FaceRecMain({ userObject }: { userObject: any }) {
     const inputSize = tier === 'low' ? 224 : tier === 'mid' ? 320 : 416;
     const intervalMs = tier === 'low' ? 700 : tier === 'mid' ? 500 : 350;
 
+    const displaySize = { width: 500, height: 600 };
+
     const detectFaces = async () => {
       try {
         if (!videoRef.current || !canvasRef.current || !faceMatcher.current) return;
@@ -794,16 +818,30 @@ function FaceRecMain({ userObject }: { userObject: any }) {
             videoRef.current,
             new faceapi.TinyFaceDetectorOptions({ inputSize, scoreThreshold: 0.6 })
           )
-          .withFaceLandmarks(true) // Use tiny landmarks
+          .withFaceLandmarks(true)
           .withFaceDescriptors()
           .withFaceExpressions();
 
         const canvas = canvasRef.current;
-        const displaySize = { width: 500, height: 600 };
         faceapi.matchDimensions(canvas, displaySize);
         const resizedDetections = faceapi.resizeResults(detections, displaySize);
-        const ctx = canvas.getContext("2d", { willReadFrequently: true });
-        if (ctx) ctx.clearRect(0, 0, displaySize.width, displaySize.height);
+
+        // Cache context — avoid re-querying every frame
+        if (!ctxRef.current) {
+          ctxRef.current = canvas.getContext("2d", { willReadFrequently: true });
+        }
+        ctxRef.current?.clearRect(0, 0, displaySize.width, displaySize.height);
+
+        const updateLiveliness = (status: "pending" | "passed" | "failed", message: string) => {
+          if (status !== prevLivelinessStatusRef.current) {
+            prevLivelinessStatusRef.current = status;
+            setLivelinessStatus(status);
+          }
+          if (message !== prevLivelinessMessageRef.current) {
+            prevLivelinessMessageRef.current = message;
+            setLivelinessMessage(message);
+          }
+        };
 
         if (resizedDetections.length > 0) {
           const results = resizedDetections.map((d: any) => faceMatcher.current!.findBestMatch(d.descriptor));
@@ -813,30 +851,28 @@ function FaceRecMain({ userObject }: { userObject: any }) {
             new faceapi.draw.DrawBox(box, { label: result.toString() }).draw(canvas);
           });
 
-          const detection = resizedDetections[0];
-          const expressions = detection.expressions;
           const bestMatch = results[0];
           const isRecognized = bestMatch && bestMatch.label !== "unknown";
-          const smiling = isSmiling(expressions);
+          const smiling = isSmiling(resizedDetections[0].expressions);
 
+          // Extend "passed" hold window each time a smile is detected
           if (isRecognized && smiling) {
-            setLivelinessStatus("passed");
-            setLivelinessMessage("Nice Smile!😉");
-          } else if (isRecognized && !smiling) {
-            setLivelinessStatus("pending");
-            setLivelinessMessage("Please smile.");
-          } else {
-            setLivelinessStatus("pending");
-            setLivelinessMessage("Face not recognized.");
+            livelinessPassedUntilRef.current = Date.now() + 4000;
           }
 
-          setName(results);
+          const isPassed = Date.now() < livelinessPassedUntilRef.current;
+          if (isPassed) {
+            updateLiveliness("passed", "Nice Smile!😉");
+          } else if (isRecognized) {
+            updateLiveliness("pending", "Please smile.");
+          } else {
+            updateLiveliness("pending", "Face not recognized.");
+          }
+
           setStatus("Running");
         } else {
-          setLivelinessStatus("pending");
+          updateLiveliness("pending", "No face detected");
           setStatus("Running");
-          setLivelinessMessage("No face detected");
-          setName([]);
         }
       } catch (error) {
         console.error("Face detection error:", error);

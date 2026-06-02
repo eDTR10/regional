@@ -5,6 +5,7 @@ import UserDashboardTableAttendance from './dashboard-body/UserDashboardTableAtt
 import DashboardCards from './dashboard-body/DashboardCards';
 import DashboardAnalogClock from '@/screens/admin/dashboard/dashboard-body/DashboardAnalogClock';
 import DashboardTableBirthday from '@/screens/admin/dashboard/dashboard-body/DashboardTableBirthday';
+import EarlyBirdsLeaderboard from './dashboard-body/EarlyBirdsLeaderboard';
 import { Building2, Car, Globe, Home, Plane } from 'lucide-react';
 import { convertStatus } from '@/helper/convert-status';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -281,7 +282,10 @@ const UserDashboardMainContainer = () => {
                 ) : (
                     <>
                         <UserDashboardTableAttendance />
-                        <DashboardTableBirthday data={data} />
+                        {hasBirthdays
+                            ? <DashboardTableBirthday data={data} />
+                            : <EarlyBirdsLeaderboard />
+                        }
                     </>
                 )}
             </div>
