@@ -1,0 +1,1 @@
+import{j as s,b as a}from"./index-4fa7e3bb.js";function r(e){const t={I:"Time-In",i:"Break-In",0:"Break-Out",o:"Time-Out",O:"Break-Out"};return e.split("").map(n=>t[n]||n).join(", ")}function u({className:e,...t}){return s.jsx("div",{className:a("animate-pulse rounded-md bg-muted",e),...t})}export{u as S,r as c};
