@@ -1,1 +1,0 @@
-function r(e){switch(e){case 1:return"In Office";case 2:return"Out of Office";case 3:return"On Travel";case 4:return"On Leave";case 5:return"Work from Home";case 6:return"Holiday";case 7:return"Off Set";case 8:return"Work Suspension";case 9:return"Halfday";default:return"Unknown"}}export{r as c};
